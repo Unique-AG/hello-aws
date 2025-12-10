@@ -1,11 +1,9 @@
 # Security Policy
 
-## Legal notice
-
-## Reporting a Vulnerability
-
 > [!CAUTION]
 > If you'd wish to disclose a vulerability securely to Unique AI, you are welcome to send it to <a href="mailto:security@unique.ch"><code>security📧unique.ch</code></a> as well 💙
+
+## Reporting a Vulnerability
 
 We have enabled the ability to privately report security issues through the Security tab above.
 
