@@ -1,0 +1,16 @@
+serviceAccount:
+  enabled: true
+  # IRSA: IAM role needs to be created in 05-compute/terraform/iam.tf if AWS access is required
+  # irsa:
+  #   roleArn: "arn:aws:iam::696630818863:role/acme-dogfood-sbx-euc2-app-repository"
+  #   enabled: true
+image:
+  tag: "2025.44.1"
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-app-repository
+routes:
+  hostname: api.hello.azure.unique.dev
+secretProvider:
+  vaults:
+    helloazuresensitive:
+      DATABASE_URL: database-url-app-repository
+      ENCRYPTION_KEY: encryption-key-app-repository

@@ -1,0 +1,28 @@
+#######################################
+# Shared Locals - Common Configuration
+#######################################
+#
+# This file contains common configuration values used across all layers.
+# Copy this to each layer's terraform/ directory as shared-locals.tf
+# and update the layer-specific values.
+#
+# Common values:
+# - org, org_moniker, client, client_name
+# - aws_account_id, aws_region (if consistent)
+#######################################
+
+locals {
+  # Organization configuration (common across all layers)
+  org         = "unique"
+  org_moniker = "uq"
+  
+  # Client configuration (common across all layers)
+  client      = "acme"
+  client_name = "Unique Dog Food AG"
+  
+  # AWS context (set per environment, but structure is common)
+  # These should be set via variables in each layer
+  # aws_account_id = var.aws_account_id
+  # aws_region     = var.aws_region
+}
+

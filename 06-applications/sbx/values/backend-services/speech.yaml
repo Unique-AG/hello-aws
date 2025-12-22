@@ -1,0 +1,21 @@
+image:
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-speech
+  tag: "2025.44.1"
+replicaCount: 2
+resources:
+  limits:
+    cpu: 100m
+    memory: 300Mi
+  requests:
+    cpu: 100m
+    memory: 300Mi
+serviceAccount:
+  enabled: true
+  # IRSA: IAM role needs to be created in 05-compute/terraform/iam.tf if AWS access is required
+  # irsa:
+  #   roleArn: "arn:aws:iam::696630818863:role/acme-dogfood-sbx-euc2-speech"
+  #   enabled: true
+secretProvider:
+  vaults:
+    helloazuresensitive:
+      SPEECH_PRIVATE_ENDPOINT_HOST: swedencentral-speech-fqdn

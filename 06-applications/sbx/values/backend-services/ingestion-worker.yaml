@@ -1,0 +1,14 @@
+image:
+  tag: "2025.44.1"
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion-worker
+secretProvider:
+  vaults:
+    helloazuremain:
+      AZURE_OPENAI_API_ENDPOINT: cognitive-account-swedencentral-ep
+      AZURE_DOCUMENT_INTELLIGENCE_ENDPOINTS: azure-document-intelligence-endpoints
+serviceAccount:
+  enabled: true
+  # IRSA: IAM role needs to be created in 05-compute/terraform/iam.tf if AWS access is required
+  # irsa:
+  #   roleArn: "arn:aws:iam::696630818863:role/acme-dogfood-sbx-euc2-ingestion-worker"
+  #   enabled: true

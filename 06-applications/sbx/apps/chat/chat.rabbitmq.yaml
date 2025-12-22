@@ -1,0 +1,9 @@
+spec:
+  name: rabbitmq-chat
+  autoSync: false
+  source:
+    repoURL: https://github.com/Unique-AG/hello-aws
+    targetRevision: preview
+    path: applications/dev/values/rabbitmq
+    directory:
+      recurse: true

@@ -1,0 +1,13 @@
+image:
+  tag: "2025.44.1"
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-event-socket
+routes:
+  gateway:
+    namespace: unique
+  hostname: api.hello.azure.unique.dev
+  pathPrefix: /event-socket
+  paths:
+    versioned:
+      enabled: true
+    probe:
+      enabled: true
