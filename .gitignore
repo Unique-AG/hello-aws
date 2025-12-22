@@ -49,3 +49,6 @@ Thumbs.db
 # Common configuration file (must be set manually from template)
 common.auto.tfvars
 
+# Deployment scripts with sensitive credentials
+scripts/deploy-with-acr.sh
+
