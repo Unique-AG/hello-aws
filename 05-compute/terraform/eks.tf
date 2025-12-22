@@ -72,19 +72,11 @@ resource "aws_eks_cluster" "main" {
   # Enable control plane logging
   enabled_cluster_log_types = var.eks_enabled_cluster_log_types
 
-  # Authentication mode: API_AND_CONFIG_MAP allows both access entries and aws-auth ConfigMap
-  # This is required for EKS access entries to work
-  # Note: This can be updated in-place without recreating the cluster
-  # We ignore changes to prevent Terraform from trying to recreate the cluster
-  # if the authentication mode is already set correctly
+  # Authentication mode: API only (access entries)
+  # ConfigMap authentication is disabled for enhanced security
+  # All access is managed via EKS access entries (modern approach)
   access_config {
-    authentication_mode = "API_AND_CONFIG_MAP"
-  }
-
-  lifecycle {
-    # Ignore changes to access_config to prevent cluster replacement
-    # The authentication mode can be updated in-place via AWS CLI if needed
-    ignore_changes = [access_config]
+    authentication_mode = "API"
   }
 
   # CloudWatch log group for EKS cluster logs

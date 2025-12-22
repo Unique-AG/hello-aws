@@ -32,7 +32,7 @@ EKS access is managed via **IAM Roles and Access Entries**:
 - **Management Server Access**: Pre-configured IAM role for kubectl access
 - **IRSA Support**: IAM Roles for Service Accounts for pod-level permissions
 - **Access Entries**: Modern EKS access control (replaces aws-auth ConfigMap)
-- **Authentication Mode**: API_AND_CONFIG_MAP for backward compatibility
+- **Authentication Mode**: API only (access entries, ConfigMap disabled)
 
 ### Node Group Configuration
 
@@ -250,7 +250,7 @@ After deployment:
 
 ### EKS Access Control
 
-EKS access is managed via **access entries** (modern approach) and **aws-auth ConfigMap** (legacy). The cluster is configured with `API_AND_CONFIG_MAP` authentication mode for backward compatibility. Access entries are preferred for new access configurations.
+EKS access is managed exclusively via **access entries** (modern approach). The cluster is configured with `API` authentication mode, which disables the legacy `aws-auth` ConfigMap for enhanced security. All access must be configured via IAM-based access entries.
 
 ### IRSA (IAM Roles for Service Accounts)
 
