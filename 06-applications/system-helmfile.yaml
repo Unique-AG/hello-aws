@@ -1,0 +1,16 @@
+# System Components Helmfile
+# Deploys all system components for Phase 1 (no ArgoCD)
+
+repositories:
+  - name: bedag
+    url: https://bedag.github.io/helm-charts
+
+releases:
+  # Storage Class (gp3) - First component, no dependencies
+  - name: storage-class-gp3
+    chart: bedag/raw
+    version: 2.0.0
+    namespace: kube-system
+    wait: false
+    values:
+      - sbx/values/storage-class/gp3.yaml

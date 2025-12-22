@@ -1,3 +1,16 @@
+#######################################
+# Authentication Policy
+#######################################
+#
+# AWS SSO (AWS IAM Identity Center) is the only permitted authentication
+# mechanism for human access to AWS resources in this project.
+#
+# All interactive access must use AWS SSO. Long-lived credentials (access keys)
+# are not permitted for human users. Service-to-service authentication uses
+# IAM roles with temporary credentials.
+#
+#######################################
+
 # IAM role for GitHub Actions OIDC
 resource "aws_iam_role" "github_actions" {
   count = var.use_oidc && var.github_repository != "" ? 1 : 0

@@ -16,13 +16,13 @@ set -euo pipefail
 #   with temporary credentials.
 #
 # Usage:
-#   ./scripts/bootstrap [environment] [--skip-plan] [--auto-approve]
+#   ./scripts/bootstrap.sh [environment] [--skip-plan] [--auto-approve]
 #
 # Examples:
-#   ./scripts/bootstrap dev
-#   ./scripts/bootstrap dev --skip-plan
-#   ./scripts/bootstrap prod --auto-approve
-#   ./scripts/bootstrap sbx
+#   ./scripts/bootstrap.sh dev
+#   ./scripts/bootstrap.sh dev --skip-plan
+#   ./scripts/bootstrap.sh prod --auto-approve
+#   ./scripts/bootstrap.sh sbx
 #######################################
 
 # Get the script directory and project root
@@ -488,9 +488,9 @@ echo ""
 echo -e "${BLUE}📝 Next Steps:${NC}"
 echo -e "   1. All backend-config.hcl files have been automatically updated"
 echo -e "   2. You can now deploy other layers using:"
-echo -e "      ./scripts/deploy governance ${ENV}"
-echo -e "      ./scripts/deploy infrastructure ${ENV}"
-echo -e "      ./scripts/deploy data-and-ai ${ENV}"
-echo -e "      ./scripts/deploy compute ${ENV}"
+echo -e "      ./scripts/deploy.sh governance ${ENV}"
+echo -e "      ./scripts/deploy.sh infrastructure ${ENV}"
+echo -e "      ./scripts/deploy.sh data-and-ai ${ENV}"
+echo -e "      ./scripts/deploy.sh compute ${ENV}"
 echo ""
 

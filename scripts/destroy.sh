@@ -12,13 +12,13 @@ set -euo pipefail
 # 4. Destroying resources
 #
 # Usage:
-#   ./scripts/destroy [layer] [environment] [--auto-approve] [--skip-plan]
+#   ./scripts/destroy.sh [layer] [environment] [--auto-approve] [--skip-plan]
 #
 # Examples:
-#   ./scripts/destroy governance sbx
-#   ./scripts/destroy governance dev --auto-approve
-#   ./scripts/destroy infrastructure prod --skip-plan --auto-approve
-#   ./scripts/destroy bootstrap sbx
+#   ./scripts/destroy.sh governance sbx
+#   ./scripts/destroy.sh governance dev --auto-approve
+#   ./scripts/destroy.sh infrastructure prod --skip-plan --auto-approve
+#   ./scripts/destroy.sh bootstrap sbx
 #######################################
 
 # Get the script directory and project root
@@ -54,11 +54,11 @@ done
 # Validate arguments
 if [[ -z "$LAYER" ]]; then
   echo -e "${RED}❌ Error: Layer is required${NC}"
-  echo -e "${YELLOW}   Usage: ./scripts/destroy [layer] [environment] [--auto-approve] [--skip-plan]${NC}"
+  echo -e "${YELLOW}   Usage: ./scripts/destroy.sh [layer] [environment] [--auto-approve] [--skip-plan]${NC}"
   echo -e "${YELLOW}   Examples:${NC}"
-  echo -e "${YELLOW}     ./scripts/destroy bootstrap sbx${NC}"
-  echo -e "${YELLOW}     ./scripts/destroy governance dev --auto-approve${NC}"
-  echo -e "${YELLOW}     ./scripts/destroy infrastructure prod --skip-plan --auto-approve${NC}"
+  echo -e "${YELLOW}     ./scripts/destroy.sh bootstrap sbx${NC}"
+  echo -e "${YELLOW}     ./scripts/destroy.sh governance dev --auto-approve${NC}"
+  echo -e "${YELLOW}     ./scripts/destroy.sh infrastructure prod --skip-plan --auto-approve${NC}"
   exit 1
 fi
 

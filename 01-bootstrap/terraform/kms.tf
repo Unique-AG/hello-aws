@@ -2,7 +2,7 @@
 resource "aws_kms_key" "terraform_state" {
   count = var.enable_server_side_encryption ? 1 : 0
 
-  description             = "KMS key for encrypting Terraform state in ${var.environment} environment"
+  description = "KMS key for encrypting Terraform state in ${var.environment} environment"
   # AWS requires minimum 7 days - enforce when 0 is specified (for fast teardown in dev/sbx)
   deletion_window_in_days = var.kms_deletion_window == 0 ? 7 : var.kms_deletion_window
   enable_key_rotation     = true

@@ -102,7 +102,7 @@ export TF_VAR_acr_password="$ACR_PASSWORD"
 # The deploy script will handle secret restoration and KMS key cancellation in Step 3.5
 cd "$PROJECT_ROOT"
 if [ ${#DEPLOY_ARGS[@]} -gt 0 ]; then
-  ./scripts/deploy "$LAYER" "$ENV" "${DEPLOY_ARGS[@]}"
+  ./scripts/deploy.sh "$LAYER" "$ENV" "${DEPLOY_ARGS[@]}"
 else
-  ./scripts/deploy "$LAYER" "$ENV"
+  ./scripts/deploy.sh "$LAYER" "$ENV"
 fi

@@ -9,11 +9,11 @@ set -euo pipefail
 # bucket name matching the bootstrap layer's terraform output.
 #
 # Usage:
-#   ./scripts/validate-backend-configs.sh [environment]
+#   ./scripts/validate-backend-configs.sh.sh [environment]
 #
 # Examples:
-#   ./scripts/validate-backend-configs.sh sbx
-#   ./scripts/validate-backend-configs.sh dev
+#   ./scripts/validate-backend-configs.sh.sh sbx
+#   ./scripts/validate-backend-configs.sh.sh dev
 #######################################
 
 # Get the script directory and project root
@@ -116,6 +116,6 @@ else
   fi
   echo ""
   echo -e "${YELLOW}💡 To fix, run the bootstrap script:${NC}"
-  echo -e "${YELLOW}   ./01-bootstrap/scripts/bootstrap ${ENV}${NC}"
+  echo -e "${YELLOW}   ./01-bootstrap/scripts/bootstrap.sh ${ENV}${NC}"
   exit 1
 fi
