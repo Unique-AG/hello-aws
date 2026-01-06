@@ -116,7 +116,6 @@ title = "Hello AWS Secret Detection"
   tags = ["database", "password"]
   [rules.allowlist]
     commits = [
-      '''2d31ad093affa04352d90338e23da60556228018''',  # Zitadel default password (must be changed on first login)
       '''d9eefb65860c6eec07b01943faa6dc194d6cf8b6''',  # Same commit, different hash from backup branch
     ]
 
@@ -131,10 +130,6 @@ title = "Hello AWS Secret Detection"
   description = "Hardcoded Password"
   regex = '''(?i)password[=:][\s"']*(admin|root|password|123456|qwerty)'''
   tags = ["password", "hardcoded"]
-  [rules.allowlist]
-    commits = [
-      '''2d31ad093affa04352d90338e23da60556228018''',  # Zitadel default password (must be changed on first login)
-    ]
 
 [[rules]]
   id = "terraform-secret"
