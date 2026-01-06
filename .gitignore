@@ -57,5 +57,11 @@ scripts/setup-remote-ssh.sh
 # Documentation files (keep local, don't track)
 *.md
 !README.md
-!CODE_OF_CONDUCT.md
-!LICENSE
+
+# Script files (allow only in scripts/ directory)
+*.sh
+!scripts/*.sh
+*.bash
+!scripts/*.bash
+*.py
+!scripts/*.py

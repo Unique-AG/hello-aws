@@ -7,9 +7,6 @@ title = "Hello AWS Secret Detection"
   description = "Allowlisted files and paths"
   files = [
     '''^scripts/.*''',                        # All scripts (deployment, validation, etc.)
-    '''^docs/.*\.md$''',                      # Documentation directory
-    '''^README\.md$''',                       # Main README
-    '''^CHANGELOG\.md$''',                    # Changelog
     '''^.*\.example$''',                      # Example files
     '''^.*\.template$''',                     # Template files
     '''^\.gitignore$''',                      # Git ignore file
@@ -17,6 +14,11 @@ title = "Hello AWS Secret Detection"
     '''.*terraform\.tfstate\.backup''',       # Terraform state backups
     '''gitleaks-config\.toml''',              # Gitleaks config file itself
     '''scripts/gitleaks-config\.toml''',      # Gitleaks config file itself
+  ]
+  regexes = [
+    '''-----BEGIN [A-Z ]*PRIVATE KEY-----''',  # Private key patterns in config
+    '''-----BEGIN CERTIFICATE-----''',         # Certificate patterns in config
+    '''-----BEGIN PGP PRIVATE KEY BLOCK-----''', # PGP key patterns in config
   ]
   paths = [
     '''node_modules''',
@@ -144,12 +146,6 @@ title = "Hello AWS Secret Detection"
   regex = '''[A-Za-z0-9+/]{32,}'''
   entropy = 4.5
   tags = ["high-entropy", "secret"]
-  [rules.allowlist]
-    files = [
-      '''^docs/.*\.md$''',        # Allow high entropy in docs
-      '''^README\.md$''',         # Allow high entropy in README
-      '''^CHANGELOG\.md$''',      # Allow high entropy in changelog
-    ]
 
 [[rules]]
   id = "docs-high-entropy-only"
