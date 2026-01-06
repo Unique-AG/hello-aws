@@ -58,10 +58,25 @@ scripts/setup-remote-ssh.sh
 *.md
 !README.md
 
-# Script files (allow only in scripts/ directory)
+# Script files (allow only currently tracked scripts)
 *.sh
-!scripts/*.sh
 *.bash
-!scripts/*.bash
 *.py
-!scripts/*.py
+# Exceptions for currently tracked scripts
+!01-bootstrap/scripts/bootstrap.sh
+!01-bootstrap/scripts/validate-backend-configs.sh
+!03-infrastructure/scripts/connect-ssm.sh
+!03-infrastructure/terraform/user-data/management-server.sh
+!05-compute/scripts/setup-kubectl.sh
+!06-applications/sbx/deploy-ingress.sh
+!06-applications/sbx/deploy-system-app.sh
+!06-applications/sbx/deploy-system-apps-sequence.sh
+!scripts/deploy-dependency-sequence.sh
+!scripts/deploy-with-acr.sh
+!scripts/deploy.sh
+!scripts/destroy.sh
+!scripts/scan-secrets.sh
+!scripts/setup-remote-ssh.sh
+!scripts/setup-ssh-keys.sh
+!scripts/validate-backend-configs.sh
+!scripts/validate.sh
