@@ -125,13 +125,13 @@ VALIDATION_FAILED=false
 for layer in "${MODIFIED_LAYERS[@]}"; do
   echo -e "${BLUE}🔍 Validating layer: ${layer}${NC}"
 
-  # Try to validate with sbx environment first (most common), fallback to dev
-  if "$VALIDATE_SCRIPT" "$layer" "sbx" 2>/dev/null; then
-    echo -e "${GREEN}✅ Layer ${layer} (sbx) validation passed${NC}"
-  elif "$VALIDATE_SCRIPT" "$layer" "dev" 2>/dev/null; then
-    echo -e "${GREEN}✅ Layer ${layer} (dev) validation passed${NC}"
+  # Try to validate with sbx environment first (most common), fallback to dev (lint-only mode)
+  if "$VALIDATE_SCRIPT" "$layer" "sbx" "true" >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Layer ${layer} (sbx) linting passed${NC}"
+  elif "$VALIDATE_SCRIPT" "$layer" "dev" "true" >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ Layer ${layer} (dev) linting passed${NC}"
   else
-    echo -e "${RED}❌ Layer ${layer} validation failed${NC}"
+    echo -e "${RED}❌ Layer ${layer} linting failed${NC}"
     VALIDATION_FAILED=true
   fi
 done

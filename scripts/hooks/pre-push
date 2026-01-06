@@ -94,6 +94,4 @@ else
   echo -e "${YELLOW}⚠️  Validation script not found${NC}"
 fi
 
-done
-
 exit 0
