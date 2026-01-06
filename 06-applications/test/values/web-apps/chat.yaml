@@ -1,0 +1,9 @@
+env:
+  FEATURE_FLAG_NET_PROMOTER_SCORE_UI_UN_7747: "true"
+  FEATURE_FLAG_NEW_TRANSLATION_UI_UN_7233: "true"
+  FILE_TYPES_DOCUMENT_TRANSLATOR: "docx,xls,pptx"
+  MAX_FILE_SIZE_IN_MB: 200
+  SELF_URL: https://test-hello.azure.unique.dev/chat
+image:
+  tag: "2025.44.1"
+  repository: uqhacrtest.azurecr.io/web-app-chat

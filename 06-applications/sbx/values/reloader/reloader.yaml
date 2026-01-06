@@ -1,0 +1,9 @@
+image:
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/stakater/reloader
+  tag: v1.4.2
+watchGlobally: true
+reloader:
+  deployment:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+  logFormat: json

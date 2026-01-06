@@ -1,0 +1,15 @@
+# Common values for sbx environment
+# This file can be included in Helm values to centralize common configuration
+
+# ECR Registry Configuration
+# Base ECR registry URL for pull-through cache
+ecr:
+  registry: "696630818863.dkr.ecr.eu-central-2.amazonaws.com"
+  
+  # ACR pull-through cache prefix
+  acr:
+    # Use shorter alias: uniquecr instead of full uniquehelloazure.azurecr.io
+    # Format: ${ecr.registry}/uniquecr/<image>
+    prefix: "uniquecr"
+    # Full ACR registry URL (for reference)
+    upstream: "uniquehelloazure.azurecr.io"

@@ -1,0 +1,59 @@
+# Local Terraform files
+# Excludes state files, crash logs, and local overrides
+# backend-config.hcl files are generated from templates by bootstrap script
+
+# Local .terraform directories
+**/.terraform/
+.terraform/
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files that might contain sensitive data
+# (but keep the template/example ones)
+*.tfvars
+!*.auto.tfvars
+!common.auto.tfvars.template
+!**/environments/**/*.auto.tfvars
+
+# Override files
+*_override.tf
+*_override.tf.json
+
+# CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore any local environment variable files
+.env
+.env.local
+
+# Ignore any backup files
+*.backup
+*.bak
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backend configuration files (generated from templates)
+**/backend-config.hcl
+
+# Common configuration file (must be set manually from template)
+common.auto.tfvars
+
+# Deployment scripts with sensitive credentials
+scripts/deploy-with-acr.sh
+
+# Documentation files (keep local, don't track)
+*.md
+!README.md
+!CODE_OF_CONDUCT.md
+!LICENSE

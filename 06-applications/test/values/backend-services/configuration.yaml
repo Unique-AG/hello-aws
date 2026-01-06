@@ -1,0 +1,7 @@
+image:
+  repository: uqhacrtest.azurecr.io/backend-service-configuration
+  tag: "2025.44.1"
+secretProvider:
+  vaults:
+    hakv2testv2:
+      DATABASE_URL: database-url-theme

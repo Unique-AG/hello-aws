@@ -1,0 +1,30 @@
+# Kong Gateway Configuration for AWS EKS
+# Updated to use Route 53 Private Hosted Zone and AWS domains
+resources:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    metadata:
+      name: kong
+      namespace: unique
+    spec:
+      gatewayClassName: kong
+      listeners:
+        - name: http
+          protocol: HTTP
+          port: 80
+          allowedRoutes:
+            namespaces:
+              from: All
+        - name: https
+          protocol: HTTPS
+          port: 443
+          allowedRoutes:
+            namespaces:
+              from: All
+          tls:
+            mode: Terminate
+            certificateRefs:
+              - name: kong-gateway-tls
+                kind: Secret
+                group: ""
+

@@ -1,0 +1,60 @@
+global:
+  priorityClassName: system-cluster-critical
+installCRDs: true
+image:
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/jetstack/cert-manager-controller
+  tag: v1.12.2
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
+# Note: For Route 53 DNS-01 validation, cert-manager uses AWS SDK
+# No recursive nameservers needed - cert-manager directly accesses Route 53 API
+# extraArgs:
+#   - --dns01-recursive-nameservers=...
+#   - --dns01-recursive-nameservers-only
+webhook:
+  image:
+    repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/jetstack/cert-manager-webhook
+    tag: v1.12.2
+cainjector:
+  image:
+    repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/jetstack/cert-manager-cainjector
+    tag: v1.12.2
+resources:
+  limits:
+      cpu: 50m
+      memory: 128Mi
+  requests:
+      cpu: 50m
+      memory: 128Mi
+webhook:
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+cainjector:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 400Mi
+    requests:
+      cpu: 100m
+      memory: 400Mi
+
+# Service Account for cert-manager with IRSA
+# Annotate with IAM role ARN for Route 53 access
+# The IAM role is created in the compute layer (05-compute/terraform/iam.tf)
+# Role name format: {naming-id}-cert-manager-route53
+# Example: uq-dogfood-sbx-euc2-cert-manager-route53
+# Get the role ARN from compute layer output: irsa_cert_manager_route53_role_arn
+serviceAccount:
+  annotations:
+    # IAM role ARN for cert-manager Route 53 DNS-01 validation
+    # Role is created in compute layer: 05-compute/terraform/iam.tf
+    # Role name pattern: {module.naming.id}-cert-manager-route53
+    # Example: uq-dogfood-sbx-euc2-cert-manager-route53
+    # Get actual ARN from compute layer output: terraform output irsa_cert_manager_route53_role_arn
+    eks.amazonaws.com/role-arn: "arn:aws:iam::217381566492:role/uq-dogfood-sbx-euc2-cert-manager-route53"

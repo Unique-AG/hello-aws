@@ -1,0 +1,129 @@
+# Ingress Controller Helmfile
+# Deploys all components required for Kong Ingress Controller
+# Dependencies: cert-manager, reloader
+
+repositories:
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: kong
+    url: https://charts.konghq.com
+  - name: stakater
+    url: https://stakater.github.io/stakater-charts
+  - name: bedag
+    url: https://bedag.github.io/helm-charts
+  - name: unique-ag
+    url: oci://ghcr.io/unique-ag/helm-charts
+
+environments:
+  default:
+    values:
+      - values/_common.yaml
+
+releases:
+  # Phase 1: Prerequisites
+  
+  # 1. cert-manager - Certificate management (required for TLS)
+  - name: cert-manager
+    namespace: cert-manager
+    createNamespace: true
+    chart: jetstack/cert-manager
+    version: 1.17.2
+    wait: true
+    timeout: 10m
+    values:
+      - values/cert-manager/cert-manager.yaml
+
+  # 2. ClusterIssuer for cert-manager - Route 53 DNS-01 (depends on cert-manager)
+  - name: clusterissuer-route53-dns
+    namespace: cert-manager
+    needs:
+      - cert-manager
+    chart: bedag/raw
+    version: 2.0.0
+    wait: false
+    values:
+      - values/cert-manager/cluster-issuer-route53.yaml
+
+  # 3. Reloader - ConfigMap/Secret reloader (used by Kong)
+  - name: reloader
+    namespace: reloader
+    createNamespace: true
+    chart: stakater/reloader
+    version: 1.4.2
+    wait: true
+    timeout: 5m
+    values:
+      - values/reloader/reloader.yaml
+
+  # Phase 2: Kong Ingress Controller Components
+  
+  # 4. Kong Plugins (custom plugins)
+  - name: kong-plugins
+    namespace: unique
+    createNamespace: true
+    needs:
+      - reloader
+    chart: oci://ghcr.io/unique-ag/helm-charts/kong-plugins
+    version: 1.2.1
+    wait: false
+    values:
+      - values/kong/kong-plugins.yaml
+
+  # 5. Kong Gateway Environment ConfigMap
+  - name: kong-gateway-environment
+    namespace: unique
+    needs:
+      - kong-plugins
+    chart: bedag/raw
+    version: 2.0.0
+    wait: false
+    values:
+      - values/kong/kong-gateway-environment.yaml
+
+  # 6. Kong Ingress Controller (main component)
+  - name: kong
+    namespace: unique
+    needs:
+      - kong-gateway-environment
+      - cert-manager
+    chart: kong/ingress
+    version: 0.19.0
+    wait: true
+    timeout: 10m
+    values:
+      - values/kong/kong-controller.yaml
+
+  # 7. Kong Gateway (depends on controller)
+  - name: kong-gateway
+    namespace: unique
+    needs:
+      - kong
+    chart: bedag/raw
+    version: 2.0.0
+    wait: false
+    values:
+      - values/kong/kong-gateway-aws.yaml
+
+  # 8. Kong Cluster Plugins
+  - name: kong-cluster-plugins
+    namespace: unique
+    needs:
+      - kong-gateway
+    chart: bedag/raw
+    version: 2.0.0
+    wait: false
+    values:
+      - values/kong/kong-cluster-plugins.yaml
+
+  # 9. Kong Ingress Resources (Ingress definitions for AWS)
+  - name: kong-ingress
+    namespace: unique
+    needs:
+      - kong-gateway
+      - clusterissuer-route53-dns
+    chart: bedag/raw
+    version: 2.0.0
+    wait: false
+    values:
+      - values/kong/kong-ingress-aws.yaml
+

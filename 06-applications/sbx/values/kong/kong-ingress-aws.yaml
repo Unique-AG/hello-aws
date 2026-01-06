@@ -1,0 +1,84 @@
+# Kong Ingress Resources for AWS EKS
+# Updated for AWS environment (removed Azure Application Gateway annotations)
+resources:
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-web-apps
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: https
+        konghq.com/strip-path: "true"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: hello.sbx.aws.unique.dev
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kong-gateway-proxy
+                    port:
+                      name: kong-proxy-tls
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - hello.sbx.aws.unique.dev
+          secretName: kong-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-backend-services
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: https
+        konghq.com/strip-path: "true"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: api.sbx.aws.unique.dev
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kong-gateway-proxy
+                    port:
+                      name: kong-proxy-tls
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - api.sbx.aws.unique.dev
+          secretName: kong-api-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-zitadel
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: https
+        konghq.com/strip-path: "true"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: id.sbx.aws.unique.dev
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kong-gateway-proxy
+                    port:
+                      name: kong-proxy-tls
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - id.sbx.aws.unique.dev
+          secretName: kong-zitadel-tls
+

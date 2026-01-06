@@ -1,0 +1,5 @@
+env:
+  SELF_URL: https://hello.azure.unique.dev/theme
+image:
+  tag: "2025.44.1"
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-theme

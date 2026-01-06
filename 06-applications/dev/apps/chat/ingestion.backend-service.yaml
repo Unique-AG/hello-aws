@@ -1,0 +1,17 @@
+spec:
+  name: backend-service-ingestion
+  autoSync: false
+  sources:
+    - repoURL: 'https://github.com/Unique-AG/hello-aws'
+      targetRevision: preview
+      ref: values
+    - repoURL: ghcr.io/unique-ag/helm-charts
+      chart: backend-service
+      targetRevision: 6.0.1
+      helm:
+        releaseName: backend-service-ingestion
+        valueFiles:
+          - $values/applications/defaults/backend-services/ingestion.yaml
+          - $values/applications/dev/values/backend-services/_all.yaml
+          - $values/applications/dev/values/backend-services/ingestion.yaml
+        valuesObject: {}

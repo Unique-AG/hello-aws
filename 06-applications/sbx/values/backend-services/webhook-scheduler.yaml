@@ -1,0 +1,3 @@
+image:
+  tag: "2025.44.1"
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-webhook-scheduler

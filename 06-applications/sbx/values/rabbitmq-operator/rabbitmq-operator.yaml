@@ -1,0 +1,23 @@
+global:
+  defaultStorageClass: gp3
+clusterOperator:
+  image:
+    registry: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+    repository: bitnamilegacy/rabbitmq-cluster-operator
+    tag: 2.10.0-debian-12-r0
+  nodeSelector:
+    scalability: steady
+    lifecycle: persistent
+  watchAllNamespaces: false
+  watchNamespaces:
+    - unique
+msgTopologyOperator:
+  image:
+    registry: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+    repository: bitnamilegacy/rmq-messaging-topology-operator
+    tag: 1.14.2-debian-12-r5
+  nodeSelector:
+    scalability: steady
+    lifecycle: persistent
+  # Matches 'nano' Preset which is the default
+  # https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15

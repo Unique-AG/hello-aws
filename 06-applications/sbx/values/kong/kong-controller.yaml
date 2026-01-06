@@ -1,0 +1,74 @@
+controller:
+  image:
+    repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/kong/kubernetes-ingress-controller
+    tag: 3.4.4
+  ingressController:
+    envFrom:
+      - configMapRef:
+          name: kong-controller-environment
+  proxy:
+    type: ClusterIP
+  nodeSelector:
+    scalability: steady
+  lifecycle: persistent
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: "kong-controller-environment"
+  extraObjects:
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: kong-controller-environment
+      data:
+        CONTROLLER_LOG_LEVEL: info
+        CONTROLLER_PROXY_SYNC_SECONDS: "15"
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: GatewayClass
+      metadata:
+        name: kong
+        annotations:
+          konghq.com/gatewayclass-unmanaged: "true"
+      spec:
+        controllerName: konghq.com/kic-gateway-controller
+gateway:
+  image:
+    repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/kong
+    tag: 3.9.0
+  nodeSelector:
+    scalability: steady
+    lifecycle: persistent
+  proxy:
+    type: ClusterIP
+    tls:
+      appProtocol: "https"
+  plugins:
+    configMaps:
+      - name: kong-plugin-unique-jwt-auth
+        pluginName: unique-jwt-auth
+      - name: kong-plugin-unique-app-repo-auth
+        pluginName: unique-app-repo-auth
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: "kong-gateway-environment,kong-plugin-unique-jwt-auth,kong-plugin-unique-app-repo-auth"
+  envFrom:
+    - configMapRef:
+        name: kong-gateway-environment
+  status:
+    tls:
+      enabled: true
+  certificates:
+    enabled: true
+    clusterIssuer: letsencrypt-route53-dns
+    proxy:
+      enabled: true
+      clusterIssuer: letsencrypt-route53-dns
+      commonName: hello.sbx.aws.unique.dev
+      dnsNames:
+        - hello.sbx.aws.unique.dev
+        - api.sbx.aws.unique.dev
+        - id.sbx.aws.unique.dev
+        - "*.sbx.aws.unique.dev"
+    admin:
+      enabled: false
+    cluster:
+      enabled: false
+    portal:
+      enabled: false

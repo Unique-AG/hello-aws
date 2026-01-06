@@ -1,0 +1,7 @@
+image:
+  repository: 696630818863.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-configuration
+  tag: "2025.44.1"
+secretProvider:
+  vaults:
+    helloazuresensitive:
+      DATABASE_URL: database-url-theme
