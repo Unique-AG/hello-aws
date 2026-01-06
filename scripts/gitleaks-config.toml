@@ -7,8 +7,9 @@ title = "Hello AWS Secret Detection"
   description = "Allowlisted files and paths"
   files = [
     '''^scripts/.*''',                        # All scripts (deployment, validation, etc.)
-    '''^.*\.md$''',                           # Documentation files
-    '''^.*\.txt$''',                          # Text files
+    '''^docs/.*\.md$''',                      # Documentation directory
+    '''^README\.md$''',                       # Main README
+    '''^CHANGELOG\.md$''',                    # Changelog
     '''^.*\.example$''',                      # Example files
     '''^.*\.template$''',                     # Template files
     '''^\.gitignore$''',                      # Git ignore file
@@ -136,3 +137,27 @@ title = "Hello AWS Secret Detection"
   description = "Terraform Secret Variable"
   regex = '''(?i)(secret|token|key|password|access_key|secret_key)[_]*[=:]\s*["']([^"'\s]{8,})["']'''
   tags = ["terraform", "secret"]
+
+[[rules]]
+  id = "high-entropy-secret"
+  description = "High Entropy Secret (very random strings)"
+  regex = '''[A-Za-z0-9+/]{32,}'''
+  entropy = 4.5
+  tags = ["high-entropy", "secret"]
+  [rules.allowlist]
+    files = [
+      '''^docs/.*\.md$''',        # Allow high entropy in docs
+      '''^README\.md$''',         # Allow high entropy in README
+      '''^CHANGELOG\.md$''',      # Allow high entropy in changelog
+    ]
+
+[[rules]]
+  id = "docs-high-entropy-only"
+  description = "Very High Entropy Only in Documentation"
+  regex = '''[A-Za-z0-9+/]{40,}'''
+  entropy = 5.0
+  tags = ["documentation", "high-entropy", "secret"]
+  paths = [
+    '''\.md$''',     # Apply to all .md files
+    '''\.txt$''',    # Apply to all .txt files
+  ]
