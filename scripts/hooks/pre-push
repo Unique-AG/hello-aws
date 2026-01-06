@@ -1,0 +1,108 @@
+#!/bin/bash
+set -euo pipefail
+
+#######################################
+# Pre-push Hook
+#######################################
+#
+# This hook runs Terraform validation before pushing
+# to prevent security issues and configuration errors
+# from reaching the remote repository.
+#
+# Runs: ./scripts/validate.sh [layer] [environment]
+#######################################
+
+# Get the script directory and project root
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${HOOK_DIR}/../.." && pwd)"
+VALIDATE_SCRIPT="${PROJECT_ROOT}/scripts/validate.sh"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+echo -e "${BLUE}🚀 Running pre-push validation...${NC}"
+
+# Check if validate script exists
+if [[ ! -f "$VALIDATE_SCRIPT" ]]; then
+  echo -e "${RED}❌ Error: Validation script not found: ${VALIDATE_SCRIPT}${NC}"
+  exit 1
+fi
+
+# Check for secrets in entire repository
+echo -e "${BLUE}🔐 Scanning entire repository for secrets...${NC}"
+
+if ! command -v gitleaks &>/dev/null; then
+  echo -e "${YELLOW}⚠️  gitleaks not found, skipping secret scan${NC}"
+else
+  # Check current branch for any secrets - block if any found
+  if ! gitleaks detect --config "${PROJECT_ROOT}/scripts/gitleaks-config.toml" --log-opts="--first-parent --branches=$(git rev-parse --abbrev-ref HEAD)" >/dev/null 2>&1; then
+    echo -e "${RED}❌ BLOCKED: Secrets detected in repository${NC}"
+    echo -e "${YELLOW}💡 To bypass (emergency only): git push --no-verify${NC}"
+    exit 1
+  else
+    echo -e "${GREEN}✅ No secrets detected in repository${NC}"
+  fi
+fi
+
+# Get the remote name and branch being pushed
+while read -r local_ref local_sha remote_ref remote_sha; do
+  # Extract branch name from remote ref
+  branch_name=$(basename "$remote_ref")
+
+  echo -e "${YELLOW}📋 Pushing to branch: ${branch_name}${NC}"
+
+  # For pre-push, validate all layers that exist in the repository
+  # This ensures comprehensive validation before pushing
+  ALL_LAYERS=("bootstrap" "governance" "infrastructure" "data-and-ai" "compute" "applications")
+
+  VALIDATION_FAILED=false
+  VALIDATED_LAYERS=()
+
+  for layer in "${ALL_LAYERS[@]}"; do
+    # Check if layer directory exists
+    layer_dir_name=""
+    case "$layer" in
+      "bootstrap") layer_dir_name="01-bootstrap" ;;
+      "governance") layer_dir_name="02-governance" ;;
+      "infrastructure") layer_dir_name="03-infrastructure" ;;
+      "data-and-ai") layer_dir_name="04-data-and-ai" ;;
+      "compute") layer_dir_name="05-compute" ;;
+      "applications") layer_dir_name="06-applications" ;;
+    esac
+
+    if [[ -d "${PROJECT_ROOT}/${layer_dir_name}/terraform" ]]; then
+      echo -e "${BLUE}🔍 Validating layer: ${layer}${NC}"
+
+      # Try to validate with sbx environment first, then dev
+      if "$VALIDATE_SCRIPT" "$layer" "sbx" 2>/dev/null; then
+        echo -e "${GREEN}✅ Layer ${layer} (sbx) validation passed${NC}"
+        VALIDATED_LAYERS+=("$layer")
+      elif "$VALIDATE_SCRIPT" "$layer" "dev" 2>/dev/null; then
+        echo -e "${GREEN}✅ Layer ${layer} (dev) validation passed${NC}"
+        VALIDATED_LAYERS+=("$layer")
+      else
+        echo -e "${RED}❌ Layer ${layer} validation failed${NC}"
+        VALIDATION_FAILED=true
+      fi
+    else
+      echo -e "${YELLOW}⏭️  Skipping layer ${layer} (directory not found)${NC}"
+    fi
+  done
+
+  if [[ ${#VALIDATED_LAYERS[@]} -eq 0 ]]; then
+    echo -e "${YELLOW}⚠️  No layers found to validate, allowing push${NC}"
+  elif [[ "$VALIDATION_FAILED" == true ]]; then
+    echo -e "${RED}❌ Pre-push validation failed. Please fix the issues and try again.${NC}"
+    echo -e "${YELLOW}💡 Tip: Run './scripts/validate.sh <layer> <env>' manually to debug${NC}"
+    exit 1
+  else
+    echo -e "${GREEN}✅ All pre-push validations passed! (${#VALIDATED_LAYERS[@]} layers validated)${NC}"
+  fi
+
+done
+
+exit 0

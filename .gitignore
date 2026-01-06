@@ -51,6 +51,8 @@ common.auto.tfvars
 
 # Deployment scripts with sensitive credentials
 scripts/deploy-with-acr.sh
+scripts/setup-ssh-keys.sh
+scripts/setup-remote-ssh.sh
 
 # Documentation files (keep local, don't track)
 *.md
