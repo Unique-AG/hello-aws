@@ -27,7 +27,7 @@ cloudwatch_log_retention_days = 7
 # Bastion and Management Server Configuration (sandbox environment)
 enable_ssm_endpoints            = true
 enable_management_server        = true
-management_server_public_access = false # Use Session Manager for access
+management_server_public_access = false       # Use Session Manager for access
 management_server_instance_type = "t3.medium" # Upgraded from t3.micro for better performance (4 GB RAM vs 1 GB)
 management_server_disk_size     = 30
 management_server_monitoring    = false

@@ -42,7 +42,7 @@ resource "aws_vpc" "main" {
 # No custom DNS servers needed - AWS DNS provides both internal and external resolution
 resource "aws_vpc_dhcp_options" "main" {
   domain_name         = "eu-central-2.compute.internal"
-  domain_name_servers = ["AmazonProvidedDNS"]  # AWS DNS resolver (VPC base IP + 2)
+  domain_name_servers = ["AmazonProvidedDNS"] # AWS DNS resolver (VPC base IP + 2)
 
   tags = merge(
     local.tags,

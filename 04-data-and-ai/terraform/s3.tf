@@ -69,8 +69,8 @@ resource "aws_s3_bucket_policy" "application_data_vpc_only" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "DenyDataAccessExceptVpcEndpoint"
-        Effect = "Deny"
+        Sid       = "DenyDataAccessExceptVpcEndpoint"
+        Effect    = "Deny"
         Principal = "*"
         # Only deny data operations, not management operations
         # This allows Terraform and IAM users to manage bucket policies
@@ -195,8 +195,8 @@ resource "aws_s3_bucket_policy" "ai_data_vpc_only" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid    = "DenyDataAccessExceptVpcEndpoint"
-        Effect = "Deny"
+        Sid       = "DenyDataAccessExceptVpcEndpoint"
+        Effect    = "Deny"
         Principal = "*"
         # Only deny data operations, not management operations
         # This allows Terraform and IAM users to manage bucket policies
