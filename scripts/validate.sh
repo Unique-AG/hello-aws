@@ -13,13 +13,15 @@ set -euo pipefail
 # 5. Secrets scanning (trivy)
 #
 # Usage:
-#   ./scripts/validate.sh [layer] [environment]
+#   ./scripts/validate.sh [layer] [environment] [skip_init]
+#
+# Options:
+#   skip_init: Set to "true" to skip Terraform initialization and only run linting/security checks
 #
 # Examples:
-#   ./scripts/validate.sh governance sbx
-#   ./scripts/validate.sh governance dev
-#   ./scripts/validate.sh infrastructure prod
-#   ./scripts/validate.sh bootstrap sbx
+#   ./scripts/validate.sh governance sbx                    # Full validation (requires infrastructure)
+#   ./scripts/validate.sh governance sbx true              # Lint-only mode (no infrastructure needed)
+#   ./scripts/validate.sh infrastructure prod true         # Lint-only mode for production
 #######################################
 
 # Get the script directory and project root
@@ -36,6 +38,7 @@ NC='\033[0m' # No Color
 # Parse arguments
 LAYER="${1:-}"
 ENV="${2:-dev}"
+SKIP_INIT="${3:-false}"
 
 # Validate arguments
 if [[ -z "$LAYER" ]]; then
@@ -182,56 +185,81 @@ echo -e "${BLUE}Config File: environments/${ENV}/00-config.auto.tfvars${NC}"
 echo -e "${BLUE}Backend Config: environments/${ENV}/backend-config.hcl${NC}"
 echo ""
 
-#######################################
-# Step 1: Initialize Terraform
-#######################################
-echo -e "${YELLOW}📦 Step 1: Initializing Terraform...${NC}"
+if [[ "$SKIP_INIT" != "true" ]]; then
+  #######################################
+  # Step 1: Initialize Terraform
+  #######################################
+  echo -e "${YELLOW}📦 Step 1: Initializing Terraform...${NC}"
 
-INIT_ARGS=()
-if [[ -f "$BACKEND_CONFIG" ]]; then
-  INIT_ARGS+=("-backend-config=${BACKEND_CONFIG}")
-fi
+  INIT_ARGS=()
+  if [[ -f "$BACKEND_CONFIG" ]]; then
+    INIT_ARGS+=("-backend-config=${BACKEND_CONFIG}")
+  fi
 
-if terraform init "${INIT_ARGS[@]}" > /dev/null 2>&1; then
-  echo -e "${GREEN}✅ Terraform initialized${NC}"
-else
-  echo -e "${RED}❌ Failed to initialize Terraform${NC}"
-  echo -e "${YELLOW}   Running init with verbose output...${NC}"
-  terraform init "${INIT_ARGS[@]}"
-  exit 1
-fi
-echo ""
-
-#######################################
-# Step 2: Validate Configuration
-#######################################
-echo -e "${YELLOW}✅ Step 2: Validating Terraform configuration...${NC}"
-
-if terraform validate; then
-  echo -e "${GREEN}✅ Configuration is valid${NC}"
-else
-  echo -e "${RED}❌ Configuration validation failed${NC}"
-  exit 1
-fi
-echo ""
-
-#######################################
-# Step 3: Format Check
-#######################################
-echo -e "${YELLOW}🎨 Step 3: Checking code formatting...${NC}"
-
-UNFORMATTED_FILES=$(terraform fmt -check -recursive 2>&1 || true)
-if [[ -z "$UNFORMATTED_FILES" ]]; then
-  echo -e "${GREEN}✅ All files are properly formatted${NC}"
-else
-  echo -e "${RED}❌ Some files are not properly formatted:${NC}"
-  echo "$UNFORMATTED_FILES"
+  if terraform init "${INIT_ARGS[@]}" > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Terraform initialized${NC}"
+  else
+    echo -e "${RED}❌ Failed to initialize Terraform${NC}"
+    echo -e "${YELLOW}   Running init with verbose output...${NC}"
+    terraform init "${INIT_ARGS[@]}"
+    exit 1
+  fi
   echo ""
-  echo -e "${YELLOW}   To fix formatting, run:${NC}"
-  echo -e "${YELLOW}   terraform fmt -recursive${NC}"
-  exit 1
+
+  #######################################
+  # Step 2: Validate Configuration
+  #######################################
+  echo -e "${YELLOW}✅ Step 2: Validating Terraform configuration...${NC}"
+
+  if terraform validate; then
+    echo -e "${GREEN}✅ Configuration is valid${NC}"
+  else
+    echo -e "${RED}❌ Configuration validation failed${NC}"
+    exit 1
+  fi
+  echo ""
+
+  #######################################
+  # Step 3: Format Check
+  #######################################
+  echo -e "${YELLOW}🎨 Step 3: Checking code formatting...${NC}"
+
+  UNFORMATTED_FILES=$(terraform fmt -check -recursive 2>&1 || true)
+  if [[ -z "$UNFORMATTED_FILES" ]]; then
+    echo -e "${GREEN}✅ All files are properly formatted${NC}"
+  else
+    echo -e "${RED}❌ Some files are not properly formatted:${NC}"
+    echo "$UNFORMATTED_FILES"
+    echo ""
+    echo -e "${YELLOW}   To fix formatting, run:${NC}"
+    echo -e "${YELLOW}   terraform fmt -recursive${NC}"
+    exit 1
+  fi
+  echo ""
 fi
-echo ""
+
+if [[ "$SKIP_INIT" == "true" ]]; then
+  echo -e "${BLUE}⏭️  Skipping Terraform initialization (lint-only mode)${NC}"
+  echo ""
+
+  #######################################
+  # Step 1: Format Check (always run)
+  #######################################
+  echo -e "${YELLOW}🎨 Step 1: Checking code formatting...${NC}"
+
+  UNFORMATTED_FILES=$(terraform fmt -check -recursive 2>&1 || true)
+  if [[ -z "$UNFORMATTED_FILES" ]]; then
+    echo -e "${GREEN}✅ All files are properly formatted${NC}"
+  else
+    echo -e "${RED}❌ Some files are not properly formatted:${NC}"
+    echo "$UNFORMATTED_FILES"
+    echo ""
+    echo -e "${YELLOW}   To fix formatting, run:${NC}"
+    echo -e "${YELLOW}   terraform fmt -recursive${NC}"
+    exit 1
+  fi
+  echo ""
+fi
 
 #######################################
 # Step 4: Advanced Linting (tflint)

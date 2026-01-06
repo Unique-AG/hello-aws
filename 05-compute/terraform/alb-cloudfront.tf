@@ -104,10 +104,10 @@ resource "aws_lb" "cloudfront" {
   # Attach CloudFront security group (allows CloudFront traffic)
   # Note: We don't attach the Kong NLB security group to avoid hitting security group rules limit
   security_groups = [aws_security_group.alb_cloudfront[0].id]
-  subnets = local.infrastructure.private_subnet_ids
+  subnets         = local.infrastructure.private_subnet_ids
 
-  enable_deletion_protection = false
-  enable_http2              = true
+  enable_deletion_protection       = false
+  enable_http2                     = true
   enable_cross_zone_load_balancing = true
 
   # Access logs (optional - can be enabled later)
@@ -215,7 +215,7 @@ resource "aws_lb_listener" "cloudfront_https" {
   port              = "443"
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-  
+
   # Use default certificate for now (can be updated to use ACM certificate later)
   # For CloudFront VPC Origin, the ALB certificate is validated separately
   default_action {

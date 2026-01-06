@@ -15,6 +15,7 @@ title = "Hello AWS Secret Detection"
     '''.*zitadel-extra-manifests\.yaml$''',   # Contains legitimate CA certificates
     '''.*terraform\.tfstate\.backup''',       # Terraform state backups
     '''gitleaks-config\.toml''',              # Gitleaks config file itself
+    '''scripts/gitleaks-config\.toml''',      # Gitleaks config file itself
   ]
   paths = [
     '''node_modules''',

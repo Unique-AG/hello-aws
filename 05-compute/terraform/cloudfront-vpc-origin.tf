@@ -60,7 +60,7 @@ locals {
       data.aws_lb.alb_details[0].dns_name, null
     ) : null
   )
-  
+
   # Only create VPC origin if ALB ARN is available
   # Priority: CloudFront ALB > Override ARN > Auto-discovery
   should_create_vpc_origin = local.internal_alb_arn != null

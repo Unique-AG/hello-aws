@@ -11,7 +11,7 @@
 # for environments where DNS resolution to OIDC endpoint is restricted
 resource "aws_iam_openid_connect_provider" "eks" {
   client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["06b25927c42a721631c1efd9431e648fa62e1e39"]  # AWS EKS standard thumbprint
+  thumbprint_list = ["06b25927c42a721631c1efd9431e648fa62e1e39"] # AWS EKS standard thumbprint
   url             = aws_eks_cluster.main.identity[0].oidc[0].issuer
 
   tags = merge(local.tags, {
@@ -57,8 +57,8 @@ resource "aws_eks_cluster" "main" {
     endpoint_public_access  = var.eks_endpoint_public_access
     # Only set public_access_cidrs if public access is enabled
     # AWS requires this to be empty list when public access is disabled
-    public_access_cidrs     = var.eks_endpoint_public_access ? var.eks_endpoint_public_access_cidrs : []
-    security_group_ids      = [aws_security_group.eks_cluster.id]
+    public_access_cidrs = var.eks_endpoint_public_access ? var.eks_endpoint_public_access_cidrs : []
+    security_group_ids  = [aws_security_group.eks_cluster.id]
   }
 
   # Prevent unnecessary updates when cluster is already at desired state
