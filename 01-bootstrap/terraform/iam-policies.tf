@@ -18,19 +18,22 @@ data "aws_iam_policy_document" "github_actions_terraform_state" {
     ]
   }
 
-  statement {
-    sid    = "KMSStateEncryption"
-    effect = "Allow"
+  dynamic "statement" {
+    for_each = var.enable_server_side_encryption ? [1] : []
+    content {
+      sid    = "KMSStateEncryption"
+      effect = "Allow"
 
-    actions = [
-      "kms:Decrypt",
-      "kms:GenerateDataKey",
-      "kms:DescribeKey",
-    ]
+      actions = [
+        "kms:Decrypt",
+        "kms:GenerateDataKey",
+        "kms:DescribeKey",
+      ]
 
-    resources = [
-      var.enable_server_side_encryption ? aws_kms_key.terraform_state[0].arn : "*",
-    ]
+      resources = [
+        aws_kms_key.terraform_state[0].arn,
+      ]
+    }
   }
 }
 
