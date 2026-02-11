@@ -1,0 +1,35 @@
+#######################################
+# Common Configuration - Shared Across All Layers
+#######################################
+#
+# This file contains common configuration values used across all layers.
+# Each layer's deploy script passes this file alongside the environment-
+# specific configuration:
+#
+#   terraform plan \
+#     -var-file=../../common.auto.tfvars \
+#     -var-file=environments/sbx/00-config.auto.tfvars
+#
+# IMPORTANT: Copy this template to common.auto.tfvars and fill in your
+# values before running the bootstrap layer.
+#
+#   cp common.auto.tfvars.template common.auto.tfvars
+#
+#######################################
+
+# AWS Configuration
+aws_region     = "eu-central-2"  # Your AWS region
+aws_account_id = null            # Auto-detected; set explicitly for deterministic plans in CI/CD
+
+# Organization identifiers
+org         = "dogfood"  # Your organization name (lowercase, used in tags)
+org_moniker = "df"       # Short form for resource names (2-10 chars)
+
+# Product identifiers
+product      = "unique"      # Your product/project name (lowercase, used in resource names)
+product_name = "Unique AI"   # Your product/project full name (used in tags and display)
+
+# Governance tracking
+# This should be injected by CI/CD from git tags, not maintained manually.
+# e.g., -var="semantic_version=$(git describe --tags --abbrev=0)"
+semantic_version = "0.0.0"
