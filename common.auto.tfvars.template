@@ -26,8 +26,9 @@ org         = "dogfood"  # Your organization name (lowercase, used in tags)
 org_moniker = "df"       # Short form for resource names (2-10 chars)
 
 # Product identifiers
-product      = "unique"      # Your product/project name (lowercase, used in resource names)
-product_name = "Unique AI"   # Your product/project full name (used in tags and display)
+product         = "unique"      # Full product name (lowercase, used in tags)
+product_moniker = "uq"          # Short form for resource names (2-10 chars)
+product_name    = "Unique AI"   # Display name (used in documentation)
 
 # Governance tracking
 # This should be injected by CI/CD from git tags, not maintained manually.

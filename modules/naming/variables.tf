@@ -19,18 +19,28 @@ variable "org_moniker" {
   default     = "df"
 
   validation {
-    condition = length(var.org_moniker) >= 2 && length(var.org_moniker) <= 10 && can(regex("^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]+$", var.org_moniker)) && !can(regex("--", var.org_moniker))
+    condition     = length(var.org_moniker) >= 2 && length(var.org_moniker) <= 10 && can(regex("^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]+$", var.org_moniker)) && !can(regex("--", var.org_moniker))
     error_message = "org_moniker must be 2-10 characters, lowercase alphanumeric with hyphens, start with letter, end with alphanumeric, no consecutive hyphens"
   }
 }
 
 variable "product" {
-  description = "Product identifier"
+  description = "Product identifier (for display and tags)"
   type        = string
 
   validation {
     condition     = can(regex("^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]$", var.product)) && !can(regex("--", var.product))
     error_message = "product must be lowercase alphanumeric with hyphens, start with letter, end with alphanumeric, no consecutive hyphens"
+  }
+}
+
+variable "product_moniker" {
+  description = "Product moniker for resource names (shortened version of product)"
+  type        = string
+
+  validation {
+    condition     = length(var.product_moniker) >= 2 && length(var.product_moniker) <= 10 && can(regex("^[a-z][a-z0-9-]*[a-z0-9]$|^[a-z]+$", var.product_moniker)) && !can(regex("--", var.product_moniker))
+    error_message = "product_moniker must be 2-10 characters, lowercase alphanumeric with hyphens, start with letter, end with alphanumeric, no consecutive hyphens"
   }
 }
 
