@@ -53,6 +53,10 @@ title = "Hello AWS Secret Detection"
   description = "Private Key"
   regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
   tags = ["key", "private"]
+  [rules.allowlist]
+    paths = [
+      '''gitleaks-config\.toml''',
+    ]
 
 [[rules]]
   id = "certificate"
@@ -60,8 +64,8 @@ title = "Hello AWS Secret Detection"
   regex = '''-----BEGIN CERTIFICATE-----'''
   tags = ["certificate"]
   [rules.allowlist]
-    commits = [
-      '''2d31ad093affa04352d90338e23da60556228018''',  # Legitimate CA certificates for Azure PostgreSQL
+    paths = [
+      '''gitleaks-config\.toml''',
     ]
 
 [[rules]]
@@ -69,6 +73,10 @@ title = "Hello AWS Secret Detection"
   description = "SSH Private Key"
   regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
   tags = ["ssh", "key", "private"]
+  [rules.allowlist]
+    paths = [
+      '''gitleaks-config\.toml''',
+    ]
 
 [[rules]]
   id = "rsa-private-key"
@@ -118,8 +126,8 @@ title = "Hello AWS Secret Detection"
   regex = '''(?i)(database.*password|db.*password|redis.*password)[=:][\s"']*([^;\s]{8,})'''
   tags = ["database", "password"]
   [rules.allowlist]
-    commits = [
-      '''d9eefb65860c6eec07b01943faa6dc194d6cf8b6''',  # Same commit, different hash from backup branch
+    paths = [
+      '''gitleaks-config\.toml''',
     ]
 
 [[rules]]
@@ -139,6 +147,10 @@ title = "Hello AWS Secret Detection"
   description = "Terraform Secret Variable"
   regex = '''(?i)(secret|token|key|password|access_key|secret_key)[_]*[=:]\s*["']([^"'\s]{8,})["']'''
   tags = ["terraform", "secret"]
+  [rules.allowlist]
+    paths = [
+      '''\.md$''',                   # Placeholder values in documentation
+    ]
 
 [[rules]]
   id = "high-entropy-secret"
@@ -146,6 +158,11 @@ title = "Hello AWS Secret Detection"
   regex = '''[A-Za-z0-9+/]{32,}'''
   entropy = 4.5
   tags = ["high-entropy", "secret"]
+  [rules.allowlist]
+    paths = [
+      '''\.md$''',                   # Docs covered by docs-high-entropy-only rule
+      '''\.txt$''',                  # Docs covered by docs-high-entropy-only rule
+    ]
 
 [[rules]]
   id = "docs-high-entropy-only"
