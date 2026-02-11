@@ -1,0 +1,159 @@
+# Gitleaks Configuration for Hello AWS Repository
+# This configuration defines rules for detecting secrets in the codebase
+
+title = "Hello AWS Secret Detection"
+
+[allowlist]
+  description = "Allowlisted files and paths"
+  files = [
+    '''^scripts/.*''',                        # All scripts (deployment, validation, etc.)
+    '''^.*\.example$''',                      # Example files
+    '''^.*\.template$''',                     # Template files
+    '''^\.gitignore$''',                      # Git ignore file
+    '''.*zitadel-extra-manifests\.yaml$''',   # Contains legitimate CA certificates
+    '''.*terraform\.tfstate\.backup''',       # Terraform state backups
+    '''gitleaks-config\.toml''',              # Gitleaks config file itself
+    '''scripts/gitleaks-config\.toml''',      # Gitleaks config file itself
+  ]
+  regexes = [
+    '''-----BEGIN [A-Z ]*PRIVATE KEY-----''',  # Private key patterns in config
+    '''-----BEGIN CERTIFICATE-----''',         # Certificate patterns in config
+    '''-----BEGIN PGP PRIVATE KEY BLOCK-----''', # PGP key patterns in config
+  ]
+  paths = [
+    '''node_modules''',
+    '''\.terraform''',
+    '''\.git''',
+    '''vendor''',
+    '''dist''',
+    '''build''',
+    '''docs''',                               # Documentation directory
+  ]
+
+[[rules]]
+  id = "aws-access-key"
+  description = "AWS Access Key"
+  regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+  tags = ["aws", "key"]
+
+[[rules]]
+  id = "aws-secret-key"
+  description = "AWS Secret Key"
+  regex = '''(?i)aws_secret_access_key[=:][\s"']*([A-Za-z0-9+/]{40})'''
+  tags = ["aws", "secret"]
+
+[[rules]]
+  id = "aws-session-token"
+  description = "AWS Session Token"
+  regex = '''(?i)aws_session_token[=:][\s"']*([A-Za-z0-9+/]{260,400})'''
+  tags = ["aws", "token"]
+
+[[rules]]
+  id = "private-key"
+  description = "Private Key"
+  regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
+  tags = ["key", "private"]
+
+[[rules]]
+  id = "certificate"
+  description = "Certificate"
+  regex = '''-----BEGIN CERTIFICATE-----'''
+  tags = ["certificate"]
+  [rules.allowlist]
+    commits = [
+      '''2d31ad093affa04352d90338e23da60556228018''',  # Legitimate CA certificates for Azure PostgreSQL
+    ]
+
+[[rules]]
+  id = "ssh-private-key"
+  description = "SSH Private Key"
+  regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
+  tags = ["ssh", "key", "private"]
+
+[[rules]]
+  id = "rsa-private-key"
+  description = "RSA Private Key"
+  regex = '''-----BEGIN RSA PRIVATE KEY-----'''
+  tags = ["rsa", "key", "private"]
+
+[[rules]]
+  id = "pgp-private-key"
+  description = "PGP Private Key"
+  regex = '''-----BEGIN PGP PRIVATE KEY BLOCK-----'''
+  tags = ["pgp", "key", "private"]
+
+[[rules]]
+  id = "github-token"
+  description = "GitHub Personal Access Token"
+  regex = '''ghp_[A-Za-z0-9]{36}'''
+  tags = ["github", "token"]
+
+[[rules]]
+  id = "github-oauth"
+  description = "GitHub OAuth Access Token"
+  regex = '''gho_[A-Za-z0-9]{36}'''
+  tags = ["github", "oauth"]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API Key"
+  regex = '''(?i)(api[_-]?key|apikey)[=:][\s"']*([A-Za-z0-9_-]{20,})'''
+  tags = ["api", "key"]
+
+[[rules]]
+  id = "slack-token"
+  description = "Slack Token"
+  regex = '''xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24,34}'''
+  tags = ["slack", "token"]
+
+[[rules]]
+  id = "stripe-key"
+  description = "Stripe API Key"
+  regex = '''(?i)sk_live_[0-9a-zA-Z]{24}'''
+  tags = ["stripe", "key", "secret"]
+
+[[rules]]
+  id = "database-password"
+  description = "Database Password"
+  regex = '''(?i)(database.*password|db.*password|redis.*password)[=:][\s"']*([^;\s]{8,})'''
+  tags = ["database", "password"]
+  [rules.allowlist]
+    commits = [
+      '''d9eefb65860c6eec07b01943faa6dc194d6cf8b6''',  # Same commit, different hash from backup branch
+    ]
+
+[[rules]]
+  id = "jwt-token"
+  description = "JWT Token"
+  regex = '''eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+  tags = ["jwt", "token"]
+
+[[rules]]
+  id = "hardcoded-password"
+  description = "Hardcoded Password"
+  regex = '''(?i)password[=:][\s"']*(admin|root|password|123456|qwerty)'''
+  tags = ["password", "hardcoded"]
+
+[[rules]]
+  id = "terraform-secret"
+  description = "Terraform Secret Variable"
+  regex = '''(?i)(secret|token|key|password|access_key|secret_key)[_]*[=:]\s*["']([^"'\s]{8,})["']'''
+  tags = ["terraform", "secret"]
+
+[[rules]]
+  id = "high-entropy-secret"
+  description = "High Entropy Secret (very random strings)"
+  regex = '''[A-Za-z0-9+/]{32,}'''
+  entropy = 4.5
+  tags = ["high-entropy", "secret"]
+
+[[rules]]
+  id = "docs-high-entropy-only"
+  description = "Very High Entropy Only in Documentation"
+  regex = '''[A-Za-z0-9+/]{40,}'''
+  entropy = 5.0
+  tags = ["documentation", "high-entropy", "secret"]
+  paths = [
+    '''\.md$''',     # Apply to all .md files
+    '''\.txt$''',    # Apply to all .txt files
+  ]
