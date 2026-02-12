@@ -244,7 +244,14 @@ alert_email_endpoints = ["ops@example.com"]
 enable_ssm_endpoints            = true
 enable_secrets_manager_endpoint = true
 enable_bedrock_endpoint         = true
+
+# Route 53 Private Hosted Zone (uncomment and set before deploying)
+# These values come from your landing zone or connectivity account
+# route53_private_zone_domain = "sbx.example.com"
+# route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
 ```
+
+> **Note**: The Route 53 private zone values (`route53_private_zone_domain` and `route53_private_zone_id`) are commented out by default. If your deployment uses a Route 53 Private Hosted Zone (e.g., from a connectivity account in a hub-and-spoke topology), uncomment and set these values in `environments/{env}/00-config.auto.tfvars` before deploying. Without them, the VPC association with the private hosted zone is skipped.
 
 ### Deployment Steps
 
