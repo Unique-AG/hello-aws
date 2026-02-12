@@ -219,6 +219,7 @@ After the bootstrap layer is deployed, deploy the remaining layers in order:
    ```bash
    ./scripts/deploy.sh infrastructure sbx
    ```
+   > **Note**: Before deploying, set the Route 53 private zone values in `03-infrastructure/terraform/environments/{env}/00-config.auto.tfvars` if your deployment uses a Private Hosted Zone. See the [infrastructure layer README](./03-infrastructure/README.md#configuration) for details.
 
 3. **Data and AI Layer** (`04-data-and-ai`):
    ```bash
@@ -287,7 +288,7 @@ Each layer has comprehensive documentation covering design rationale, security p
   - Operational excellence practices
 
 - **[03-infrastructure](./03-infrastructure/README.md)**: Networking and foundational infrastructure
-  - Three-tier subnet architecture (public, private, isolated)
+  - Four-tier subnet architecture (public, private, isolated, GitHub runners)
   - VPC endpoints for private AWS service access
   - Management server with Session Manager
   - Network security and encryption
