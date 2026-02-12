@@ -1,6 +1,6 @@
 # IAM user with static S3 credentials for the chat service
 # The chat service's S3BucketStrategy requires explicit access keys rather than IRSA
-# Credentials are stored in Secrets Manager for retrieval via ExternalSecrets
+# Access key is created by .scripts/seed-secrets.sh (not in Terraform to avoid secrets in state)
 
 resource "aws_iam_user" "s3_access" {
   name = "iam-user-${module.naming.id}-s3-access"
@@ -53,11 +53,8 @@ resource "aws_iam_user_policy" "s3_access" {
   policy = data.aws_iam_policy_document.s3_access.json
 }
 
-resource "aws_iam_access_key" "s3_access" {
-  user = aws_iam_user.s3_access.name
-}
-
-# S3 Access Credentials in Secrets Manager
+# S3 Access Credential Containers in Secrets Manager
+# Access key values populated by .scripts/seed-secrets.sh
 
 resource "aws_secretsmanager_secret" "s3_access_key_id" {
   name                    = var.s3_access_key_id_secret_name
@@ -66,11 +63,6 @@ resource "aws_secretsmanager_secret" "s3_access_key_id" {
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = merge(local.tags, { Name = var.s3_access_key_id_secret_name, Purpose = "s3-credentials" })
-}
-
-resource "aws_secretsmanager_secret_version" "s3_access_key_id" {
-  secret_id     = aws_secretsmanager_secret.s3_access_key_id.id
-  secret_string = aws_iam_access_key.s3_access.id
 }
 
 resource "aws_secretsmanager_secret" "s3_secret_access_key" {
@@ -82,10 +74,7 @@ resource "aws_secretsmanager_secret" "s3_secret_access_key" {
   tags = merge(local.tags, { Name = var.s3_secret_access_key_secret_name, Purpose = "s3-credentials" })
 }
 
-resource "aws_secretsmanager_secret_version" "s3_secret_access_key" {
-  secret_id     = aws_secretsmanager_secret.s3_secret_access_key.id
-  secret_string = aws_iam_access_key.s3_access.secret
-}
+# S3 Config — infrastructure facts (Terraform-managed values)
 
 resource "aws_secretsmanager_secret" "s3_endpoint" {
   name                    = var.s3_endpoint_secret_name
