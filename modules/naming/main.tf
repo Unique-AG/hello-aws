@@ -59,7 +59,7 @@ locals {
     "eu-west-3"      = "euw3"
     "eu-central-1"   = "euc1"
     "eu-central-2"   = "euc2"
-    "ap-southeast-1"  = "apse1"
+    "ap-southeast-1" = "apse1"
     "ap-southeast-2" = "apse2"
     "ap-northeast-1" = "apne1"
     "ap-northeast-2" = "apne2"
@@ -73,18 +73,16 @@ locals {
     replace(replace(replace(local.region, "-", ""), "north", "n"), "south", "s")
   )
 
-  # Base name parts: df-unique-sbx-euc2
   base_parts = compact([
     var.org_moniker,
-    var.product,
+    var.product_moniker,
     var.environment,
     local.region_code
   ])
 
-  # Short name parts: df-unique-x-euc2
   short_parts = compact([
     var.org_moniker,
-    var.product,
+    var.product_moniker,
     local.env_short[var.environment],
     local.region_code
   ])
@@ -150,7 +148,7 @@ locals {
   # CloudWatch Log Group: 512 chars max
   # Format: /{org_moniker}/{product}/{environment}
   # Note: Layer is tracked via tags, not in the log group path
-  log_group_prefix = "/${var.org_moniker}/${var.product}/${var.environment}"
+  log_group_prefix = "/${var.org_moniker}/${var.product_moniker}/${var.environment}"
 
   #─────────────────────────────────────
   # Tags
@@ -158,15 +156,15 @@ locals {
 
   # Required tags (always present)
   required_tags = {
-    "org:Name"              = var.org
-    "product:Id"            = var.product
-    "product:Environment"   = var.environment
-    "layer:Name"            = var.layer
+    "org:Name"                   = var.org
+    "product:Id"                 = var.product
+    "product:Environment"        = var.environment
+    "layer:Name"                 = var.layer
     "governance:SemanticVersion" = var.semantic_version
-    "automation:ManagedBy"  = "terraform"
-    "automation:Pipeline"   = var.pipeline
-    "cost:CostCenter"       = "product-${var.product}"
-    "cost:Project"          = var.product
+    "automation:ManagedBy"       = "terraform"
+    "automation:Pipeline"        = var.pipeline
+    "cost:CostCenter"            = "product-${var.product}"
+    "cost:Project"               = var.product
   }
 
   # Optional tags (only included when the variable is set)
