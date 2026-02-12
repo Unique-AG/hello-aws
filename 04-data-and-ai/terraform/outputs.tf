@@ -223,3 +223,8 @@ output "bedrock_available_models" {
   description = "List of available Amazon Bedrock foundation models"
   value       = data.aws_bedrock_foundation_models.available.model_summaries[*].model_id
 }
+
+output "bedrock_inference_profile_arns" {
+  description = "Map of application inference profile names to their ARNs"
+  value       = { for k, v in aws_bedrock_inference_profile.this : k => v.arn }
+}
