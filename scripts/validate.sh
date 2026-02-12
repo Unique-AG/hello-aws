@@ -194,12 +194,12 @@ if [[ "$SKIP_INIT" != "true" ]]; then
     INIT_ARGS+=("-backend-config=${BACKEND_CONFIG}")
   fi
 
-  if terraform init "${INIT_ARGS[@]}" > /dev/null 2>&1; then
+  if terraform init ${INIT_ARGS[@]+"${INIT_ARGS[@]}"} > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Terraform initialized${NC}"
   else
     echo -e "${RED}❌ Failed to initialize Terraform${NC}"
     echo -e "${YELLOW}   Running init with verbose output...${NC}"
-    terraform init "${INIT_ARGS[@]}"
+    terraform init ${INIT_ARGS[@]+"${INIT_ARGS[@]}"}
     exit 1
   fi
   echo ""
@@ -316,7 +316,18 @@ fi
 if [[ "$TRIVY_AVAILABLE" == "true" ]]; then
   echo -e "${YELLOW}🔒 Step 6: Running trivy IaC security scan...${NC}"
 
-  if trivy fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0 "$TERRAFORM_DIR"; then
+  # shellcheck disable=SC2054
+  TRIVY_ARGS=(fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0)
+  # Pass tfvars so trivy can resolve variables (avoids null-value panics in adaptDefaultTags)
+  if [[ -f "$COMMON_CONFIG" ]]; then
+    TRIVY_ARGS+=(--tf-vars "$COMMON_CONFIG")
+  fi
+  if [[ -f "$CONFIG_FILE" ]]; then
+    TRIVY_ARGS+=(--tf-vars "$CONFIG_FILE")
+  fi
+  TRIVY_ARGS+=("$TERRAFORM_DIR")
+
+  if trivy "${TRIVY_ARGS[@]}"; then
     echo -e "${GREEN}✅ trivy passed (no HIGH/CRITICAL misconfigurations)${NC}"
   else
     echo -e "${YELLOW}⚠️  trivy found security issues (non-blocking)${NC}"
