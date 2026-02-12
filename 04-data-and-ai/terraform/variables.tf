@@ -92,7 +92,6 @@ variable "bedrock_inference_profiles" {
     # Swiss-local foundation models (run natively in eu-central-2, no cross-region)
     "claude-3-5-sonnet"   = { model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0", source_type = "foundation-model" }
     "claude-3-haiku"      = { model_id = "anthropic.claude-3-haiku-20240307-v1:0", source_type = "foundation-model" }
-    "cohere-embed-v4"     = { model_id = "cohere.embed-v4:0", source_type = "foundation-model" }
     "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
   }
 }

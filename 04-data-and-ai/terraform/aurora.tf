@@ -50,15 +50,16 @@ resource "aws_security_group" "aurora" {
 
 # Aurora PostgreSQL Cluster
 resource "aws_rds_cluster" "postgres" {
-  cluster_identifier           = "aurora-${module.naming.id}-postgres"
-  engine                       = "aurora-postgresql"
-  engine_version               = var.aurora_engine_version
-  database_name                = var.aurora_database_name
-  master_username              = "dbadmin"
-  master_password              = random_password.postgres_password.result
-  backup_retention_period      = var.aurora_backup_retention_period
-  preferred_backup_window      = var.aurora_preferred_backup_window
-  preferred_maintenance_window = var.aurora_preferred_maintenance_window
+  cluster_identifier            = "aurora-${module.naming.id}-postgres"
+  engine                        = "aurora-postgresql"
+  engine_version                = var.aurora_engine_version
+  database_name                 = var.aurora_database_name
+  master_username               = "dbadmin"
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = local.infrastructure.kms_key_secrets_manager_arn
+  backup_retention_period       = var.aurora_backup_retention_period
+  preferred_backup_window       = var.aurora_preferred_backup_window
+  preferred_maintenance_window  = var.aurora_preferred_maintenance_window
 
   db_subnet_group_name            = aws_db_subnet_group.main.name
   vpc_security_group_ids          = [aws_security_group.aurora.id]

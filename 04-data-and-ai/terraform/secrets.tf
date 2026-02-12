@@ -1,16 +1,14 @@
-# Generated Credentials
+# Secrets Manager
+#
+# Hybrid approach:
+#   - Infrastructure facts (endpoints, ports, bucket names, etc.) are managed as
+#     aws_secretsmanager_secret_version by Terraform — always in sync, not sensitive.
+#   - Generated credentials (passwords, encryption keys, access keys) are populated
+#     by .scripts/seed-secrets.sh after terraform apply — never in Terraform state.
 
-# PostgreSQL Master Password
-resource "random_password" "postgres_password" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-  numeric = true
-}
-
-# PostgreSQL Secrets
+# ---------------------------------------------------------------------------
+# PostgreSQL — infrastructure facts (Terraform-managed values)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "psql_host" {
   name                    = var.psql_host_secret_name
@@ -54,6 +52,10 @@ resource "aws_secretsmanager_secret_version" "psql_username" {
   secret_string = "dbadmin"
 }
 
+# ---------------------------------------------------------------------------
+# PostgreSQL — generated credentials (seed script only, container here)
+# ---------------------------------------------------------------------------
+
 resource "aws_secretsmanager_secret" "psql_password" {
   name                    = var.psql_password_secret_name
   description             = "PostgreSQL master password"
@@ -63,12 +65,9 @@ resource "aws_secretsmanager_secret" "psql_password" {
   tags = merge(local.tags, { Name = var.psql_password_secret_name, Purpose = "database-credentials" })
 }
 
-resource "aws_secretsmanager_secret_version" "psql_password" {
-  secret_id     = aws_secretsmanager_secret.psql_password.id
-  secret_string = random_password.postgres_password.result
-}
-
-# Redis Secrets
+# ---------------------------------------------------------------------------
+# Redis — infrastructure facts (Terraform-managed values)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "redis_host" {
   name                    = var.redis_host_secret_name
@@ -102,15 +101,9 @@ resource "aws_secretsmanager_secret_version" "redis_port" {
   secret_string = "6380"
 }
 
-# Encryption Keys
-
-resource "random_password" "encryption_key_app_repository" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-}
+# ---------------------------------------------------------------------------
+# Encryption Keys — generated credentials (seed script only, containers here)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "encryption_key_app_repository" {
   name                    = var.encryption_key_app_repository_secret_name
@@ -119,18 +112,6 @@ resource "aws_secretsmanager_secret" "encryption_key_app_repository" {
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = merge(local.tags, { Name = var.encryption_key_app_repository_secret_name, Purpose = "encryption-key" })
-}
-
-resource "aws_secretsmanager_secret_version" "encryption_key_app_repository" {
-  secret_id     = aws_secretsmanager_secret.encryption_key_app_repository.id
-  secret_string = random_password.encryption_key_app_repository.result
-}
-
-resource "random_id" "encryption_key_node_chat_lxm" {
-  keepers = {
-    version = "1"
-  }
-  byte_length = 32
 }
 
 resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
@@ -142,18 +123,6 @@ resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
   tags = merge(local.tags, { Name = var.encryption_key_node_chat_lxm_secret_name, Purpose = "encryption-key" })
 }
 
-resource "aws_secretsmanager_secret_version" "encryption_key_node_chat_lxm" {
-  secret_id     = aws_secretsmanager_secret.encryption_key_node_chat_lxm.id
-  secret_string = random_id.encryption_key_node_chat_lxm.hex
-}
-
-resource "random_id" "encryption_key_ingestion" {
-  keepers = {
-    version = "1"
-  }
-  byte_length = 32
-}
-
 resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
   name                    = var.encryption_key_ingestion_secret_name
   description             = "Encryption key for ingestion service"
@@ -163,20 +132,9 @@ resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
   tags = merge(local.tags, { Name = var.encryption_key_ingestion_secret_name, Purpose = "encryption-key" })
 }
 
-resource "aws_secretsmanager_secret_version" "encryption_key_ingestion" {
-  secret_id     = aws_secretsmanager_secret.encryption_key_ingestion.id
-  secret_string = random_id.encryption_key_ingestion.hex
-}
-
-# Zitadel Secrets
-
-resource "random_password" "zitadel_db_user_password" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-}
+# ---------------------------------------------------------------------------
+# Zitadel — generated credentials (seed script only, containers here)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "zitadel_db_user_password" {
   name                    = var.zitadel_db_user_password_secret_name
@@ -187,19 +145,6 @@ resource "aws_secretsmanager_secret" "zitadel_db_user_password" {
   tags = merge(local.tags, { Name = var.zitadel_db_user_password_secret_name, Purpose = "zitadel" })
 }
 
-resource "aws_secretsmanager_secret_version" "zitadel_db_user_password" {
-  secret_id     = aws_secretsmanager_secret.zitadel_db_user_password.id
-  secret_string = random_password.zitadel_db_user_password.result
-}
-
-resource "random_password" "zitadel_master_key" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-}
-
 resource "aws_secretsmanager_secret" "zitadel_master_key" {
   name                    = var.zitadel_master_key_secret_name
   description             = "Zitadel master key"
@@ -207,11 +152,6 @@ resource "aws_secretsmanager_secret" "zitadel_master_key" {
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = merge(local.tags, { Name = var.zitadel_master_key_secret_name, Purpose = "zitadel" })
-}
-
-resource "aws_secretsmanager_secret_version" "zitadel_master_key" {
-  secret_id     = aws_secretsmanager_secret.zitadel_master_key.id
-  secret_string = random_password.zitadel_master_key.result
 }
 
 # Zitadel PAT (placeholder — must be set manually after Zitadel deployment)
@@ -224,24 +164,9 @@ resource "aws_secretsmanager_secret" "zitadel_pat" {
   tags = merge(local.tags, { Name = var.zitadel_pat_secret_name, Purpose = "zitadel" })
 }
 
-resource "aws_secretsmanager_secret_version" "zitadel_pat" {
-  secret_id     = aws_secretsmanager_secret.zitadel_pat.id
-  secret_string = "<TO BE SET MANUALLY>"
-
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
-}
-
-# RabbitMQ Secrets
-
-resource "random_password" "rabbitmq_password_chat" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-}
+# ---------------------------------------------------------------------------
+# RabbitMQ — generated credentials (seed script only, container here)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "rabbitmq_password_chat" {
   name                    = var.rabbitmq_password_chat_secret_name
@@ -252,12 +177,9 @@ resource "aws_secretsmanager_secret" "rabbitmq_password_chat" {
   tags = merge(local.tags, { Name = var.rabbitmq_password_chat_secret_name, Purpose = "rabbitmq" })
 }
 
-resource "aws_secretsmanager_secret_version" "rabbitmq_password_chat" {
-  secret_id     = aws_secretsmanager_secret.rabbitmq_password_chat.id
-  secret_string = random_password.rabbitmq_password_chat.result
-}
-
-# PostgreSQL Database Connection Strings
+# ---------------------------------------------------------------------------
+# PostgreSQL Connection Strings — contain password (seed script only, containers here)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "psql_connection_string" {
   for_each = var.postgresql_databases
@@ -270,22 +192,9 @@ resource "aws_secretsmanager_secret" "psql_connection_string" {
   tags = merge(local.tags, { Name = "psql-connection-string-${each.key}", Purpose = "database-credentials" })
 }
 
-resource "aws_secretsmanager_secret_version" "psql_connection_string" {
-  for_each = var.postgresql_databases
-
-  secret_id     = aws_secretsmanager_secret.psql_connection_string[each.key].id
-  secret_string = "postgresql://dbadmin:${random_password.postgres_password.result}@${aws_rds_cluster.postgres.endpoint}:5432/${each.value.name}"
-}
-
-# LiteLLM Secrets
-
-resource "random_password" "litellm_proxy_master_key" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
-}
+# ---------------------------------------------------------------------------
+# LiteLLM — generated credentials (seed script only, containers here)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "litellm_proxy_master_key" {
   name                    = var.litellm_proxy_master_key_secret_name
@@ -294,19 +203,6 @@ resource "aws_secretsmanager_secret" "litellm_proxy_master_key" {
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = merge(local.tags, { Name = var.litellm_proxy_master_key_secret_name, Purpose = "litellm" })
-}
-
-resource "aws_secretsmanager_secret_version" "litellm_proxy_master_key" {
-  secret_id     = aws_secretsmanager_secret.litellm_proxy_master_key.id
-  secret_string = random_password.litellm_proxy_master_key.result
-}
-
-resource "random_password" "litellm_salt_key" {
-  keepers = {
-    version = "1"
-  }
-  length  = 32
-  special = false
 }
 
 resource "aws_secretsmanager_secret" "litellm_salt_key" {
@@ -318,13 +214,7 @@ resource "aws_secretsmanager_secret" "litellm_salt_key" {
   tags = merge(local.tags, { Name = var.litellm_salt_key_secret_name, Purpose = "litellm" })
 }
 
-resource "aws_secretsmanager_secret_version" "litellm_salt_key" {
-  secret_id     = aws_secretsmanager_secret.litellm_salt_key.id
-  secret_string = random_password.litellm_salt_key.result
-}
-
-# OpenAI endpoint definitions pointing to LiteLLM proxy (Bedrock backend)
-# Required by the chat service's Azure SDK factory at startup
+# OpenAI endpoint definitions — contains LiteLLM master key (seed script only, container here)
 resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
   name                    = var.azure_openai_endpoint_definitions_secret_name
   description             = "OpenAI endpoint definitions pointing to LiteLLM proxy (Bedrock backend)"
@@ -334,24 +224,9 @@ resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
   tags = merge(local.tags, { Name = var.azure_openai_endpoint_definitions_secret_name, Purpose = "litellm" })
 }
 
-resource "aws_secretsmanager_secret_version" "azure_openai_endpoint_definitions" {
-  secret_id = aws_secretsmanager_secret.azure_openai_endpoint_definitions.id
-  secret_string = jsonencode([
-    {
-      endpoint = "http://litellm.unique.svc:4000"
-      key      = random_password.litellm_proxy_master_key.result
-      location = var.aws_region
-      models = [
-        { modelName = "gpt-4o", deploymentName = "gpt-4o", modelVersion = "2024-11-20" },
-        { modelName = "gpt-4o-2024-11-20", deploymentName = "gpt-4o-2024-11-20", modelVersion = "2024-11-20" },
-        { modelName = "gpt-4-turbo", deploymentName = "gpt-4-turbo", modelVersion = "turbo-2024-04-09" },
-        { modelName = "gpt-4-32k", deploymentName = "gpt-4-32k", modelVersion = "0613" },
-      ]
-    }
-  ])
-}
-
-# S3 Bucket Secrets (for workload discovery via ExternalSecrets)
+# ---------------------------------------------------------------------------
+# S3 Bucket Config — infrastructure facts (Terraform-managed values)
+# ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "s3_application_data_bucket" {
   name                    = var.s3_application_data_bucket_secret_name
@@ -409,8 +284,9 @@ resource "aws_secretsmanager_secret_version" "s3_ai_data_bucket_arn" {
   secret_string = aws_s3_bucket.ai_data.arn
 }
 
-# RDS CA Certificate Bundle (for SSL connections to Aurora)
-# Downloaded from: https://truststore.pki.rds.amazonaws.com/{region}/{region}-bundle.pem
+# ---------------------------------------------------------------------------
+# RDS CA Certificate Bundle — public certificate (Terraform-managed value)
+# ---------------------------------------------------------------------------
 
 data "http" "rds_ca_bundle" {
   url = "https://truststore.pki.rds.amazonaws.com/${var.aws_region}/${var.aws_region}-bundle.pem"

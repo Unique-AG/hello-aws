@@ -77,6 +77,11 @@ output "aurora_cluster_database_name" {
   value       = aws_rds_cluster.postgres.database_name
 }
 
+output "aurora_master_user_secret_arn" {
+  description = "ARN of the AWS-managed secret containing the Aurora master user password"
+  value       = try(aws_rds_cluster.postgres.master_user_secret[0].secret_arn, null)
+}
+
 # ElastiCache Redis
 output "elasticache_replication_group_id" {
   description = "ID of the ElastiCache replication group"
@@ -98,113 +103,60 @@ output "elasticache_port" {
   value       = aws_elasticache_replication_group.redis.port
 }
 
-# Secrets Manager — Secret Names
-output "psql_host_secret_name" {
-  description = "Secret name for PostgreSQL host"
-  value       = aws_secretsmanager_secret.psql_host.name
+# IAM
+output "s3_access_iam_user_name" {
+  description = "IAM user name for S3 access key creation"
+  value       = aws_iam_user.s3_access.name
 }
 
-output "psql_port_secret_name" {
-  description = "Secret name for PostgreSQL port"
-  value       = aws_secretsmanager_secret.psql_port.name
+# Region (for seed script)
+output "aws_region" {
+  description = "AWS region where resources are deployed"
+  value       = var.aws_region
 }
 
-output "psql_username_secret_name" {
-  description = "Secret name for PostgreSQL username"
-  value       = aws_secretsmanager_secret.psql_username.name
+# PostgreSQL databases (for connection string construction in seed script)
+output "postgresql_databases" {
+  description = "Map of database keys to database names"
+  value       = var.postgresql_databases
 }
 
-output "psql_password_secret_name" {
-  description = "Secret name for PostgreSQL password"
-  value       = aws_secretsmanager_secret.psql_password.name
+# Secrets Manager — consolidated ARN map (used by seed script and IAM policies)
+output "secret_arns" {
+  description = "Map of all Secrets Manager secret ARNs"
+  value = {
+    psql_host                         = aws_secretsmanager_secret.psql_host.arn
+    psql_port                         = aws_secretsmanager_secret.psql_port.arn
+    psql_username                     = aws_secretsmanager_secret.psql_username.arn
+    psql_password                     = aws_secretsmanager_secret.psql_password.arn
+    redis_host                        = aws_secretsmanager_secret.redis_host.arn
+    redis_port                        = aws_secretsmanager_secret.redis_port.arn
+    encryption_key_app_repository     = aws_secretsmanager_secret.encryption_key_app_repository.arn
+    encryption_key_node_chat_lxm      = aws_secretsmanager_secret.encryption_key_node_chat_lxm.arn
+    encryption_key_ingestion          = aws_secretsmanager_secret.encryption_key_ingestion.arn
+    zitadel_db_user_password          = aws_secretsmanager_secret.zitadel_db_user_password.arn
+    zitadel_master_key                = aws_secretsmanager_secret.zitadel_master_key.arn
+    zitadel_pat                       = aws_secretsmanager_secret.zitadel_pat.arn
+    rabbitmq_password_chat            = aws_secretsmanager_secret.rabbitmq_password_chat.arn
+    litellm_proxy_master_key          = aws_secretsmanager_secret.litellm_proxy_master_key.arn
+    litellm_salt_key                  = aws_secretsmanager_secret.litellm_salt_key.arn
+    azure_openai_endpoint_definitions = aws_secretsmanager_secret.azure_openai_endpoint_definitions.arn
+    s3_application_data_bucket        = aws_secretsmanager_secret.s3_application_data_bucket.arn
+    s3_ai_data_bucket                 = aws_secretsmanager_secret.s3_ai_data_bucket.arn
+    s3_application_data_bucket_arn    = aws_secretsmanager_secret.s3_application_data_bucket_arn.arn
+    s3_ai_data_bucket_arn             = aws_secretsmanager_secret.s3_ai_data_bucket_arn.arn
+    s3_access_key_id                  = aws_secretsmanager_secret.s3_access_key_id.arn
+    s3_secret_access_key              = aws_secretsmanager_secret.s3_secret_access_key.arn
+    s3_endpoint                       = aws_secretsmanager_secret.s3_endpoint.arn
+    s3_region                         = aws_secretsmanager_secret.s3_region.arn
+    rds_ca_bundle                     = aws_secretsmanager_secret.rds_ca_bundle.arn
+  }
 }
 
-output "redis_host_secret_name" {
-  description = "Secret name for Redis host"
-  value       = aws_secretsmanager_secret.redis_host.name
-}
-
-output "redis_port_secret_name" {
-  description = "Secret name for Redis port"
-  value       = aws_secretsmanager_secret.redis_port.name
-}
-
-output "encryption_key_app_repository_secret_name" {
-  description = "Secret name for application repository encryption key"
-  value       = aws_secretsmanager_secret.encryption_key_app_repository.name
-}
-
-output "encryption_key_node_chat_lxm_secret_name" {
-  description = "Secret name for node chat LXM encryption key"
-  value       = aws_secretsmanager_secret.encryption_key_node_chat_lxm.name
-}
-
-output "encryption_key_ingestion_secret_name" {
-  description = "Secret name for ingestion encryption key"
-  value       = aws_secretsmanager_secret.encryption_key_ingestion.name
-}
-
-output "zitadel_db_user_password_secret_name" {
-  description = "Secret name for Zitadel database user password"
-  value       = aws_secretsmanager_secret.zitadel_db_user_password.name
-}
-
-output "zitadel_master_key_secret_name" {
-  description = "Secret name for Zitadel master key"
-  value       = aws_secretsmanager_secret.zitadel_master_key.name
-}
-
-output "zitadel_pat_secret_name" {
-  description = "Secret name for Zitadel PAT"
-  value       = aws_secretsmanager_secret.zitadel_pat.name
-}
-
-output "rabbitmq_password_chat_secret_name" {
-  description = "Secret name for RabbitMQ password for chat"
-  value       = aws_secretsmanager_secret.rabbitmq_password_chat.name
-}
-
-# Secrets Manager — ARNs (for IAM policies)
-output "psql_host_secret_arn" {
-  description = "ARN of the PostgreSQL host secret"
-  value       = aws_secretsmanager_secret.psql_host.arn
-}
-
-output "psql_password_secret_arn" {
-  description = "ARN of the PostgreSQL password secret"
-  value       = aws_secretsmanager_secret.psql_password.arn
-}
-
-output "redis_host_secret_arn" {
-  description = "ARN of the Redis host secret"
-  value       = aws_secretsmanager_secret.redis_host.arn
-}
-
-# PostgreSQL Database Connection Strings
-output "psql_database_connection_strings_secret_names" {
-  description = "Map of database names to their connection string secret names"
-  value       = { for k, v in aws_secretsmanager_secret.psql_connection_string : k => v.name }
-}
-
-# S3 Bucket Secrets
-output "s3_application_data_bucket_secret_name" {
-  description = "Secret name for S3 application data bucket"
-  value       = aws_secretsmanager_secret.s3_application_data_bucket.name
-}
-
-output "s3_ai_data_bucket_secret_name" {
-  description = "Secret name for S3 AI data bucket"
-  value       = aws_secretsmanager_secret.s3_ai_data_bucket.name
-}
-
-output "s3_application_data_bucket_arn_secret_name" {
-  description = "Secret name for S3 application data bucket ARN"
-  value       = aws_secretsmanager_secret.s3_application_data_bucket_arn.name
-}
-
-output "s3_ai_data_bucket_arn_secret_name" {
-  description = "Secret name for S3 AI data bucket ARN"
-  value       = aws_secretsmanager_secret.s3_ai_data_bucket_arn.name
+# PostgreSQL connection string secret ARNs (dynamic, from for_each)
+output "psql_connection_string_secret_arns" {
+  description = "Map of database keys to their connection string secret ARNs"
+  value       = { for k, v in aws_secretsmanager_secret.psql_connection_string : k => v.arn }
 }
 
 # VPC Endpoints
