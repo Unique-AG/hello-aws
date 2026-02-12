@@ -77,6 +77,26 @@ variable "enable_bedrock_logging" {
   default     = true
 }
 
+variable "bedrock_inference_profiles" {
+  description = "Application inference profiles for cost tracking and CloudWatch metrics. source_type is 'inference-profile' (cross-region) or 'foundation-model' (single-region)."
+  type = map(object({
+    model_id    = string
+    source_type = optional(string, "inference-profile")
+  }))
+  default = {
+    # EU cross-region inference profiles (Anthropic Claude via LiteLLM)
+    "claude-sonnet-4-5" = { model_id = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0" }
+    "claude-opus-4-5"   = { model_id = "eu.anthropic.claude-opus-4-5-20251101-v1:0" }
+    "claude-opus-4-6"   = { model_id = "eu.anthropic.claude-opus-4-6-v1" }
+    "claude-haiku-4-5"  = { model_id = "eu.anthropic.claude-haiku-4-5-20251001-v1:0" }
+    # Swiss-local foundation models (run natively in eu-central-2, no cross-region)
+    "claude-3-5-sonnet"   = { model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0", source_type = "foundation-model" }
+    "claude-3-haiku"      = { model_id = "anthropic.claude-3-haiku-20240307-v1:0", source_type = "foundation-model" }
+    "cohere-embed-v4"     = { model_id = "cohere.embed-v4:0", source_type = "foundation-model" }
+    "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
+  }
+}
+
 # CloudWatch
 variable "cloudwatch_log_retention_days" {
   description = "Number of days to retain CloudWatch logs"

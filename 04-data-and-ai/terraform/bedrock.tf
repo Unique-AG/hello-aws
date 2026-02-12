@@ -78,7 +78,6 @@ resource "aws_iam_role_policy" "bedrock_logging" {
   policy = data.aws_iam_policy_document.bedrock_logging[0].json
 }
 
-# Bedrock Model Invocation Logging Configuration
 resource "aws_bedrock_model_invocation_logging_configuration" "main" {
   count = var.enable_bedrock_logging ? 1 : 0
 
@@ -95,6 +94,27 @@ resource "aws_bedrock_model_invocation_logging_configuration" "main" {
     aws_cloudwatch_log_group.bedrock_logs,
     aws_iam_role.bedrock_logging
   ]
+}
+
+# Application Inference Profiles
+# Wrap system cross-region inference profiles for per-model cost tracking and CloudWatch metrics
+# LiteLLM and workloads can invoke these via the account-scoped ARN
+resource "aws_bedrock_inference_profile" "this" {
+  for_each = var.bedrock_inference_profiles
+
+  name = "${module.naming.id}-${each.key}"
+
+  model_source {
+    copy_from = "arn:aws:bedrock:${var.aws_region}::${each.value.source_type}/${each.value.model_id}"
+  }
+
+  tags = merge(
+    local.tags,
+    {
+      Name  = "${module.naming.id}-${each.key}"
+      Model = each.value.model_id
+    }
+  )
 }
 
 data "aws_bedrock_foundation_models" "available" {
