@@ -5,7 +5,7 @@ The bootstrap layer creates the S3 bucket, KMS key, CloudWatch log group, and op
 ## Resources
 
 - **S3 state bucket**: Versioning, KMS encryption, access logging, HTTPS-only bucket policy, lifecycle rules for old versions
-- **S3 access logs bucket**: Versioning, KMS encryption, public access blocked
+- **S3 access logs bucket**: Versioning, KMS encryption, public access blocked, lifecycle policy (90-day expiration, 30-day noncurrent version expiration)
 - **KMS key**: Customer-managed, automatic rotation, policy grants for S3, CloudWatch Logs, and GitHub Actions (if OIDC configured)
 - **CloudWatch log group**: KMS encrypted, minimum 365-day retention for non-sandbox environments
 - **GitHub Actions OIDC provider + IAM role** (optional): Federated authentication scoped to a specific GitHub repository
