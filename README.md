@@ -142,7 +142,7 @@ Common configuration values are defined in `common.auto.tfvars` at the repositor
 
 - AWS region and account ID
 - Organization identifiers (org, org_moniker)
-- Product identifiers (product, product_name)
+- Product identifiers (product, product_moniker)
 - Semantic version (set by CI/CD)
 
 These values are critical because the naming module uses them to generate globally unique resource names. AWS resources such as S3 buckets, IAM roles, and KMS aliases must be unique within an account or globally across AWS. The naming module combines `org_moniker`, `product`, `environment`, and region into deterministic prefixes:
@@ -177,7 +177,7 @@ Before deploying any layer, you must configure the common values file:
    - `org`: Your organization name (e.g., `"dogfood"`)
    - `org_moniker`: Your organization short name (e.g., `"df"`)
    - `product`: Your product/project name (e.g., `"unique"`)
-   - `product_name`: Your product/project full name (e.g., `"Unique AI"`)
+   - `product_moniker`: Your product short name (e.g., `"uq"`)
    - `semantic_version`: Version number (typically set by CI/CD, default: `"0.1.0"`)
 
 ### Step 2: Deploy Bootstrap Layer

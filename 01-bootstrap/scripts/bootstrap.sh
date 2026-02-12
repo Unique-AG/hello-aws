@@ -84,7 +84,7 @@ if [[ ! -f "$COMMON_CONFIG" ]]; then
     echo -e "${YELLOW}     2. Edit ${COMMON_CONFIG} and update the values:${NC}"
     echo -e "${BLUE}        - aws_region${NC}"
     echo -e "${BLUE}        - org and org_moniker${NC}"
-    echo -e "${BLUE}        - product and product_name${NC}"
+    echo -e "${BLUE}        - product and product_moniker${NC}"
     echo -e "${BLUE}        - semantic_version (if needed)${NC}"
   else
     echo -e "${RED}   Template file not found: ${COMMON_TEMPLATE}${NC}"
