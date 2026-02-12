@@ -287,7 +287,7 @@ Each layer has comprehensive documentation covering design rationale, security p
   - Operational excellence practices
 
 - **[03-infrastructure](./03-infrastructure/README.md)**: Networking and foundational infrastructure
-  - Three-tier subnet architecture (public, private, isolated)
+  - Four-tier subnet architecture (public, private, isolated, GitHub runners)
   - VPC endpoints for private AWS service access
   - Management server with Session Manager
   - Network security and encryption
