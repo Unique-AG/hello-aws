@@ -1,0 +1,14 @@
+spec:
+  name: es-ingestion
+  autoSync: false
+  sources:
+    - repoURL: 'https://github.com/unique-ag/hello-aws'
+      targetRevision: deploy/rc-06-applications
+      ref: values
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: elasticsearch-ingestion
+        valueFiles:
+          - $values/06-applications/sbx/values/elasticsearch/elasticsearch.yaml
