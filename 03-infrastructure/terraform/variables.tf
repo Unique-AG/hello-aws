@@ -271,3 +271,23 @@ variable "route53_private_zone_id" {
   type        = string
   default     = null
 }
+
+# Transit Gateway Configuration
+variable "transit_gateway_id" {
+  description = "Transit Gateway ID to attach the VPC to (from connectivity layer). If not provided, Transit Gateway attachment will be skipped."
+  type        = string
+  default     = null
+}
+
+# Connectivity Account Configuration
+variable "connectivity_account_id" {
+  description = "AWS account ID of the connectivity account. Required when enable_connectivity_account_role is true."
+  type        = string
+  default     = null
+}
+
+variable "enable_connectivity_account_role" {
+  description = "Whether to create a cross-account IAM role for the connectivity account to discover resources (Transit Gateway, EKS, ALBs)"
+  type        = bool
+  default     = false
+}
