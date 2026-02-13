@@ -57,3 +57,9 @@ common.auto.tfvars
 # Used .docs/ and .scripts/ for local drafts and scripts that should not be committed to the repository
 .docs/
 .scripts/
+
+# Instance configuration (contains deployment-specific values, generated from template)
+06-applications/instance-config.yaml
+06-applications/.instance-applied.yaml
+06-applications/*/instance-config.yaml
+06-applications/*/.instance-applied.yaml
