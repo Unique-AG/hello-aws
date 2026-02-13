@@ -76,7 +76,7 @@ output "ecr_pull_through_cache_registry_urls" {
 }
 
 output "ecr_registry_url" {
-  description = "Base ECR registry URL (e.g., 696630818863.dkr.ecr.eu-central-2.amazonaws.com)"
+  description = "Base ECR registry URL (e.g., 123456789012.dkr.ecr.eu-central-2.amazonaws.com)"
   value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${var.aws_region}.amazonaws.com"
 }
 
