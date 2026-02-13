@@ -1,0 +1,52 @@
+global:
+  priorityClassName: system-cluster-critical
+installCRDs: true
+# Using official images for sbx - private ECR not accessible from this account
+image:
+  repository: quay.io/jetstack/cert-manager-controller
+  tag: v1.17.2
+# nodeSelector removed for sbx environment - nodes don't have these labels
+# nodeSelector:
+#   scalability: steady
+#   lifecycle: persistent
+# Use external recursive nameservers for DNS-01 challenge verification
+# Required because the private hosted zone <DOMAIN_BASE> shadows the public
+# zone's NS records when resolving from inside the cluster
+extraArgs:
+  - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53
+  - --dns01-recursive-nameservers-only
+webhook:
+  image:
+    repository: quay.io/jetstack/cert-manager-webhook
+    tag: v1.17.2
+cainjector:
+  image:
+    repository: quay.io/jetstack/cert-manager-cainjector
+    tag: v1.17.2
+resources:
+  limits:
+      cpu: 50m
+      memory: 128Mi
+  requests:
+      cpu: 50m
+      memory: 128Mi
+webhook:
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
+cainjector:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 400Mi
+    requests:
+      cpu: 100m
+      memory: 400Mi
+
+# Service account for cert-manager (Pod Identity association managed by Terraform)
+serviceAccount:
+  create: true

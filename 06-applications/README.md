@@ -92,8 +92,8 @@ All parameters in `<env>/instance-config.yaml`:
 └── sbx/                             # Environment-specific configuration
     ├── instance-config.yaml         # (gitignored) Real values for this env
     ├── apps/
-    │   ├── system/                   # System app specs (9 apps)
-    │   └── chat/                     # Chat app specs (19 apps)
+    │   ├── system/                   # System app specs (10 apps)
+    │   └── chat/                     # Chat app specs (21 apps)
     ├── charts/
     │   ├── backend-service/          # Local Helm chart for backend services
     │   └── web-app/                  # Local Helm chart for web apps
@@ -135,10 +135,11 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 
 ## Application Categories
 
-### System Applications (9)
+### System Applications (10)
 
 | App | autoSync | Description |
 |-----|----------|-------------|
+| storage-class-gp3 | true | gp3 StorageClass for EBS CSI Driver |
 | cert-manager | true | TLS certificate management with Route 53 DNS-01 validation |
 | external-secrets | false | AWS Secrets Manager integration (ClusterSecretStore + app secrets) |
 | reloader | true | Automatic pod restart on ConfigMap/Secret changes |
@@ -149,7 +150,7 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 | zitadel | false | Identity provider (ExternalSecrets for DB credentials) |
 | argocd | false | ArgoCD self-management |
 
-### Chat Applications (19)
+### Chat Applications (21)
 
 All chat apps have `autoSync: false`. They include:
 
@@ -157,11 +158,11 @@ All chat apps have `autoSync: false`. They include:
 app-repository, configuration, event-socket, speech, webhook-scheduler, webhook-worker,
 client-insights-exporter
 
-**AI Services:** assistants-core
+**AI Services:** assistants-core, ingestor
 
 **Web Apps:** chat, admin, knowledge-upload, theme
 
-**Data:** rabbitmq (cluster instance), qdrant (vector database)
+**Data:** rabbitmq (cluster instance), qdrant (vector database), litellm (LLM gateway)
 
 ## Pod Identities
 
