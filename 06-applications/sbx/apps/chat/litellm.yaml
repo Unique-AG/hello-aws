@@ -1,0 +1,21 @@
+spec:
+  name: litellm
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: litellm-db-init
+        valueFiles:
+          - $values/06-applications/sbx/values/litellm/litellm-db-init.yaml
+    - chart: litellm
+      repoURL: ghcr.io/unique-ag/helm-charts
+      targetRevision: 1.72.2
+      helm:
+        releaseName: litellm
+        valueFiles:
+          - $values/06-applications/sbx/values/litellm/litellm.yaml

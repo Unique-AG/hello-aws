@@ -1,0 +1,9 @@
+spec:
+  name: rabbitmq-chat
+  autoSync: false
+  source:
+    repoURL: <GITHUB_REPO_URL>
+    targetRevision: <GIT_TARGET_REVISION>
+    path: 06-applications/sbx/values/rabbitmq
+    directory:
+      recurse: true
