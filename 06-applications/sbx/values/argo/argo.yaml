@@ -1,0 +1,58 @@
+# ArgoCD configuration (AWS sbx)
+# Admin account enabled for initial access (OIDC added in follow-up)
+nameOverride: argo
+global:
+  domain: <DOMAIN_ARGOCD>
+  nodeSelector:
+    scalability: steady
+    lifecycle: persistent
+repoServer:
+  extraArgs:
+    - --repo-cache-expiration=15m
+server:
+  ingress:
+    enabled: true
+    ingressClassName: kong
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+    hosts:
+      - <DOMAIN_ARGOCD>
+    tls:
+      - secretName: argo-le-tls
+        hosts:
+          - <DOMAIN_ARGOCD>
+configs:
+  cm:
+    create: true
+    url: https://<DOMAIN_ARGOCD>
+    admin.enabled: true
+    timeout.reconciliation: 30s
+  rbac:
+      create: true
+      policy.default: role:admin
+      scopes: '[roles]'
+      policy.csv: |
+        #################################################
+        # Policy rules are in the form:
+        #   p, subject, resource, action, object, effect
+        # Role definitions and bindings are in the form:
+        #   g, subject, inherited-subject
+        #################################################
+
+        ################### GROUPS #####################
+        g, maintain, role:admin
+        ################### POLICIES #####################
+        # role:sync-only
+        p, role:sync-only, applications, get, *, allow
+        p, role:sync-only, applications, sync, *, allow
+        p, role:sync-only, applications, action/apps/*/restart, *, allow
+        p, role:sync-only, applications, action/batch/CronJob/create-job, *, allow
+        p, role:sync-only, logs, get, chat/*, deny
+
+        # role:no-access
+        p, role:no-access, *, *, *, deny
+
+        # maintainers are kings here and only here
+        # role:admin
+        p, role:admin, *, *, *, allow
+extraObjects: []
