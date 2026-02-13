@@ -1,0 +1,29 @@
+# instance-config.yaml — Edit these values for your deployment, then run:
+#   ./scripts/configure-instance.sh
+
+github:
+  repoURL: https://github.com/unique-ag/hello-aws
+  targetRevision: main
+
+domain:
+  base: sbx.rbcn.ai
+  api: api.sbx.rbcn.ai
+  identity: id.sbx.rbcn.ai
+  argocd: argo.sbx.rbcn.ai
+  dnsZone: rbcn.ai
+
+aws:
+  region: eu-central-2
+  hostedZoneID: Z06962683TV7AEN6MMQ8E
+  ecr:
+    primary:     # Unique application images
+      accountId: "217381566492"
+      prefix: uniquecr
+    thirdParty:  # Operator/infra images (rabbitmq, qdrant, bitnami)
+      accountId: "696630818863"
+      prefix: uniquecr
+
+zitadel:
+  projectId: "359427268977638958"
+  clientId: "359427806301601326"
+  orgId: "359427162140327470"
