@@ -1,5 +1,5 @@
-# CronJobs configuration (v10.0.1 schema)
-cronJobs:
+# Extra cron jobs
+extraCronJobs:
   user-sync:
     concurrencyPolicy: Forbid
     env:

@@ -1,21 +1,21 @@
 # Base configuration for all backend services (AWS sbx)
 #
-# Domain: sbx.rbcn.ai
+# Domain: <DOMAIN_BASE>
 # Secrets: AWS Secrets Manager via ExternalSecrets
 # Images: ECR pull-through cache
 
 env:
-  ADMIN_FRONTEND_URL: https://sbx.rbcn.ai/admin
-  CHAT_FRONTEND_URL: https://sbx.rbcn.ai/chat
-  CORS_ALLOWED_ORIGINS: https://sbx.rbcn.ai
-  INGESTION_UPLOAD_API_URL: https://api.sbx.rbcn.ai/scoped/ingestion/upload
-  UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
-  ZITADEL_HOST: https://id.sbx.rbcn.ai
-  ZITADEL_PROJECT_ID: "359427268977638958"
-  ZITADEL_ROOT_ORG_ID: "359427162140327470"
+  ADMIN_FRONTEND_URL: https://<DOMAIN_BASE>/admin
+  CHAT_FRONTEND_URL: https://<DOMAIN_BASE>/chat
+  CORS_ALLOWED_ORIGINS: https://<DOMAIN_BASE>
+  INGESTION_UPLOAD_API_URL: https://<DOMAIN_API>/scoped/ingestion/upload
+  UNIQUE_INSTALLATION_ID: <DOMAIN_BASE>
+  ZITADEL_HOST: https://<DOMAIN_IDENTITY>
+  ZITADEL_PROJECT_ID: "<ZITADEL_PROJECT_ID>"
+  ZITADEL_ROOT_ORG_ID: "<ZITADEL_ORG_ID>"
 
 routes:
-  hostname: api.sbx.rbcn.ai
+  hostname: <DOMAIN_API>
   skipCrdCheck: true
 
 # Disable Azure secretProvider (use ExternalSecrets for AWS instead)

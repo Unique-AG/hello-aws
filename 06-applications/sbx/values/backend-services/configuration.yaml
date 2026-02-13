@@ -4,7 +4,7 @@ secretProvider:
   enabled: false
 
 image:
-  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-configuration
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-configuration
   tag: "2026.06.1"
 
 extraEnvSecrets:
