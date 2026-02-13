@@ -298,3 +298,20 @@ output "ec2_messages_endpoint_id" {
   value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ec2_messages[0].id : null
 }
 
+# Transit Gateway Outputs
+output "transit_gateway_attachment_id" {
+  description = "ID of the Transit Gateway VPC attachment"
+  value       = try(aws_ec2_transit_gateway_vpc_attachment.main[0].id, null)
+}
+
+output "transit_gateway_attachment_arn" {
+  description = "ARN of the Transit Gateway VPC attachment"
+  value       = try(aws_ec2_transit_gateway_vpc_attachment.main[0].arn, null)
+}
+
+# Cross-Account IAM Outputs
+output "connectivity_account_read_only_role_arn" {
+  description = "ARN of the IAM role that allows the connectivity account to discover resources"
+  value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
+}
+
