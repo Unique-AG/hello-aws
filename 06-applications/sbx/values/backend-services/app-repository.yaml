@@ -4,11 +4,11 @@ secretProvider:
   enabled: false
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-app-repository
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-app-repository
   tag: "2026.06.1"
 
 routes:
-  hostname: <DOMAIN_API>
+  hostname: api.sbx.rbcn.ai
 
 serviceAccount:
   enabled: true

@@ -5,9 +5,9 @@ env:
   FEATURE_FLAG_NEW_TRANSLATION_UI_UN_7233: "true"
   FILE_TYPES_DOCUMENT_TRANSLATOR: "docx,xls,pptx"
   MAX_FILE_SIZE_IN_MB: "200"
-  SELF_URL: https://<DOMAIN_BASE>/chat
-  SPEECH_BACKEND_API_URL: wss://<DOMAIN_API>/speech/ws/v1/speech-to-text
+  SELF_URL: https://sbx.rbcn.ai/chat
+  SPEECH_BACKEND_API_URL: wss://api.sbx.rbcn.ai/speech/ws/v1/speech-to-text
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/web-app-chat
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-chat
   tag: "2026.06.1"

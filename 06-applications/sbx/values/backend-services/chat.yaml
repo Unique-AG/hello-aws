@@ -44,7 +44,7 @@ env:
     ]
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-chat
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-chat
   tag: "2026.06.1"
 
 resources:

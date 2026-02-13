@@ -70,7 +70,7 @@ zitadel:
           Username: root@cluster-iam.localhost
           Password: "RootPassword1!"
   configmapConfig:
-    ExternalDomain: <DOMAIN_IDENTITY>
+    ExternalDomain: id.sbx.rbcn.ai
     ExternalPort: 443
     ExternalSecure: true
     LogStore:

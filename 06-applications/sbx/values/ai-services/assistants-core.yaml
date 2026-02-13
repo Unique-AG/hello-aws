@@ -2,15 +2,15 @@
 # Uses AWS Bedrock for LLM inference and S3 for storage
 
 env:
-  CORS_ALLOWED_ORIGINS: https://<DOMAIN_BASE>
-  ZITADEL_PROJECT_ID: "<ZITADEL_PROJECT_ID>"
-  UNIQUE_INSTALLATION_ID: <DOMAIN_BASE>
-  AWS_REGION: <AWS_REGION>
+  CORS_ALLOWED_ORIGINS: https://sbx.rbcn.ai
+  ZITADEL_PROJECT_ID: "359427268977638958"
+  UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
+  AWS_REGION: eu-central-2
   LLM_PROVIDER: bedrock
   STORAGE_PROVIDER: s3
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/ai-service-assistants-core
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/ai-service-assistants-core
   tag: "2026.06.1"
 
 replicaCount: 1

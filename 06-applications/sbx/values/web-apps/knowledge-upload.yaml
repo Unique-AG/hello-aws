@@ -1,8 +1,8 @@
 # Knowledge Upload web app configuration (AWS sbx)
 
 env:
-  SELF_URL: https://<DOMAIN_BASE>/knowledge-upload
+  SELF_URL: https://sbx.rbcn.ai/knowledge-upload
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/web-app-knowledge-upload
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-knowledge-upload
   tag: "2026.06.1"
