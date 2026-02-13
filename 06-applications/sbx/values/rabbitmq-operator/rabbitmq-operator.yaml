@@ -1,5 +1,7 @@
 global:
   defaultStorageClass: gp3
+  security:
+    allowInsecureImages: true
 
 useCertManager: true
 
