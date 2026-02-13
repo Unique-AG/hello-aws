@@ -1,0 +1,90 @@
+applicationsets:
+  system:
+    additionalAnnotations:
+      argocd.argoproj.io/sync-wave: "0"
+    namespace: unique
+    goTemplate: true
+    generators:
+      - git:
+          repoURL: <GITHUB_REPO_URL>
+          revision: <GIT_TARGET_REVISION>
+          files:
+            - path: "06-applications/sbx/apps/system/*.yaml"
+    template:
+      metadata:
+        name: '{{ .spec.name }}'
+        namespace: unique
+      spec:
+        project: default
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: unique
+    templatePatch: |
+      spec:
+        {{- if hasKey .spec "sources" }}
+        sources:
+          {{- .spec.sources | toYaml | nindent 4 }}
+        {{- else }}
+        source:
+          {{- .spec.source | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if hasKey .spec "additionalValues" }}
+        {{- .spec.additionalValues | toYaml | nindent 2 }}
+        {{- end }}
+        {{- if hasKey .spec "ignoreDifferences" }}
+        ignoreDifferences:
+          {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if .spec.autoSync }}
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
+          syncOptions:
+            - CreateNamespace=true
+        {{- end }}
+
+  chat:
+    additionalAnnotations:
+      argocd.argoproj.io/sync-wave: "1"
+    namespace: unique
+    goTemplate: true
+    generators:
+      - git:
+          repoURL: <GITHUB_REPO_URL>
+          revision: <GIT_TARGET_REVISION>
+          files:
+            - path: "06-applications/sbx/apps/chat/*.yaml"
+    template:
+      metadata:
+        name: '{{ .spec.name }}'
+        namespace: unique
+      spec:
+        project: default
+        destination:
+          server: https://kubernetes.default.svc
+          namespace: unique
+    templatePatch: |
+      spec:
+        {{- if hasKey .spec "sources" }}
+        sources:
+          {{- .spec.sources | toYaml | nindent 4 }}
+        {{- else }}
+        source:
+          {{- .spec.source | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if hasKey .spec "additionalValues" }}
+        {{- .spec.additionalValues | toYaml | nindent 2 }}
+        {{- end }}
+        {{- if hasKey .spec "ignoreDifferences" }}
+        ignoreDifferences:
+          {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if .spec.autoSync }}
+        syncPolicy:
+          automated:
+            prune: true
+            selfHeal: true
+          syncOptions:
+            - CreateNamespace=true
+        {{- end }}
