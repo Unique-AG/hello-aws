@@ -1,0 +1,20 @@
+# Ingestion Worker backend service configuration (AWS sbx)
+# Uses AWS Bedrock for AI and S3 for storage
+
+secretProvider:
+  enabled: false
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion-worker
+  tag: "2026.06.1"
+
+env:
+  LLM_PROVIDER: bedrock
+  AWS_REGION: eu-central-2
+  STORAGE_PROVIDER: s3
+
+serviceAccount:
+  enabled: true
+
+extraEnvSecrets:
+  - ingestion-worker-secrets

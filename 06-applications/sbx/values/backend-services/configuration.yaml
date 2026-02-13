@@ -1,0 +1,11 @@
+# Configuration (theme) backend service configuration (AWS sbx)
+
+secretProvider:
+  enabled: false
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-configuration
+  tag: "2026.06.1"
+
+extraEnvSecrets:
+  - configuration-secrets

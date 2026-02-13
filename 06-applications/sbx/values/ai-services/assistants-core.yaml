@@ -1,0 +1,41 @@
+# Assistants Core AI service configuration (AWS sbx)
+# Uses AWS Bedrock for LLM inference and S3 for storage
+
+env:
+  CORS_ALLOWED_ORIGINS: https://sbx.rbcn.ai
+  ZITADEL_PROJECT_ID: "359427268977638958"
+  UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
+  AWS_REGION: eu-central-2
+  LLM_PROVIDER: bedrock
+  STORAGE_PROVIDER: s3
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/ai-service-assistants-core
+  tag: "2026.06.1"
+
+replicaCount: 1
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 2Gi
+  requests:
+    cpu: 250m
+    memory: 1Gi
+
+secretProvider:
+  enabled: false
+
+routes:
+  skipCrdCheck: true
+
+serviceAccount:
+  enabled: true
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+nodeSelector: null
+
+extraEnvSecrets:
+  - assistants-core-secrets
