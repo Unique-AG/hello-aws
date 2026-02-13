@@ -1,0 +1,72 @@
+# Ingestion backend service configuration (AWS sbx)
+# Uses S3 for storage and LiteLLM for embeddings
+
+secretProvider:
+  enabled: false
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
+  tag: "2026.06.1"
+
+env:
+  AWS_REGION: <AWS_REGION>
+  AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
+  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "false"
+  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "false"
+  STORAGE_PROVIDER: s3
+
+envVars:
+  - name: RABBITMQ_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: username
+  - name: AMQP_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: username
+  - name: RABBITMQ_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: password
+  - name: AMQP_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: password
+  - name: AMQP_HOST
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: host
+  - name: AMQP_PORT
+    valueFrom:
+      secretKeyRef:
+        name: rabbitmqcluster-chat-default-user
+        key: port
+
+replicaCount: 2
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 700Mi
+  requests:
+    cpu: 200m
+    memory: 650Mi
+
+serviceAccount:
+  enabled: true
+
+extraEnvSecrets:
+  - ingestion-secrets
+
+hooks:
+  migration:
+    command: cd /home/node/app/services/node-ingestion; npx prisma migrate deploy;
+    enabled: true
+
+volumeMounts: []
+volumes: []

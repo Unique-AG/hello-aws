@@ -1,0 +1,8 @@
+# Admin web app configuration (AWS sbx)
+
+env:
+  SELF_URL: https://<DOMAIN_BASE>/admin
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/web-app-admin
+  tag: "2026.06.1"

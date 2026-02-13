@@ -1,0 +1,8 @@
+# Webhook Scheduler backend service configuration (AWS sbx)
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-webhook-scheduler
+  tag: "2026.06.1"
+
+extraEnvSecrets:
+  - webhook-scheduler-secrets

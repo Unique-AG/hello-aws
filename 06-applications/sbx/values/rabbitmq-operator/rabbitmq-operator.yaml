@@ -1,0 +1,19 @@
+global:
+  defaultStorageClass: gp3
+
+useCertManager: true
+
+clusterOperator:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY>
+    repository: bitnamilegacy/rabbitmq-cluster-operator
+    tag: 2.10.0-debian-12-r0
+  watchAllNamespaces: false
+  watchNamespaces:
+    - unique
+
+msgTopologyOperator:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY>
+    repository: bitnamilegacy/rmq-messaging-topology-operator
+    tag: 1.14.2-debian-12-r5

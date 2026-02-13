@@ -19,33 +19,31 @@ webhook:
   image:
     repository: quay.io/jetstack/cert-manager-webhook
     tag: v1.17.2
+  resources:
+    limits:
+      cpu: 50m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 128Mi
 cainjector:
   image:
     repository: quay.io/jetstack/cert-manager-cainjector
     tag: v1.17.2
+  resources:
+    limits:
+      cpu: 100m
+      memory: 400Mi
+    requests:
+      cpu: 100m
+      memory: 400Mi
 resources:
   limits:
-      cpu: 50m
-      memory: 128Mi
+    cpu: 50m
+    memory: 128Mi
   requests:
-      cpu: 50m
-      memory: 128Mi
-webhook:
-  resources:
-    limits:
-      cpu: 50m
-      memory: 128Mi
-    requests:
-      cpu: 50m
-      memory: 128Mi
-cainjector:
-  resources:
-    limits:
-      cpu: 100m
-      memory: 400Mi
-    requests:
-      cpu: 100m
-      memory: 400Mi
+    cpu: 50m
+    memory: 128Mi
 
 # Service account for cert-manager (Pod Identity association managed by Terraform)
 serviceAccount:

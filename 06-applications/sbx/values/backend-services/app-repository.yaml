@@ -1,0 +1,17 @@
+# App Repository backend service configuration (AWS sbx)
+
+secretProvider:
+  enabled: false
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-app-repository
+  tag: "2026.06.1"
+
+routes:
+  hostname: <DOMAIN_API>
+
+serviceAccount:
+  enabled: true
+
+extraEnvSecrets:
+  - app-repository-secrets
