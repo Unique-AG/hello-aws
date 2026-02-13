@@ -1,7 +1,7 @@
 data "aws_iam_policy_document" "kms_terraform_state" {
-  # checkov:skip=CKV_AWS_109:KMS key policy - root account needs permissions management to prevent lockout
-  # checkov:skip=CKV_AWS_111:KMS key policy - root account needs write access to manage key lifecycle
-  # checkov:skip=CKV_AWS_356:KMS key policy - resources=* is self-referential (means this key only)
+  # checkov:skip=CKV_AWS_109: see docs/security-baseline.md
+  # checkov:skip=CKV_AWS_111: see docs/security-baseline.md
+  # checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   statement {
     sid       = "EnableIAMUserPermissions"
     effect    = "Allow"
