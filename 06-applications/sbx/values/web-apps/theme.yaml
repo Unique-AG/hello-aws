@@ -1,0 +1,8 @@
+# Theme web app configuration (AWS sbx)
+
+env:
+  SELF_URL: https://sbx.rbcn.ai/theme
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-theme
+  tag: "2026.06.1"

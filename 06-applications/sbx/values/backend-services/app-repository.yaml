@@ -1,0 +1,17 @@
+# App Repository backend service configuration (AWS sbx)
+
+secretProvider:
+  enabled: false
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-app-repository
+  tag: "2026.06.1"
+
+routes:
+  hostname: api.sbx.rbcn.ai
+
+serviceAccount:
+  enabled: true
+
+extraEnvSecrets:
+  - app-repository-secrets
