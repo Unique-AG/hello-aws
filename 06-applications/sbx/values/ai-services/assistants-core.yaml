@@ -26,9 +26,6 @@ resources:
 secretProvider:
   enabled: false
 
-routes:
-  skipCrdCheck: true
-
 serviceAccount:
   enabled: true
 
