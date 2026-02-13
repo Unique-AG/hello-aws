@@ -2,7 +2,7 @@
 # Admin account enabled for initial access (OIDC added in follow-up)
 nameOverride: argo
 global:
-  domain: <DOMAIN_ARGOCD>
+  domain: argo.sbx.rbcn.ai
   nodeSelector:
     scalability: steady
     lifecycle: persistent
@@ -16,15 +16,15 @@ server:
     annotations:
       cert-manager.io/cluster-issuer: letsencrypt-route53-dns
     hosts:
-      - <DOMAIN_ARGOCD>
+      - argo.sbx.rbcn.ai
     tls:
       - secretName: argo-le-tls
         hosts:
-          - <DOMAIN_ARGOCD>
+          - argo.sbx.rbcn.ai
 configs:
   cm:
     create: true
-    url: https://<DOMAIN_ARGOCD>
+    url: https://argo.sbx.rbcn.ai
     admin.enabled: true
     timeout.reconciliation: 30s
   rbac:

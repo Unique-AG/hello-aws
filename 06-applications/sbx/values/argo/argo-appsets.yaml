@@ -6,8 +6,8 @@ applicationsets:
     goTemplate: true
     generators:
       - git:
-          repoURL: <GITHUB_REPO_URL>
-          revision: <GIT_TARGET_REVISION>
+          repoURL: https://github.com/unique-ag/hello-aws
+          revision: deploy/rc-06-applications
           files:
             - path: "06-applications/sbx/apps/system/*.yaml"
     template:
@@ -51,8 +51,8 @@ applicationsets:
     goTemplate: true
     generators:
       - git:
-          repoURL: <GITHUB_REPO_URL>
-          revision: <GIT_TARGET_REVISION>
+          repoURL: https://github.com/unique-ag/hello-aws
+          revision: deploy/rc-06-applications
           files:
             - path: "06-applications/sbx/apps/chat/*.yaml"
     template:
