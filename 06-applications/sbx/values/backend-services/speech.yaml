@@ -5,7 +5,7 @@ secretProvider:
   enabled: false
 
 image:
-  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-speech
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-speech
   tag: "2026.06.1"
 
 replicaCount: 2
@@ -20,7 +20,7 @@ resources:
 
 env:
   SPEECH_PROVIDER: aws-transcribe
-  AWS_REGION: eu-central-2
+  AWS_REGION: <AWS_REGION>
 
 serviceAccount:
   enabled: true

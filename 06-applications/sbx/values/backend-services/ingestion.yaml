@@ -5,11 +5,11 @@ secretProvider:
   enabled: false
 
 image:
-  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
   tag: "2026.06.1"
 
 env:
-  AWS_REGION: eu-central-2
+  AWS_REGION: <AWS_REGION>
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "false"
   FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "false"

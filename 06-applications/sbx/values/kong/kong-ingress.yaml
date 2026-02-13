@@ -1,5 +1,5 @@
 # Kong Ingress Resources for AWS EKS
-# Updated for AWS environment with rbcn.ai domain
+# Updated for AWS environment with <DNS_ZONE> domain
 resources:
   - apiVersion: networking.k8s.io/v1
     kind: Ingress
@@ -13,7 +13,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: sbx.rbcn.ai
+        - host: <DOMAIN_BASE>
           http:
             paths:
               - backend:
@@ -25,7 +25,7 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - sbx.rbcn.ai
+            - <DOMAIN_BASE>
           secretName: kong-tls
 
   - apiVersion: networking.k8s.io/v1
@@ -40,7 +40,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: api.sbx.rbcn.ai
+        - host: <DOMAIN_API>
           http:
             paths:
               - backend:
@@ -52,7 +52,7 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - api.sbx.rbcn.ai
+            - <DOMAIN_API>
           secretName: kong-api-tls
 
   - apiVersion: networking.k8s.io/v1
@@ -67,7 +67,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: id.sbx.rbcn.ai
+        - host: <DOMAIN_IDENTITY>
           http:
             paths:
               - backend:
@@ -79,5 +79,5 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - id.sbx.rbcn.ai
+            - <DOMAIN_IDENTITY>
           secretName: kong-zitadel-tls

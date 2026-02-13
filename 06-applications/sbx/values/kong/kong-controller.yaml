@@ -68,11 +68,11 @@ gateway:
     proxy:
       enabled: true
       clusterIssuer: letsencrypt-route53-dns
-      commonName: sbx.rbcn.ai
+      commonName: <DOMAIN_BASE>
       dnsNames:
-        - sbx.rbcn.ai
-        - api.sbx.rbcn.ai
-        - id.sbx.rbcn.ai
+        - <DOMAIN_BASE>
+        - <DOMAIN_API>
+        - <DOMAIN_IDENTITY>
     admin:
       enabled: false
     cluster:
