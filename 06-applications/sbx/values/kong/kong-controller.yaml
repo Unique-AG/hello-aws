@@ -1,0 +1,81 @@
+# Using public images for sbx - private ECR not accessible
+controller:
+  image:
+    repository: kong/kubernetes-ingress-controller
+    tag: 3.4.4
+  ingressController:
+    envFrom:
+      - configMapRef:
+          name: kong-controller-environment
+  proxy:
+    type: ClusterIP
+  # nodeSelector removed for sbx - nodes don't have these labels
+  # nodeSelector:
+  #   scalability: steady
+  #   lifecycle: persistent
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: "kong-controller-environment"
+  extraObjects:
+    - apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: kong-controller-environment
+      data:
+        CONTROLLER_LOG_LEVEL: info
+        CONTROLLER_PROXY_SYNC_SECONDS: "15"
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: GatewayClass
+      metadata:
+        name: kong
+        annotations:
+          konghq.com/gatewayclass-unmanaged: "true"
+      spec:
+        controllerName: konghq.com/kic-gateway-controller
+gateway:
+  image:
+    repository: kong
+    tag: 3.9.0
+  # nodeSelector removed for sbx - nodes don't have these labels
+  # nodeSelector:
+  #   scalability: steady
+  #   lifecycle: persistent
+  proxy:
+    type: LoadBalancer
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+      service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # Legacy annotation for in-tree cloud provider
+      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    tls:
+      appProtocol: "https"
+  plugins:
+    configMaps:
+      - name: kong-plugin-unique-jwt-auth
+        pluginName: unique-jwt-auth
+      - name: kong-plugin-unique-app-repo-auth
+        pluginName: unique-app-repo-auth
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: "kong-gateway-environment,kong-plugin-unique-jwt-auth,kong-plugin-unique-app-repo-auth"
+  envFrom:
+    - configMapRef:
+        name: kong-gateway-environment
+  status:
+    tls:
+      enabled: true
+  certificates:
+    enabled: true
+    clusterIssuer: letsencrypt-route53-dns
+    proxy:
+      enabled: true
+      clusterIssuer: letsencrypt-route53-dns
+      commonName: sbx.rbcn.ai
+      dnsNames:
+        - sbx.rbcn.ai
+        - api.sbx.rbcn.ai
+        - id.sbx.rbcn.ai
+    admin:
+      enabled: false
+    cluster:
+      enabled: false
+    portal:
+      enabled: false
