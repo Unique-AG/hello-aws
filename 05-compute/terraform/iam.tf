@@ -47,7 +47,7 @@ resource "aws_eks_pod_identity_association" "ebs_csi" {
 #######################################
 # Cluster Secrets Role
 #######################################
-# Used by ClusterSecretStore service account in external-secrets namespace
+# Used by ClusterSecretStore service account in unique namespace
 
 resource "aws_iam_role" "cluster_secrets" {
   name = "${module.naming.id}-cluster-secrets"
@@ -98,7 +98,7 @@ resource "aws_iam_role_policy" "cluster_secrets" {
 
 resource "aws_eks_pod_identity_association" "cluster_secrets" {
   cluster_name    = aws_eks_cluster.main.name
-  namespace       = "external-secrets"
+  namespace       = "unique"
   service_account = "external-secrets"
   role_arn        = aws_iam_role.cluster_secrets.arn
 }
@@ -162,7 +162,7 @@ resource "aws_iam_role_policy" "cert_manager_route53" {
 
 resource "aws_eks_pod_identity_association" "cert_manager" {
   cluster_name    = aws_eks_cluster.main.name
-  namespace       = "cert-manager"
+  namespace       = "unique"
   service_account = "cert-manager"
   role_arn        = aws_iam_role.cert_manager_route53.arn
 }
