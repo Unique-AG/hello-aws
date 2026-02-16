@@ -40,6 +40,7 @@ resource "aws_flow_log" "main" {
 }
 
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  #checkov:skip=CKV_AWS_338: Retention is environment-configurable; sandbox uses shorter retention
   name              = "${module.naming.log_group_prefix}/vpc-flow-logs"
   retention_in_days = var.cloudwatch_log_retention_days
   kms_key_id        = aws_kms_key.cloudwatch_logs.arn

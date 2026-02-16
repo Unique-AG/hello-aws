@@ -16,6 +16,26 @@ This is a living document. Security posture is being hardened on an ongoing basi
 | CKV_AWS_111 | `aws_kms_key.terraform_state` | KMS key policy grants root account write access to manage key lifecycle — required for key administration |
 | CKV_AWS_356 | `aws_kms_key.terraform_state` | KMS key policy uses `Resource: *` which is self-referential (refers to the key itself, not all resources) |
 
+### 03-infrastructure
+
+#### Trivy
+
+| Rule | Severity | Resource | Rationale |
+|---|---|---|---|
+| AVD-AWS-0053 | HIGH | `aws_lb.websocket` | Public-facing by design — WebSocket ALB serves client connections that cannot traverse CloudFront |
+| AVD-AWS-0054 | CRITICAL | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, HTTP is sufficient for private VPC traffic |
+| AVD-AWS-0104 | CRITICAL | `aws_security_group.github_runners` | Runners require HTTPS (443) egress to `0.0.0.0/0` for GitHub API and package registries; scoped to port 443 only |
+
+#### Checkov
+
+| Rule | Resource | Rationale |
+|---|---|---|
+| CKV_AWS_91 | `aws_lb.ingress_nlb`, `aws_lb.websocket` | ALB access logging deferred until S3 log bucket is provisioned |
+| CKV_AWS_150 | `aws_lb.ingress_nlb` | Deletion protection controlled by `var.alb_deletion_protection`; disabled in sandbox for fast teardown |
+| CKV_AWS_290 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions do not support resource-level constraints (AWS API limitation) |
+| CKV_AWS_355 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions require `Resource: *` (AWS API limitation) |
+| CKV_AWS_338 | `aws_cloudwatch_log_group.vpc_flow_logs` | Retention is variable-driven per environment (7d sbx, 30d default, 365d prod) |
+
 ### 05-compute
 
 #### Trivy (`.trivyignore`)
@@ -29,8 +49,6 @@ This is a living document. Security posture is being hardened on an ongoing basi
 
 | Rule | Resource | Rationale |
 |---|---|---|
-| CKV_AWS_91 | `aws_lb.cloudfront`, `aws_lb.websocket` | ALB access logging deferred until S3 log bucket is provisioned |
-| CKV_AWS_2 | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, ALB forwards to Kong NLB over private network |
 | CKV_AWS_163 | `aws_ecr_repository.main` | `scan_on_push` is variable-driven per repo; registry-level enhanced scanning provides continuous coverage |
 | CKV_AWS_51 | `aws_ecr_repository.main` | `image_tag_mutability` is intentionally variable-driven per repo |
 | CKV_AWS_338 | `aws_cloudwatch_log_group.eks_cluster` | Retention is variable-driven per environment (7d sbx, 30d default, 365d prod) |
