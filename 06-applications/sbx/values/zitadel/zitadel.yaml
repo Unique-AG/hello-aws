@@ -69,6 +69,11 @@ zitadel:
         Human:
           Username: root@cluster-iam.localhost
           Password: "RootPassword1!"
+        Machine:
+          Machine:
+            Username: provision-ephemeral
+            Name: Provision Ephemeral (bootstrap only)
+          Pat: {}
   configmapConfig:
     ExternalDomain: id.sbx.rbcn.ai
     ExternalPort: 443

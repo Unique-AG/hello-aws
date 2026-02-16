@@ -13,4 +13,11 @@ spec:
         valueFiles:
           - $values/06-applications/sbx/values/zitadel/zitadel.yaml
           - $values/06-applications/sbx/values/zitadel/zitadel-extra-manifests.yaml
-        valuesObject: {}
+        valuesObject:
+          zitadel:
+            secretConfig:
+              FirstInstance:
+                Org:
+                  Machine:
+                    Pat:
+                      ExpirationDate: "2029-01-01T00:00:00Z"
