@@ -1,4 +1,5 @@
 resource "aws_security_group" "github_runners" {
+  #trivy:ignore:AVD-AWS-0104 Runners require HTTPS egress to GitHub API and package registries
   count = var.enable_github_runners ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"
@@ -12,14 +13,6 @@ resource "aws_security_group" "github_runners" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
     description = "HTTPS outbound for GitHub API and registries"
-  }
-
-  egress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP outbound"
   }
 
   # Outbound to VPC endpoints

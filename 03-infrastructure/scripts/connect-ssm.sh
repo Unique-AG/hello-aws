@@ -37,7 +37,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-BOLD='\033[1m'
 NC='\033[0m'
 
 log()     { echo -e "${GREEN}[✓]${NC} $1"; }
@@ -251,9 +250,9 @@ verify_instance() {
     return 0
   fi
 
-  error "Instance ${INSTANCE_ID} is not accessible via SSM. Ensure:"
-  error "  1. Instance has SSM agent installed and running"
-  error "  2. Instance has IAM role with AmazonSSMManagedInstanceCore policy"
+  warn "Instance ${INSTANCE_ID} is not accessible via SSM. Ensure:"
+  warn "  1. Instance has SSM agent installed and running"
+  warn "  2. Instance has IAM role with AmazonSSMManagedInstanceCore policy"
   error "  3. SSM VPC endpoints are configured (if in private subnet)"
 }
 
@@ -328,7 +327,7 @@ start_port_forwarding() {
   MONITOR_PID=$!
   
   # Trap Ctrl+C to clean up
-  trap "kill ${MONITOR_PID} 2>/dev/null; pkill -f 'aws ssm start-session.*${LOCAL_PORT}' 2>/dev/null; exit" INT TERM
+  trap 'kill '"${MONITOR_PID}"' 2>/dev/null; pkill -f "aws ssm start-session.*'"${LOCAL_PORT}"'" 2>/dev/null; exit' INT TERM
   
   # Wait for the monitor process
   wait ${MONITOR_PID}
@@ -339,7 +338,6 @@ start_port_forwarding() {
   
   if [ "${exit_code}" -ne 0 ]; then
     error "Port forwarding failed to establish"
-    return 1
   fi
 }
 
