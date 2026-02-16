@@ -47,7 +47,13 @@ enable_secondary_cidr = true
 # Route 53 Private Hosted Zone Configuration
 # Associates this VPC with the Route 53 Private Hosted Zone from landing zone
 # This enables DNS resolution across all VPCs associated with the zone
-# Uncomment and set to your hosted zone values before deploying:
-# route53_private_zone_domain = "sbx.example.com"
-# route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
+route53_private_zone_domain = "sbx.rbcn.ai"
+route53_private_zone_id     = "Z05798252TZLW3XWZUQE0"
+
+# Ingress NLB + ALB + CloudFront VPC Origin
+# enable_ingress_nlb defaults to true — NLB is created with infrastructure
+alb_deletion_protection         = false
+enable_cloudfront_vpc_origin    = true
+internal_alb_certificate_domain = "*.sbx.rbcn.ai"
+connectivity_account_id         = "198666613175"
 

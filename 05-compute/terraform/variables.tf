@@ -278,11 +278,4 @@ variable "acr_password" {
   ephemeral   = true
 }
 
-# Connectivity Account Configuration
-variable "connectivity_account_id" {
-  description = "AWS account ID of the connectivity account for RAM sharing (CloudFront VPC Origin)"
-  type        = string
-  default     = null
-}
-
 

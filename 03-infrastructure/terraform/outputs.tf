@@ -315,3 +315,81 @@ output "connectivity_account_read_only_role_arn" {
   value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
 }
 
+#######################################
+# Ingress NLB Outputs
+#######################################
+
+output "ingress_nlb_dns_name" {
+  description = "DNS name of the Terraform-managed Ingress NLB"
+  value       = try(aws_lb.ingress_nlb[0].dns_name, null)
+}
+
+output "ingress_nlb_arn" {
+  description = "ARN of the Terraform-managed Ingress NLB"
+  value       = try(aws_lb.ingress_nlb[0].arn, null)
+}
+
+output "ingress_target_group_http_arn" {
+  description = "ARN of the Ingress HTTP target group (for TargetGroupBinding)"
+  value       = try(aws_lb_target_group.ingress_http[0].arn, null)
+}
+
+output "ingress_target_group_https_arn" {
+  description = "ARN of the Ingress HTTPS target group (for TargetGroupBinding)"
+  value       = try(aws_lb_target_group.ingress_https[0].arn, null)
+}
+
+#######################################
+# ALB for CloudFront Outputs
+#######################################
+
+output "cloudfront_alb_arn" {
+  description = "ARN of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_lb.cloudfront[0].arn, null)
+}
+
+output "cloudfront_alb_dns_name" {
+  description = "DNS name of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_lb.cloudfront[0].dns_name, null)
+}
+
+output "cloudfront_alb_security_group_id" {
+  description = "Security group ID of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_security_group.alb_cloudfront[0].id, null)
+}
+
+output "websocket_alb_dns_name" {
+  description = "DNS name of the public WebSocket ALB (for CloudFront standard origin)"
+  value       = try(aws_lb.websocket[0].dns_name, null)
+}
+
+output "internal_alb_certificate_validation_records" {
+  description = "DNS validation records for the internal ALB certificate"
+  value = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? {
+    for dvo in aws_acm_certificate.internal_alb[0].domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  } : {}
+}
+
+output "internal_alb_certificate_arn" {
+  description = "ARN of the internal ALB certificate"
+  value       = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? aws_acm_certificate.internal_alb[0].arn : null
+}
+
+#######################################
+# CloudFront VPC Origin Outputs
+#######################################
+
+output "cloudfront_vpc_origin_id" {
+  description = "ID of the CloudFront VPC Origin (for use in connectivity layer)"
+  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].id, null)
+}
+
+output "cloudfront_vpc_origin_arn" {
+  description = "ARN of the CloudFront VPC Origin"
+  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].arn, null)
+}
+

@@ -2,24 +2,12 @@
 # ALB for CloudFront VPC Origin
 #######################################
 #
-# Creates an internal ALB that forwards traffic to the Kong NLB.
+# Creates an internal ALB that forwards traffic to the Ingress NLB.
 # This ALB has security groups attached from creation (required for CloudFront VPC Origins).
-# Architecture: CloudFront → ALB (with SGs) → Kong NLB → Kong Gateway
+# Architecture: CloudFront → ALB (with SGs) → Ingress NLB → ingress controller
 #
 # Reference: https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html
 #######################################
-
-variable "kong_nlb_dns_name" {
-  description = "DNS name of the Kong NLB to forward traffic to. Can be AWS-provided DNS or Private Hosted Zone DNS (e.g., kong-nlb.sbx.aws.unique.dev or ac07acf717701483c979dc6c7144664a-df35c4a149aa54be.elb.eu-central-2.amazonaws.com)"
-  type        = string
-  default     = null
-}
-
-variable "kong_nlb_security_group_id" {
-  description = "Security group ID for the ALB (e.g., sg-0cecb4958cdae0338). Must be attached during ALB creation."
-  type        = string
-  default     = null
-}
 
 variable "alb_deletion_protection" {
   description = "Enable deletion protection for ALBs (recommended for production, disable for sbx teardown)"
@@ -36,14 +24,11 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 # Security Group for ALB (allows CloudFront traffic)
 # This security group is attached during ALB creation
 resource "aws_security_group" "alb_cloudfront" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-cloudfront"
-  description = "Security group for ALB used as CloudFront VPC Origin (forwards to Kong NLB)"
-  vpc_id      = local.infrastructure.vpc_id
-
-  # Note: Rules are added via separate aws_security_group_rule resources
-  # to avoid hitting AWS security group rules limit
+  description = "Security group for ALB used as CloudFront VPC Origin (forwards to Ingress NLB)"
+  vpc_id      = aws_vpc.main.id
 
   tags = merge(local.tags, {
     Name = "${module.naming.id}-alb-cloudfront-sg"
@@ -52,7 +37,7 @@ resource "aws_security_group" "alb_cloudfront" {
 
 # Security Group Rules (separate resources to avoid limits)
 resource "aws_security_group_rule" "alb_cloudfront_https_ingress" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   type              = "ingress"
   description       = "Allow HTTPS from CloudFront VPC Origin"
@@ -68,42 +53,40 @@ resource "aws_security_group_rule" "alb_cloudfront_https_ingress" {
 # The CloudFront managed prefix list contains many IP ranges that exceed the 60 rules limit
 
 resource "aws_security_group_rule" "alb_cloudfront_https_egress" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   type              = "egress"
-  description       = "Allow HTTPS outbound to Kong NLB"
+  description       = "Allow HTTPS outbound to Ingress NLB"
   from_port         = 443
   to_port           = 443
   protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
+  cidr_blocks       = [aws_vpc.main.cidr_block]
   security_group_id = aws_security_group.alb_cloudfront[0].id
 }
 
 resource "aws_security_group_rule" "alb_cloudfront_http_egress" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   type              = "egress"
-  description       = "Allow HTTP outbound to Kong NLB"
+  description       = "Allow HTTP outbound to Ingress NLB"
   from_port         = 80
   to_port           = 80
   protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
+  cidr_blocks       = [aws_vpc.main.cidr_block]
   security_group_id = aws_security_group.alb_cloudfront[0].id
 }
 
 # Internal ALB for CloudFront VPC Origin
-# This ALB forwards traffic to the Kong NLB
+# This ALB forwards traffic to the Ingress NLB
 resource "aws_lb" "cloudfront" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   name               = "${module.naming.id_short}-cf-alb"
   internal           = true
   load_balancer_type = "application"
-  # Attach CloudFront security group (allows CloudFront traffic)
-  # Note: We don't attach the Kong NLB security group to avoid hitting security group rules limit
-  security_groups = [aws_security_group.alb_cloudfront[0].id]
-  subnets         = local.infrastructure.private_subnet_ids
+  security_groups    = [aws_security_group.alb_cloudfront[0].id]
+  subnets            = aws_subnet.private[*].id
 
   enable_deletion_protection       = var.alb_deletion_protection
   drop_invalid_header_fields       = true
@@ -115,22 +98,22 @@ resource "aws_lb" "cloudfront" {
   })
 }
 
-# Target Group for Kong NLB
-# ALB forwards traffic to this target group, which points to the Kong NLB
+# Target Group for Ingress NLB
+# ALB forwards traffic to this target group, which points to the Ingress NLB IPs
 # Note: ALB target groups cannot directly forward to NLB DNS names
-# We'll use target_type = "ip" and resolve the NLB DNS to IP addresses
-# Traffic: CloudFront (HTTPS) → ALB (TLS terminated) → Kong NLB (HTTP:80) → Kong Gateway
-resource "aws_lb_target_group" "kong_nlb" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+# We use target_type = "ip" and resolve the NLB DNS to IP addresses
+# Traffic: CloudFront (HTTPS) → ALB (TLS terminated) → Ingress NLB (HTTP:80) → ingress controller
+resource "aws_lb_target_group" "ingress_nlb" {
+  count = var.enable_ingress_nlb ? 1 : 0
 
-  name        = "${module.naming.id}-kong-nlb-tg"
+  name        = "${module.naming.id_short}-ing-nlb-tg"
   target_type = "ip"
   port        = 80
   protocol    = "HTTP"
-  vpc_id      = local.infrastructure.vpc_id
+  vpc_id      = aws_vpc.main.id
 
   # Health check configuration
-  # Kong returns 404 on root path when no route is configured, so we accept 404
+  # Ingress controller returns 404 on root path when no route is configured, so we accept 404
   health_check {
     enabled             = true
     healthy_threshold   = 2
@@ -148,21 +131,21 @@ resource "aws_lb_target_group" "kong_nlb" {
   deregistration_delay = 30
 
   tags = merge(local.tags, {
-    Name = "${module.naming.id}-kong-nlb-tg"
+    Name = "${module.naming.id}-ingress-nlb-tg"
   })
 }
 
-# Resolve Kong NLB DNS to IP addresses and register as targets
+# Resolve Ingress NLB DNS to IP addresses and register as targets
 # NLB DNS resolves to one IP per AZ - these are stable for NLBs
-data "dns_a_record_set" "kong_nlb" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
-  host  = var.kong_nlb_dns_name
+data "dns_a_record_set" "ingress_nlb" {
+  count = var.enable_ingress_nlb ? 1 : 0
+  host  = aws_lb.ingress_nlb[0].dns_name
 }
 
-resource "aws_lb_target_group_attachment" "kong_nlb" {
-  for_each = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? toset(data.dns_a_record_set.kong_nlb[0].addrs) : toset([])
+resource "aws_lb_target_group_attachment" "ingress_nlb" {
+  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
 
-  target_group_arn = aws_lb_target_group.kong_nlb[0].arn
+  target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
   target_id        = each.value
   port             = 80
 }
@@ -180,7 +163,7 @@ variable "internal_alb_certificate_domain" {
 }
 
 resource "aws_acm_certificate" "internal_alb" {
-  count = var.kong_nlb_dns_name != null && var.internal_alb_certificate_domain != null ? 1 : 0
+  count = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? 1 : 0
 
   domain_name       = var.internal_alb_certificate_domain
   validation_method = "DNS"
@@ -194,28 +177,11 @@ resource "aws_acm_certificate" "internal_alb" {
   }
 }
 
-# Output the DNS validation records for manual/external validation
-output "internal_alb_certificate_validation_records" {
-  description = "DNS validation records for the internal ALB certificate (create these in Route 53 or external DNS)"
-  value = var.kong_nlb_dns_name != null && var.internal_alb_certificate_domain != null ? {
-    for dvo in aws_acm_certificate.internal_alb[0].domain_validation_options : dvo.domain_name => {
-      name  = dvo.resource_record_name
-      type  = dvo.resource_record_type
-      value = dvo.resource_record_value
-    }
-  } : {}
-}
-
-output "internal_alb_certificate_arn" {
-  description = "ARN of the internal ALB certificate"
-  value       = var.kong_nlb_dns_name != null && var.internal_alb_certificate_domain != null ? aws_acm_certificate.internal_alb[0].arn : null
-}
-
 # HTTPS Listener for ALB
-# Listens on port 443 and forwards to Kong NLB target group
+# Listens on port 443 and forwards to Ingress NLB target group
 # Only created when ACM certificate is configured (HTTPS listeners require a certificate)
 resource "aws_lb_listener" "cloudfront_https" {
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null && var.internal_alb_certificate_domain != null ? 1 : 0
+  count = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? 1 : 0
 
   load_balancer_arn = aws_lb.cloudfront[0].arn
   port              = "443"
@@ -225,17 +191,18 @@ resource "aws_lb_listener" "cloudfront_https" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.kong_nlb[0].arn
+    target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
   }
 
-  depends_on = [aws_lb.cloudfront, aws_lb_target_group.kong_nlb, aws_acm_certificate.internal_alb]
+  depends_on = [aws_lb.cloudfront, aws_lb_target_group.ingress_nlb, aws_acm_certificate.internal_alb]
 }
 
-# HTTP Listener (forwards to Kong NLB)
+# HTTP Listener (forwards to Ingress NLB)
 # CloudFront handles TLS termination, so HTTP is sufficient for VPC Origin
 resource "aws_lb_listener" "cloudfront_http" {
   #checkov:skip=CKV_AWS_2: see docs/security-baseline.md
-  count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
+  #trivy:ignore:AVD-AWS-0054 CloudFront handles TLS termination; HTTP is sufficient for VPC Origin
+  count = var.enable_ingress_nlb ? 1 : 0
 
   load_balancer_arn = aws_lb.cloudfront[0].arn
   port              = "80"
@@ -243,10 +210,10 @@ resource "aws_lb_listener" "cloudfront_http" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.kong_nlb[0].arn
+    target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
   }
 
-  depends_on = [aws_lb.cloudfront, aws_lb_target_group.kong_nlb]
+  depends_on = [aws_lb.cloudfront, aws_lb_target_group.ingress_nlb]
 }
 
 #######################################
@@ -256,16 +223,16 @@ resource "aws_lb_listener" "cloudfront_http" {
 # Creates a public ALB restricted to CloudFront-only traffic (via managed prefix list SG)
 # as a standard CloudFront custom origin for WebSocket paths.
 # CloudFront VPC Origins do NOT support WebSocket, so this public ALB bypasses VPC Origin.
-# Architecture: CloudFront → Standard Origin → Public ALB → Kong NLB → Kong → Chat Backend
+# Architecture: CloudFront → Standard Origin → Public ALB → Ingress NLB → Ingress Controller → Chat Backend
 #######################################
 
 # Security Group for Public WebSocket ALB (allows CloudFront traffic only)
 resource "aws_security_group" "alb_websocket" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-websocket"
   description = "Security group for public WebSocket ALB (CloudFront IPs only)"
-  vpc_id      = local.infrastructure.vpc_id
+  vpc_id      = aws_vpc.main.id
 
   tags = merge(local.tags, {
     Name = "${module.naming.id}-alb-websocket-sg"
@@ -273,7 +240,7 @@ resource "aws_security_group" "alb_websocket" {
 }
 
 resource "aws_security_group_rule" "alb_websocket_https_ingress" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   type              = "ingress"
   description       = "Allow HTTPS from CloudFront edge servers"
@@ -285,27 +252,28 @@ resource "aws_security_group_rule" "alb_websocket_https_ingress" {
 }
 
 resource "aws_security_group_rule" "alb_websocket_http_egress" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   type              = "egress"
-  description       = "Allow HTTP outbound to Kong NLB"
+  description       = "Allow HTTP outbound to Ingress NLB"
   from_port         = 80
   to_port           = 80
   protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
+  cidr_blocks       = [aws_vpc.main.cidr_block]
   security_group_id = aws_security_group.alb_websocket[0].id
 }
 
 # Public ALB for WebSocket traffic
 resource "aws_lb" "websocket" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+  #trivy:ignore:AVD-AWS-0053 Public-facing by design for WebSocket traffic from clients
+  count = var.enable_ingress_nlb ? 1 : 0
 
   name               = "${module.naming.id_short}-ws-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb_websocket[0].id]
-  subnets            = local.infrastructure.public_subnet_ids
+  subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection       = var.alb_deletion_protection
   drop_invalid_header_fields       = true
@@ -317,15 +285,15 @@ resource "aws_lb" "websocket" {
   })
 }
 
-# Target Group for WebSocket ALB → Kong NLB
-resource "aws_lb_target_group" "websocket_kong" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+# Target Group for WebSocket ALB → Ingress NLB
+resource "aws_lb_target_group" "websocket_ingress" {
+  count = var.enable_ingress_nlb ? 1 : 0
 
-  name        = "${module.naming.id}-ws-kong-tg"
+  name        = "${module.naming.id_short}-ws-ing-tg"
   target_type = "ip"
   port        = 80
   protocol    = "HTTP"
-  vpc_id      = local.infrastructure.vpc_id
+  vpc_id      = aws_vpc.main.id
 
   health_check {
     enabled             = true
@@ -341,22 +309,22 @@ resource "aws_lb_target_group" "websocket_kong" {
   deregistration_delay = 30
 
   tags = merge(local.tags, {
-    Name = "${module.naming.id}-ws-kong-tg"
+    Name = "${module.naming.id}-ws-ingress-tg"
   })
 }
 
-# Register Kong NLB IPs as targets for WebSocket ALB
-resource "aws_lb_target_group_attachment" "websocket_kong" {
-  for_each = var.kong_nlb_dns_name != null ? toset(data.dns_a_record_set.kong_nlb[0].addrs) : toset([])
+# Register Ingress NLB IPs as targets for WebSocket ALB
+resource "aws_lb_target_group_attachment" "websocket_ingress" {
+  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
 
-  target_group_arn = aws_lb_target_group.websocket_kong[0].arn
+  target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
   target_id        = each.value
   port             = 80
 }
 
 # HTTPS Listener for WebSocket ALB
 resource "aws_lb_listener" "websocket_https" {
-  count = var.kong_nlb_dns_name != null && var.internal_alb_certificate_domain != null ? 1 : 0
+  count = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? 1 : 0
 
   load_balancer_arn = aws_lb.websocket[0].arn
   port              = "443"
@@ -366,15 +334,15 @@ resource "aws_lb_listener" "websocket_https" {
 
   default_action {
     type             = "forward"
-    target_group_arn = aws_lb_target_group.websocket_kong[0].arn
+    target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
   }
 
-  depends_on = [aws_lb.websocket, aws_lb_target_group.websocket_kong, aws_acm_certificate.internal_alb]
+  depends_on = [aws_lb.websocket, aws_lb_target_group.websocket_ingress, aws_acm_certificate.internal_alb]
 }
 
 # HTTP → HTTPS redirect for WebSocket ALB
 resource "aws_lb_listener" "websocket_http" {
-  count = var.kong_nlb_dns_name != null ? 1 : 0
+  count = var.enable_ingress_nlb ? 1 : 0
 
   load_balancer_arn = aws_lb.websocket[0].arn
   port              = "80"
@@ -392,4 +360,3 @@ resource "aws_lb_listener" "websocket_http" {
 
   depends_on = [aws_lb.websocket]
 }
-
