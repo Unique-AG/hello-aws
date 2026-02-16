@@ -2,7 +2,7 @@
 
 ## Overview
 
-The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, and an optional management server. This layer establishes the network foundation that all other layers depend on.
+The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
 
 ## Design Rationale
 
@@ -76,6 +76,20 @@ An optional EC2 management server provides:
 - **NAT Gateway Alarms**: `ErrorPortAllocation` and `PacketsDropCount` per gateway, wired to SNS
 - **NAT HA Guard**: `check` block warns if `single_nat_gateway = true` in production
 
+### Ingress NLB, ALBs, and CloudFront VPC Origin
+
+The infrastructure layer manages the full ingress load balancing stack, keeping networking resources independent of EKS:
+
+- **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
+- **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
+- **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.rbcn.ai`), used for TLS termination on both ALBs.
+- **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
+
+Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
+
+For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingress NLB → Ingress controller`
+
 ## Resources
 
 ### VPC and Networking
@@ -96,7 +110,7 @@ An optional EC2 management server provides:
 
 ### KMS Keys
 
-- **General Purpose Key**: EKS, EBS, S3, RDS, ElastiCache, ECR, SNS (with `kms:CreateGrant` for EC2 and RDS)
+- **General Purpose Key**: EKS, EBS, S3, RDS, ElastiCache, ECR, SNS (with `kms:CreateGrant` for EC2, Auto Scaling, and RDS)
 - **Secrets Manager Key**: Secrets Manager + ECR Pull Through Cache
 - **CloudWatch Logs Key**: CloudWatch Log Groups
 - **Prometheus Key** (optional): Managed Prometheus workspace
@@ -124,6 +138,28 @@ An optional EC2 management server provides:
 - **VPC Flow Log Group**: Dedicated, retention matches `cloudwatch_log_retention_days`
 - **SNS Topic**: KMS-encrypted alerts topic
 - **CloudWatch Alarms**: NAT Gateway port allocation errors and packet drops
+
+### Ingress NLB
+
+- **Security Group**: Inbound HTTP/HTTPS from VPC (ALBs), outbound to EKS pods (VPC CIDR)
+- **Network Load Balancer**: Internal, cross-zone enabled, private subnets
+- **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
+- **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group
+
+### ALBs for CloudFront
+
+- **CloudFront ALB**: Internal, security group restricted to CloudFront managed prefix list (HTTPS ingress only)
+- **WebSocket ALB**: Public (in public subnets), security group restricted to CloudFront managed prefix list
+- **Target Groups**: Both ALBs forward to Ingress NLB IPs (resolved via DNS), HTTP port 80
+- **HTTPS Listeners**: TLS 1.3 policy, ACM wildcard certificate
+- **HTTP Listener**: CloudFront ALB forwards to NLB; WebSocket ALB redirects HTTP → HTTPS
+- **ACM Certificate**: DNS-validated wildcard certificate for the environment domain
+
+### CloudFront VPC Origin
+
+- **VPC Origin**: Points to the internal CloudFront ALB, HTTPS-only origin protocol
+- **AWS RAM Share**: Shares VPC Origin with connectivity account (us-east-1, as CloudFront is global)
+- **Principal Association**: Connectivity account receives RAM invitation
 
 ### GitHub Runners (Optional)
 
@@ -249,6 +285,13 @@ enable_bedrock_endpoint         = true
 # These values come from your landing zone or connectivity account
 # route53_private_zone_domain = "sbx.example.com"
 # route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
+
+# Ingress NLB + ALB + CloudFront VPC Origin
+# enable_ingress_nlb defaults to true — NLB is created with infrastructure
+alb_deletion_protection         = false        # Disable for sbx teardown
+enable_cloudfront_vpc_origin    = true
+internal_alb_certificate_domain = "*.sbx.rbcn.ai"
+connectivity_account_id         = "198666613175"
 ```
 
 > **Note**: The Route 53 private zone values (`route53_private_zone_domain` and `route53_private_zone_id`) are commented out by default. If your deployment uses a Route 53 Private Hosted Zone (e.g., from a connectivity account in a hub-and-spoke topology), uncomment and set these values in `environments/{env}/00-config.auto.tfvars` before deploying. Without them, the VPC association with the private hosted zone is skipped.
@@ -315,6 +358,18 @@ After deployment:
 - `management_server_security_group_id`
 - `ssm_instance_profile_arn`, `ssm_instance_profile_name`, `ssm_instance_role_arn`
 
+### Ingress NLB
+- `ingress_nlb_dns_name`, `ingress_nlb_arn`
+- `ingress_target_group_http_arn`, `ingress_target_group_https_arn`
+
+### ALBs
+- `cloudfront_alb_arn`, `cloudfront_alb_dns_name`, `cloudfront_alb_security_group_id`
+- `websocket_alb_dns_name`
+- `internal_alb_certificate_arn`, `internal_alb_certificate_validation_records`
+
+### CloudFront VPC Origin
+- `cloudfront_vpc_origin_id`, `cloudfront_vpc_origin_arn`
+
 ### DNS
 - `route53_private_zone_id`, `route53_private_zone_domain`
 
@@ -327,3 +382,6 @@ After deployment:
 - [AWS Well-Architected Framework - Security](https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/welcome.html)
 - [EBS Encryption by Default](https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html)
 - [IMDSv2 Best Practices](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html)
+- [CloudFront VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html)
+- [AWS Load Balancer Controller - TargetGroupBinding](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/targetgroupbinding/targetgroupbinding/)
+- [AWS RAM Resource Sharing](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)

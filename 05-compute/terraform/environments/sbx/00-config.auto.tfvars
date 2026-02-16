@@ -27,14 +27,5 @@ ecr_pull_through_cache_upstream_registries = [
   "uniquecr",
 ]
 
-# ALB Configuration (disable deletion protection for sbx teardown)
-alb_deletion_protection = false
-
 # VPC Endpoints
 enable_eks_endpoint = true
-
-# CloudFront VPC Origin (optional — set kong_nlb_dns_name after Kong is deployed)
-# kong_nlb_dns_name          = null  # Set after Kong NLB is deployed
-# kong_nlb_security_group_id = null  # Set to EKS node SG after deployment
-enable_cloudfront_vpc_origin    = false
-internal_alb_certificate_domain = "*.sbx.rbcn.ai"
