@@ -194,6 +194,71 @@ resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_management_serv
 >>>>>>> cb78cec (fix: migrate all SG rules to aws_vpc_security_group_*_rule resources)
 }
 
+# Security Group for EKS Nodes
+resource "aws_security_group" "eks_nodes" {
+  name        = "${module.naming.id}-eks-nodes"
+  description = "Security group for EKS worker nodes"
+  vpc_id      = local.infrastructure.vpc_id
+
+  # Allow node-to-node communication
+  ingress {
+    description = "Allow node-to-node communication"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    self        = true
+  }
+
+  # Allow inbound from VPC (for pods)
+  ingress {
+    description = "Allow inbound from VPC CIDR"
+    from_port   = 0
+    to_port     = 65535
+    protocol    = "tcp"
+    cidr_blocks = [local.infrastructure.vpc_cidr_block]
+  }
+
+  # EKS cluster control plane needs outbound access for API operations
+  # Restrict to VPC CIDR for security
+  egress {
+    description = "Allow HTTPS outbound to VPC"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = [local.infrastructure.vpc_cidr_block]
+  }
+
+  tags = merge(local.tags, {
+    Name = "${module.naming.id}-eks-nodes-sg"
+  })
+}
+
+# Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG
+# NLB health checks target pod IPs directly; the EKS managed cluster SG
+# (applied to all nodes) must allow this traffic for health checks to pass.
+resource "aws_security_group_rule" "eks_cluster_sg_from_nlb" {
+  count = local.infrastructure.ingress_nlb_security_group_id != null ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow inbound from Ingress NLB for health checks"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = local.infrastructure.ingress_nlb_security_group_id
+  security_group_id        = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
+# Security Group Rule: Allow inbound from EKS cluster to nodes
+resource "aws_security_group_rule" "eks_nodes_from_cluster" {
+  type                     = "ingress"
+  description              = "Allow inbound from EKS cluster"
+  from_port                = 1025
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_cluster.id
+  security_group_id        = aws_security_group.eks_nodes.id
+}
+
 # EKS Node Group IAM Role
 resource "aws_iam_role" "eks_node_group" {
   name = "${module.naming.id}-eks-node-group-role"

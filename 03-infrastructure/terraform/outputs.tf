@@ -329,6 +329,11 @@ output "ingress_nlb_arn" {
   value       = try(aws_lb.ingress_nlb[0].arn, null)
 }
 
+output "ingress_nlb_security_group_id" {
+  description = "Security group ID of the Ingress NLB"
+  value       = try(aws_security_group.ingress_nlb[0].id, null)
+}
+
 output "ingress_target_group_http_arn" {
   description = "ARN of the Ingress HTTP target group (for TargetGroupBinding)"
   value       = try(aws_lb_target_group.ingress_http[0].arn, null)
