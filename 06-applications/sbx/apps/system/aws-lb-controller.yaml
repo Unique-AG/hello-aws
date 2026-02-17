@@ -1,0 +1,14 @@
+spec:
+  name: aws-lb-controller
+  autoSync: true
+  sources:
+    - repoURL: 'https://github.com/unique-ag/hello-aws'
+      targetRevision: deploy/rc-06-applications
+      ref: values
+    - chart: aws-load-balancer-controller
+      repoURL: https://aws.github.io/eks-charts
+      targetRevision: 1.11.0
+      helm:
+        releaseName: aws-load-balancer-controller
+        valueFiles:
+          - $values/06-applications/sbx/values/aws-lb-controller/aws-lb-controller.yaml

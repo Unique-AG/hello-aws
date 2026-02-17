@@ -40,12 +40,7 @@ gateway:
   #   scalability: steady
   #   lifecycle: persistent
   proxy:
-    type: LoadBalancer
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
-      service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
-      service.beta.kubernetes.io/aws-load-balancer-internal: "true"  # Legacy annotation for in-tree cloud provider
-      service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    type: ClusterIP
     tls:
       appProtocol: "https"
   plugins:
@@ -79,3 +74,24 @@ gateway:
       enabled: false
     portal:
       enabled: false
+  extraObjects:
+    - apiVersion: elbv2.k8s.aws/v1beta1
+      kind: TargetGroupBinding
+      metadata:
+        name: kong-proxy-http
+      spec:
+        serviceRef:
+          name: kong-gateway-proxy
+          port: 80
+        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-http/44fbaddde80cbf60
+        targetType: ip
+    - apiVersion: elbv2.k8s.aws/v1beta1
+      kind: TargetGroupBinding
+      metadata:
+        name: kong-proxy-https
+      spec:
+        serviceRef:
+          name: kong-gateway-proxy
+          port: 443
+        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-https/1105243f0c8419a2
+        targetType: ip
