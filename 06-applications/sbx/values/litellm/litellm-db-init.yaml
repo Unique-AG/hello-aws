@@ -8,6 +8,9 @@ resources:
     metadata:
       name: litellm-db-init
       namespace: unique
+      annotations:
+        argocd.argoproj.io/hook: PostSync
+        argocd.argoproj.io/hook-delete-policy: HookSucceeded
     spec:
       ttlSecondsAfterFinished: 300
       backoffLimit: 3
