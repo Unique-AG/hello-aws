@@ -42,14 +42,14 @@ output "eks_node_security_group_id" {
   value       = aws_security_group.eks_nodes.id
 }
 
-output "eks_node_group_id" {
-  description = "ID of the EKS node group"
-  value       = aws_eks_node_group.main.id
+output "eks_node_group_ids" {
+  description = "Map of EKS node group names to IDs"
+  value       = { for k, v in aws_eks_node_group.pool : k => v.id }
 }
 
-output "eks_node_group_arn" {
-  description = "ARN of the EKS node group"
-  value       = aws_eks_node_group.main.arn
+output "eks_node_group_arns" {
+  description = "Map of EKS node group names to ARNs"
+  value       = { for k, v in aws_eks_node_group.pool : k => v.arn }
 }
 
 # ECR Repository Outputs

@@ -15,10 +15,30 @@ eks_endpoint_public_access_cidrs = ["0.0.0.0/0"]
 eks_cluster_log_retention_days   = 7
 
 # EKS Node Group Configuration
-eks_node_group_instance_types = ["m6i.2xlarge"]
-eks_node_group_desired_size   = 1
-eks_node_group_min_size       = 1
-eks_node_group_max_size       = 2
+eks_node_groups = {
+  steady = {
+    instance_types = ["m6i.2xlarge"]
+    desired_size   = 2
+    min_size       = 0
+    max_size        = 4
+    max_unavailable = 2
+    labels = {
+      lifecycle   = "persistent"
+      scalability = "steady"
+    }
+    taints = []
+  }
+  rapid = {
+    instance_types = ["m6i.2xlarge"]
+    desired_size   = 0
+    min_size       = 0
+    max_size       = 3
+    labels = {
+      lifecycle   = "ephemeral"
+      scalability = "rapid"
+    }
+  }
+}
 
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
