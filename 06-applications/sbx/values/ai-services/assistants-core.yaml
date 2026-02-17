@@ -27,6 +27,8 @@ secretProvider: null
 
 serviceAccount:
   enabled: true
+  workloadIdentity:
+    enabled: false
 
 podAnnotations:
   reloader.stakater.com/auto: "true"

@@ -35,5 +35,9 @@ podAnnotations:
 
 nodeSelector: null
 
+serviceAccount:
+  workloadIdentity:
+    enabled: false
+
 keda:
   skipCrdCheck: true
