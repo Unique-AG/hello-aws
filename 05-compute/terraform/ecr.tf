@@ -221,6 +221,7 @@ locals {
   acr_configured = var.acr_registry_url != ""
   # Filter registries: exclude ACR-related ones if ACR is not configured
   ecr_pull_through_cache_registries = local.acr_configured ? var.ecr_pull_through_cache_upstream_registries : [for reg in var.ecr_pull_through_cache_upstream_registries : reg if reg != var.acr_registry_url && reg != local.acr_alias]
+
 }
 
 resource "aws_ecr_pull_through_cache_rule" "main" {
