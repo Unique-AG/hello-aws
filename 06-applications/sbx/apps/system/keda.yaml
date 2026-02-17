@@ -1,6 +1,8 @@
 spec:
   name: keda
   autoSync: true
+  syncOptions:
+    - ServerSideApply=true
   sources:
     - repoURL: 'https://github.com/unique-ag/hello-aws'
       targetRevision: deploy/rc-06-applications
