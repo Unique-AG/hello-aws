@@ -42,6 +42,9 @@ applicationsets:
             selfHeal: true
           syncOptions:
             - CreateNamespace=true
+            {{- if hasKey .spec "syncOptions" }}
+            {{- .spec.syncOptions | toYaml | nindent 6 }}
+            {{- end }}
         {{- end }}
 
   chat:
@@ -87,4 +90,7 @@ applicationsets:
             selfHeal: true
           syncOptions:
             - CreateNamespace=true
+            {{- if hasKey .spec "syncOptions" }}
+            {{- .spec.syncOptions | toYaml | nindent 6 }}
+            {{- end }}
         {{- end }}
