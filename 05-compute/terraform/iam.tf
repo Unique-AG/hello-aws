@@ -39,6 +39,44 @@ resource "aws_iam_role_policy_attachment" "ebs_csi" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
 
+data "aws_iam_policy_document" "ebs_csi_kms" {
+  statement {
+    sid    = "KMSForEBSEncryption"
+    effect = "Allow"
+    actions = [
+      "kms:CreateGrant",
+      "kms:ListGrants",
+      "kms:RevokeGrant",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+  statement {
+    sid    = "KMSEncryptDecrypt"
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo",
+      "kms:GenerateDataKey",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:DescribeKey",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "ebs_csi_kms" {
+  name   = "ebs-kms-encryption"
+  role   = aws_iam_role.ebs_csi.id
+  policy = data.aws_iam_policy_document.ebs_csi_kms.json
+}
+
 resource "aws_eks_pod_identity_association" "ebs_csi" {
   cluster_name    = aws_eks_cluster.main.name
   namespace       = "kube-system"
