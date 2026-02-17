@@ -1,9 +1,6 @@
 # Chat backend service configuration (AWS sbx)
 # Secrets pulled from AWS Secrets Manager via ExternalSecrets
 
-secretProvider:
-  enabled: false
-
 env:
   AMQP_BENCHMARK_PREFETCH: "1"
   ANONYMIZED_CHAT_INTERACTIONS_EXPORT: "false"

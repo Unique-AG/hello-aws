@@ -1,9 +1,6 @@
 # Speech backend service configuration (AWS sbx)
 # Uses AWS Transcribe for speech-to-text
 
-secretProvider:
-  enabled: false
-
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-speech
   tag: "2026.06.1"

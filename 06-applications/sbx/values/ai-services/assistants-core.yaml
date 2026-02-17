@@ -23,8 +23,7 @@ resources:
     cpu: 250m
     memory: 1Gi
 
-secretProvider:
-  enabled: false
+secretProvider: null
 
 serviceAccount:
   enabled: true

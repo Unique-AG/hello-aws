@@ -1,9 +1,6 @@
 # Ingestion backend service configuration (AWS sbx)
 # Uses S3 for storage and LiteLLM for embeddings
 
-secretProvider:
-  enabled: false
-
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
   tag: "2026.06.1"

@@ -20,8 +20,7 @@ routes:
 
 # Disable Azure secretProvider (use ExternalSecrets for AWS instead)
 # Secrets are pulled from AWS Secrets Manager via ClusterSecretStore
-secretProvider:
-  enabled: false
+secretProvider: null
 
 resources:
   requests:

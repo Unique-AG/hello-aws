@@ -1,8 +1,5 @@
 # Configuration (theme) backend service configuration (AWS sbx)
 
-secretProvider:
-  enabled: false
-
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-configuration
   tag: "2026.06.1"
