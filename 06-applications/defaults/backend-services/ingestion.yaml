@@ -55,7 +55,7 @@ env:
 hooks:
   migration:
     command: |
-      cd /home/node/app/services/node-ingestion/prisma; npx prisma migrate deploy;
+      cd /home/node/app/services/node-ingestion; npx prisma migrate deploy;
     enabled: true
 nodeSelector:
   scalability: steady
