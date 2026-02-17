@@ -257,7 +257,7 @@ resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "eks-pod-identity-agent"
   resolve_conflicts_on_update = "OVERWRITE"
-  depends_on                  = [aws_eks_node_group.main]
+  depends_on                  = [aws_eks_node_group.pool]
 }
 
 # EBS CSI Driver Addon - Required for PersistentVolumeClaims with gp3 storage
@@ -270,7 +270,7 @@ resource "aws_eks_addon" "ebs_csi" {
   addon_version               = var.eks_ebs_csi_driver_version
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
 
   lifecycle {
     ignore_changes = [service_account_role_arn]
@@ -287,7 +287,9 @@ resource "aws_eks_addon" "coredns" {
   addon_name                  = "coredns"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
+
+  tags = local.tags
 }
 
 # kube-proxy Addon
@@ -296,7 +298,9 @@ resource "aws_eks_addon" "kube_proxy" {
   addon_name                  = "kube-proxy"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
+
+  tags = local.tags
 }
 
 # VPC CNI Addon
@@ -305,38 +309,44 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_name                  = "vpc-cni"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
+
+  tags = local.tags
 }
 
 #######################################
-# EKS Node Group
+# EKS Node Groups
 #######################################
 
-# EKS Node Group
-resource "aws_eks_node_group" "main" {
+resource "aws_eks_node_group" "pool" {
+  for_each = var.eks_node_groups
+
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "${module.naming.id}-node-group"
+  node_group_name = "${module.naming.id}-${each.key}"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = local.infrastructure.private_subnet_ids
 
-  instance_types = var.eks_node_group_instance_types
-  capacity_type  = var.eks_node_group_capacity_type
-  disk_size      = var.eks_node_group_disk_size
+  instance_types = each.value.instance_types
+  capacity_type  = each.value.capacity_type
+  disk_size      = each.value.disk_size
 
   scaling_config {
-    desired_size = var.eks_node_group_desired_size
-    min_size     = var.eks_node_group_min_size
-    max_size     = var.eks_node_group_max_size
+    desired_size = each.value.desired_size
+    min_size     = each.value.min_size
+    max_size     = each.value.max_size
   }
 
   update_config {
-    max_unavailable = var.eks_node_group_update_config.max_unavailable
+    max_unavailable = each.value.max_unavailable
   }
 
-  labels = var.eks_node_group_labels
+  labels = {
+    lifecycle   = each.value.labels.lifecycle
+    scalability = each.value.labels.scalability
+  }
 
   dynamic "taint" {
-    for_each = var.eks_node_group_taints
+    for_each = each.value.taints
     content {
       key    = taint.value.key
       value  = taint.value.value
@@ -344,7 +354,6 @@ resource "aws_eks_node_group" "main" {
     }
   }
 
-  # Ensure cluster is ready before creating node group
   depends_on = [
     aws_eks_cluster.main,
     aws_iam_role_policy_attachment.eks_worker_node_policy,
@@ -352,53 +361,8 @@ resource "aws_eks_node_group" "main" {
     aws_iam_role_policy_attachment.eks_container_registry_policy
   ]
 
-  tags = {
-    Name = "${module.naming.id}-node-group"
-  }
-}
-
-# Large node group for system applications (Kong, etc.)
-resource "aws_eks_node_group" "large" {
-  cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "${module.naming.id}-node-group-large"
-  node_role_arn   = aws_iam_role.eks_node_group.arn
-  subnet_ids      = local.infrastructure.private_subnet_ids
-
-  instance_types = var.eks_node_group_instance_types
-  capacity_type  = var.eks_node_group_capacity_type
-  disk_size      = var.eks_node_group_disk_size
-
-  scaling_config {
-    desired_size = var.eks_node_group_desired_size
-    min_size     = var.eks_node_group_min_size
-    max_size     = var.eks_node_group_max_size
-  }
-
-  update_config {
-    max_unavailable = var.eks_node_group_update_config.max_unavailable
-  }
-
-  labels = var.eks_node_group_labels
-
-  dynamic "taint" {
-    for_each = var.eks_node_group_taints
-    content {
-      key    = taint.value.key
-      value  = taint.value.value
-      effect = taint.value.effect
-    }
-  }
-
-  # Ensure cluster is ready before creating node group
-  depends_on = [
-    aws_eks_cluster.main,
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-    aws_iam_role_policy_attachment.eks_container_registry_policy
-  ]
-
-  tags = {
-    Name = "${module.naming.id}-node-group-large"
-  }
+  tags = merge(local.tags, {
+    Name = "${module.naming.id}-${each.key}"
+  })
 }
 
