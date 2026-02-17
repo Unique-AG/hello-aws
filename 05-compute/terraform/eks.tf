@@ -236,6 +236,21 @@ resource "aws_security_group" "eks_nodes" {
   })
 }
 
+# Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG
+# NLB health checks target pod IPs directly; the EKS managed cluster SG
+# (applied to all nodes) must allow this traffic for health checks to pass.
+resource "aws_security_group_rule" "eks_cluster_sg_from_nlb" {
+  count = local.infrastructure.ingress_nlb_security_group_id != null ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow inbound from Ingress NLB for health checks"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = local.infrastructure.ingress_nlb_security_group_id
+  security_group_id        = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
 # Security Group Rule: Allow inbound from EKS cluster to nodes
 resource "aws_security_group_rule" "eks_nodes_from_cluster" {
   type                     = "ingress"
