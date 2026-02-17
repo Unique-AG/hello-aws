@@ -3,7 +3,7 @@
 
 env:
   CORS_ALLOWED_ORIGINS: https://sbx.rbcn.ai
-  ZITADEL_PROJECT_ID: "359427268977638958"
+  ZITADEL_PROJECT_ID: "360428746047488602"
   UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
   AWS_REGION: eu-central-2
   LLM_PROVIDER: bedrock
@@ -23,8 +23,7 @@ resources:
     cpu: 250m
     memory: 1Gi
 
-secretProvider:
-  enabled: false
+secretProvider: null
 
 serviceAccount:
   enabled: true

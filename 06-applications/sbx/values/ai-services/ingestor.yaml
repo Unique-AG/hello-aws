@@ -8,8 +8,7 @@ env:
   REDIS_PORT: "6380"
   REDIS_USE_TLS: "true"
 
-secretProvider:
-  enabled: false
+secretProvider: null
 
 routes:
   skipCrdCheck: true
