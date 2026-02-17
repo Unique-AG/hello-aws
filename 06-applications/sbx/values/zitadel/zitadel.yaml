@@ -6,7 +6,9 @@ chownImage:
 image:
   repository: ghcr.io/zitadel/zitadel
   tag: v2.71.13
-# nodeSelector removed for sbx - nodes don't have these labels
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
 ingress:
   enabled: false
 securityContext:
@@ -69,11 +71,6 @@ zitadel:
         Human:
           Username: root@cluster-iam.localhost
           Password: "RootPassword1!"
-        Machine:
-          Machine:
-            Username: provision-ephemeral
-            Name: Provision Ephemeral (bootstrap only)
-          Pat: {}
   configmapConfig:
     ExternalDomain: id.sbx.rbcn.ai
     ExternalPort: 443
@@ -124,17 +121,17 @@ zitadel:
       LoginPolicy:
         AllowDomainDiscovery: true
         AllowRegister: false
-replicaCount: 1
+replicaCount: 2
 resources:
   requests:
-    cpu: 250m
-    memory: 512Mi
+    cpu: 500m
+    memory: 1Gi
   limits:
     memory: 1Gi
 initJob:
   resources:
     requests:
       cpu: 100m
-      memory: 256Mi
+      memory: 512Mi
     limits:
       memory: 512Mi
