@@ -7,7 +7,7 @@ useCertManager: true
 
 clusterOperator:
   image:
-    registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+    registry: docker.io
     repository: bitnamilegacy/rabbitmq-cluster-operator
     tag: 2.10.0-debian-12-r0
   watchAllNamespaces: false
@@ -16,6 +16,6 @@ clusterOperator:
 
 msgTopologyOperator:
   image:
-    registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+    registry: docker.io
     repository: bitnamilegacy/rmq-messaging-topology-operator
     tag: 1.14.2-debian-12-r5
