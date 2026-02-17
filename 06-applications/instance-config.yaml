@@ -20,7 +20,7 @@ aws:
       accountId: "217381566492"
       prefix: uniquecr
     thirdParty:  # Operator/infra images (rabbitmq, qdrant, bitnami)
-      accountId: "696630818863"
+      accountId: "217381566492"
       prefix: uniquecr
 
 zitadel:

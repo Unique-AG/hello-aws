@@ -16,13 +16,13 @@ aws:
   region: eu-central-2
   hostedZoneID: Z06962683TV7AEN6MMQ8E
   kms:
-    keyArn: "arn:aws:kms:eu-central-2:217381566492:key/a017a40c-c6e2-4928-b2a1-fe7f2decc4e8"
+    keyArn: "arn:aws:kms:eu-central-2:217381566492:key/0f60d8fc-d97d-4b7e-ab8f-50c80b16caf4"
   ecr:
     primary:     # Unique application images
       accountId: "217381566492"
       prefix: uniquecr
     thirdParty:  # Operator/infra images (rabbitmq, qdrant, bitnami)
-      accountId: "696630818863"
+      accountId: "217381566492"
       prefix: uniquecr
 
 zitadel:
