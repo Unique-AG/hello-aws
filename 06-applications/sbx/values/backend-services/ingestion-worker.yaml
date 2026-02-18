@@ -9,6 +9,7 @@ env:
   LLM_PROVIDER: bedrock
   AWS_REGION: <AWS_REGION>
   STORAGE_PROVIDER: s3
+  TRUSTED_DOMAINS: '["<TRUSTED_STORAGE_DOMAIN>"]'
 
 serviceAccount:
   enabled: true
