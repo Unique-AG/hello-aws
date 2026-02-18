@@ -157,7 +157,7 @@ resource "aws_lb_target_group_attachment" "ingress_nlb" {
 # This certificate validates the ALB for CloudFront VPC Origin connections
 
 variable "internal_alb_certificate_domain" {
-  description = "Domain name for the internal ALB certificate (e.g., '*.sbx.rbcn.ai')"
+  description = "Domain name for the internal ALB certificate (e.g., '*.sbx.example.com')"
   type        = string
   default     = null
 }
