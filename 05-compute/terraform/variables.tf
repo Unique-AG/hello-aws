@@ -133,7 +133,7 @@ variable "eks_node_groups" {
       key    = string
       value  = string
       effect = string
-    })), [
+      })), [
       { key = "scalability", value = "rapid", effect = "NO_SCHEDULE" },
       { key = "lifecycle", value = "ephemeral", effect = "NO_SCHEDULE" }
     ])

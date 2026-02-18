@@ -5,7 +5,7 @@ resource "aws_cloudwatch_log_group" "bedrock_logs" {
   count = var.enable_bedrock_logging ? 1 : 0
 
   name              = "${module.naming.log_group_prefix}/bedrock/model-invocations"
-  retention_in_days = var.cloudwatch_log_retention_days
+  retention_in_days = max(var.cloudwatch_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_cloudwatch_logs_arn
 
   tags = merge(

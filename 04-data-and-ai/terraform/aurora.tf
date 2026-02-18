@@ -50,6 +50,7 @@ resource "aws_security_group" "aurora" {
 
 # Aurora PostgreSQL Cluster
 resource "aws_rds_cluster" "postgres" {
+  #checkov:skip=CKV_AWS_162: see docs/security-baseline.md
   cluster_identifier            = "aurora-${module.naming.id}-postgres"
   engine                        = "aurora-postgresql"
   engine_version                = var.aurora_engine_version
@@ -66,6 +67,7 @@ resource "aws_rds_cluster" "postgres" {
   storage_encrypted               = true
   kms_key_id                      = local.infrastructure.kms_key_general_arn
   enabled_cloudwatch_logs_exports = ["postgresql"]
+  copy_tags_to_snapshot           = true
   deletion_protection             = var.aurora_deletion_protection
   skip_final_snapshot             = var.aurora_skip_final_snapshot
   engine_mode                     = "provisioned"
@@ -81,6 +83,7 @@ resource "aws_rds_cluster" "postgres" {
 
 # Aurora PostgreSQL Cluster Instances
 resource "aws_rds_cluster_instance" "postgres" {
+  #checkov:skip=CKV_AWS_118: see docs/security-baseline.md
   count              = var.aurora_instance_count
   identifier         = "aurora-${module.naming.id}-postgres-${count.index + 1}"
   cluster_identifier = aws_rds_cluster.postgres.id
@@ -88,6 +91,7 @@ resource "aws_rds_cluster_instance" "postgres" {
   engine             = aws_rds_cluster.postgres.engine
   engine_version     = aws_rds_cluster.postgres.engine_version
 
+  auto_minor_version_upgrade      = true
   performance_insights_enabled    = var.aurora_performance_insights_enabled
   performance_insights_kms_key_id = var.aurora_performance_insights_enabled ? local.infrastructure.kms_key_general_arn : null
 

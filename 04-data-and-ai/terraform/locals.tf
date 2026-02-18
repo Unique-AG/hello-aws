@@ -1,7 +1,4 @@
 locals {
-  # Layer name for state file organization
-  layer_name = "data-and-ai"
-
   # Terraform state bucket name (computed from naming module, same as bootstrap layer)
   # Format: s3-{id_short}-tfstate
   terraform_state_bucket = "${module.naming.s3_bucket_prefix}-tfstate"
