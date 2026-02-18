@@ -31,18 +31,18 @@ kms_deletion_window           = 0
 cloudwatch_log_retention_days = 7
 
 # Bastion and Management Server Configuration (sandbox environment)
-enable_ssm_endpoints            = true
-enable_management_server        = true
+ssm_endpoints_enabled            = true
+management_server_enabled        = true
 management_server_public_access = false       # Use Session Manager for access
 management_server_instance_type = "t3.medium" # Upgraded from t3.micro for better performance (4 GB RAM vs 1 GB)
 management_server_disk_size     = 30
 management_server_monitoring    = false
 
 # GitHub Runners
-enable_github_runners = true
+github_runners_enabled = true
 
 # Secondary CIDR for EKS pod networking
-enable_secondary_cidr = true
+secondary_cidr_enabled = true
 
 # Route 53 Private Hosted Zone Configuration
 # Associates this VPC with the Route 53 Private Hosted Zone from landing zone

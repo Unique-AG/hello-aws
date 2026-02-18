@@ -152,13 +152,10 @@ resource "aws_kms_key" "general" {
     ]
   })
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "kms-${module.naming.id}-general"
-      Purpose = "general-encryption"
-    }
-  )
+  tags = {
+    Name    = "kms-${module.naming.id}-general"
+    Purpose = "general-encryption"
+  }
 }
 
 resource "aws_kms_alias" "general" {
@@ -217,13 +214,10 @@ resource "aws_kms_key" "secrets_manager" {
     ]
   })
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "kms-${module.naming.id}-secrets-manager"
-      Purpose = "secrets-manager"
-    }
-  )
+  tags = {
+    Name    = "kms-${module.naming.id}-secrets-manager"
+    Purpose = "secrets-manager"
+  }
 }
 
 resource "aws_kms_alias" "secrets_manager" {
@@ -274,13 +268,10 @@ resource "aws_kms_key" "cloudwatch_logs" {
     ]
   })
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "kms-${module.naming.id}-cloudwatch-logs"
-      Purpose = "cloudwatch-logs"
-    }
-  )
+  tags = {
+    Name    = "kms-${module.naming.id}-cloudwatch-logs"
+    Purpose = "cloudwatch-logs"
+  }
 }
 
 resource "aws_kms_alias" "cloudwatch_logs" {
@@ -328,13 +319,10 @@ resource "aws_kms_key" "prometheus" {
     ]
   })
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "kms-${module.naming.id}-prometheus"
-      Purpose = "prometheus"
-    }
-  )
+  tags = {
+    Name    = "kms-${module.naming.id}-prometheus"
+    Purpose = "prometheus"
+  }
 }
 
 resource "aws_kms_alias" "prometheus" {

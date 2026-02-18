@@ -102,7 +102,7 @@ variable "single_nat_gateway" {
   default     = false
 }
 
-variable "enable_secondary_cidr" {
+variable "secondary_cidr_enabled" {
   description = "Enable secondary CIDR block (100.64.0.0/20) for EKS pod networking"
   type        = bool
   default     = false
@@ -175,7 +175,7 @@ variable "enable_ec2_endpoint" {
   default     = true
 }
 
-variable "enable_ssm_endpoints" {
+variable "ssm_endpoints_enabled" {
   description = "Enable Systems Manager Interface Endpoints (required for Session Manager/bastion)"
   type        = bool
   default     = true
@@ -209,7 +209,7 @@ variable "enable_managed_prometheus" {
 }
 
 # Bastion and Management Server Configuration
-variable "enable_management_server" {
+variable "management_server_enabled" {
   description = "Enable EC2 management server (jump server)"
   type        = bool
   default     = true
@@ -253,7 +253,7 @@ variable "alert_email_endpoints" {
 }
 
 # GitHub Runners Configuration
-variable "enable_github_runners" {
+variable "github_runners_enabled" {
   description = "Enable GitHub Actions self-hosted runners infrastructure"
   type        = bool
   default     = false

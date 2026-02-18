@@ -3,13 +3,10 @@ resource "aws_cloudwatch_log_group" "infrastructure" {
   retention_in_days = var.environment == "sbx" ? var.cloudwatch_log_retention_days : max(var.cloudwatch_log_retention_days, 365)
   kms_key_id        = aws_kms_key.cloudwatch_logs.arn
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "log-${module.naming.id}-infrastructure"
-      Purpose = "infrastructure-logs"
-    }
-  )
+  tags = {
+    Name    = "log-${module.naming.id}-infrastructure"
+    Purpose = "infrastructure-logs"
+  }
 }
 
 # SNS Topic for Infrastructure Alerts
@@ -17,10 +14,10 @@ resource "aws_sns_topic" "alerts" {
   name              = "${module.naming.id}-infrastructure-alerts"
   kms_master_key_id = aws_kms_key.general.arn
 
-  tags = merge(local.tags, {
+  tags = {
     Name    = "${module.naming.id}-infrastructure-alerts"
     Purpose = "infrastructure-alerts"
-  })
+  }
 }
 
 resource "aws_sns_topic_subscription" "alert_email" {
@@ -50,8 +47,6 @@ resource "aws_cloudwatch_metric_alarm" "nat_error_port_allocation" {
   dimensions = {
     NatGatewayId = aws_nat_gateway.main[count.index].id
   }
-
-  tags = local.tags
 }
 
 # NAT Gateway PacketsDropCount Alarm
@@ -73,6 +68,4 @@ resource "aws_cloudwatch_metric_alarm" "nat_packets_drop" {
   dimensions = {
     NatGatewayId = aws_nat_gateway.main[count.index].id
   }
-
-  tags = local.tags
 }
