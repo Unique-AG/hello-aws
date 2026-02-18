@@ -93,6 +93,8 @@ variable "bedrock_inference_profiles" {
     "claude-3-5-sonnet"   = { model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0", source_type = "foundation-model" }
     "claude-3-haiku"      = { model_id = "anthropic.claude-3-haiku-20240307-v1:0", source_type = "foundation-model" }
     "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
+    # Global inference profile (Cohere Embed v4 via LiteLLM)
+    "cohere-embed-v4" = { model_id = "global.cohere.embed-v4:0" }
   }
 }
 

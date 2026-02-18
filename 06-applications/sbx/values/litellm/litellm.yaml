@@ -6,6 +6,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/berriai/litellm-database
+  tag: "litellm_stable_release_branch-v1.81.3-stable"
   pullPolicy: IfNotPresent
 
 # Service account for Bedrock access (Pod Identity association managed by Terraform)
@@ -112,10 +113,12 @@ proxy_config:
         max_tokens: 10000
 
     # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
-    # Maps text-embedding-ada-002 to Cohere Embed v4 via EU CRIS (1536 dims, multimodal)
+    # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
+    # model: sets provider mapping, model_id: sets Bedrock inference profile ARN
     - model_name: text-embedding-ada-002
       litellm_params:
-        model: bedrock/eu.cohere.embed-v4:0
+        model: bedrock/cohere.embed-v4:0
+        model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>
         aws_region_name: <AWS_REGION>
 
   general_settings:
@@ -127,6 +130,7 @@ proxy_config:
     disable_error_logs: false
 
   litellm_settings:
+    drop_params: true
     turn_off_message_logging: false
     max_budget: 10000
     budget_duration: 30d
