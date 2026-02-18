@@ -11,8 +11,8 @@ env:
   INGESTION_UPLOAD_API_URL: https://api.sbx.rbcn.ai/scoped/ingestion/upload
   UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
   ZITADEL_HOST: https://id.sbx.rbcn.ai
-  ZITADEL_PROJECT_ID: "360428746047488602"
-  ZITADEL_ROOT_ORG_ID: "360299865873384324"
+  ZITADEL_PROJECT_ID: "360558571718444181"
+  ZITADEL_ROOT_ORG_ID: "360557335975887577"
 
 routes:
   hostname: api.sbx.rbcn.ai
