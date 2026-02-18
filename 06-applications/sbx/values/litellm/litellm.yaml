@@ -113,10 +113,11 @@ proxy_config:
 
     # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
     # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
-    # Note: embedding models don't support cross-region inference profiles (eu.* prefix)
+    # model: sets provider mapping, model_id: sets Bedrock inference profile ARN
     - model_name: text-embedding-ada-002
       litellm_params:
         model: bedrock/cohere.embed-v4:0
+        model_id: arn:aws:bedrock:eu-central-2:217381566492:application-inference-profile/p5rbstj6fcgb
         aws_region_name: eu-central-2
 
   general_settings:
