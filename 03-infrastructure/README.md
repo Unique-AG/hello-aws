@@ -55,7 +55,7 @@ The VPC default security group is locked down with **no ingress or egress rules*
 
 VPC endpoints provide **private connectivity** to AWS services without internet access:
 
-- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket and ECR layer bucket)
+- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket, application-data and ai-data S3 buckets, and ECR layer bucket)
 - **Interface Endpoints**: SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, STS, KMS, EC2
 - **Private Access**: All AWS service access stays within the VPC
 
@@ -90,6 +90,15 @@ Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TC
 
 For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingress NLB → Ingress controller`
 
+> **Future**: The ambition is to consolidate the two ALBs into a single ALB once CloudFront VPC Origins support WebSocket traffic.
+
+### Transit Gateway (Optional)
+
+When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity account), the VPC is attached to the Transit Gateway for hub-and-spoke network connectivity:
+
+- **VPC Attachment**: Private subnets, DNS support enabled
+- **Cross-Account IAM Role**: Optional read-only role (`enable_connectivity_account_role`) allows the connectivity account to discover VPCs, subnets, EKS clusters, and load balancers for Transit Gateway routing and CloudFront setup
+
 ## Resources
 
 ### VPC and Networking
@@ -105,7 +114,7 @@ For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingr
 ### VPC Endpoints
 
 - **Interface Endpoints**: SSM, Secrets Manager, ECR (API + DKR), CloudWatch (Logs + Metrics), Prometheus, Bedrock, Bedrock Runtime, STS, KMS, EC2, EC2 Messages, SSM Messages
-- **Gateway Endpoints**: S3 (with restrictive bucket-scoped policy)
+- **Gateway Endpoints**: S3 (with policy scoped to Terraform state, application S3 buckets, and ECR layers)
 - **Security Group**: Restricted ingress/egress to VPC CIDR
 
 ### KMS Keys
@@ -161,6 +170,11 @@ For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingr
 - **AWS RAM Share**: Shares VPC Origin with connectivity account (us-east-1, as CloudFront is global)
 - **Principal Association**: Connectivity account receives RAM invitation
 
+### Transit Gateway (Optional)
+
+- **VPC Attachment**: Connects to Transit Gateway shared via AWS RAM, private subnets, DNS support enabled
+- **Cross-Account IAM Role**: Read-only for connectivity account (EC2 describe, EKS describe, ELB describe)
+
 ### GitHub Runners (Optional)
 
 - **Subnets**: /26 per AZ, non-overlapping with other tiers
@@ -177,7 +191,7 @@ For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingr
 - **Private Subnets**: Workloads in private subnets (no public IPs)
 - **Isolated Subnets**: Databases with no internet access
 - **VPC-Only Management Server**: No internet egress from jump server
-- **S3 Endpoint Policy**: Scoped to Terraform state and ECR layer buckets only
+- **S3 Endpoint Policy**: Scoped to Terraform state, application S3 buckets, and ECR layer buckets only
 
 ### Encryption
 
@@ -358,8 +372,12 @@ After deployment:
 - `management_server_security_group_id`
 - `ssm_instance_profile_arn`, `ssm_instance_profile_name`, `ssm_instance_role_arn`
 
+### Transit Gateway
+- `transit_gateway_attachment_id`, `transit_gateway_attachment_arn`
+- `connectivity_account_read_only_role_arn`
+
 ### Ingress NLB
-- `ingress_nlb_dns_name`, `ingress_nlb_arn`
+- `ingress_nlb_dns_name`, `ingress_nlb_arn`, `ingress_nlb_security_group_id`
 - `ingress_target_group_http_arn`, `ingress_target_group_https_arn`
 
 ### ALBs
