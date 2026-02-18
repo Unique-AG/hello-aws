@@ -207,8 +207,8 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 
 | Service Account | Namespace | AWS Access | Purpose |
 |----------------|-----------|------------|---------|
-| `cert-manager` | cert-manager | Route 53 | DNS-01 certificate validation |
-| `external-secrets` | external-secrets | Secrets Manager + KMS | Secret retrieval |
+| `cert-manager` | unique | Route 53 | DNS-01 certificate validation |
+| `external-secrets` | unique | Secrets Manager + KMS | Secret retrieval |
 | `ebs-csi-controller-sa` | kube-system | EBS | Volume provisioning (EKS addon, not ArgoCD-managed) |
 
 ### Chat

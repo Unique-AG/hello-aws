@@ -21,15 +21,14 @@ The EKS cluster is configured for **private-only API access** with IAM-based aut
 - **KMS Encryption**: Cluster secrets encrypted with the customer-managed general KMS key from infrastructure layer
 - **Control Plane Logging**: All 5 log types (`api`, `audit`, `authenticator`, `controllerManager`, `scheduler`) to CloudWatch
 - **Private Endpoints**: API server accessible only from within the VPC; public access disabled
-- **Security Groups**: Cluster SG allows 443 from VPC endpoints SG, nodes SG, and management server SG; egress restricted to VPC CIDR
+- **Security Groups**: Cluster SG allows 443 from VPC endpoints SG, nodes SG, and management server SG; egress restricted to VPC CIDR. If ingress NLB exists, the EKS managed cluster SG also allows inbound from NLB SG for health checks.
 
 ### Node Groups
 
-Two node groups share the same IAM role and scaling configuration:
+Node groups are defined via the `eks_node_groups` variable (a map of pool configurations). All pools share the same IAM role and deploy across all private subnets (multi-AZ):
 
-- **Standard** (`node-group`): General workloads
-- **Large** (`node-group-large`): System workloads (ingress controller, etc.)
-- Both deploy across all private subnets (multi-AZ), support configurable instance types, capacity type (ON_DEMAND/SPOT), disk size, labels, and taints
+- Each pool supports configurable instance types, capacity type (ON_DEMAND/SPOT), disk size, scaling limits, labels, and taints
+- Pool names become the node group suffix: `{naming-id}-{pool-name}`
 - Node IAM role includes `AmazonEKSWorkerNodePolicy`, `AmazonEKS_CNI_Policy`, `AmazonEC2ContainerRegistryReadOnly`, plus an inline policy for `ecr:BatchImportUpstreamImage` and `ecr:CreateRepository` (pull-through cache)
 
 ### EKS Addons
@@ -52,9 +51,9 @@ Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assu
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
-| EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) |
-| Cluster Secrets | `external-secrets` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
-| Cert-Manager Route 53 | `cert-manager` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
+| EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) + KMS encrypt/decrypt for EBS encryption |
+| Cluster Secrets | `unique` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
+| Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` |
 | LiteLLM | `unique` | `litellm` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` |
 | Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `*-ai-data` |
@@ -62,7 +61,7 @@ Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assu
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 
-Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), EU cross-region inference profiles (`arn:aws:bedrock:*::inference-profile/eu.*`), and account-scoped inference profiles.
+Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
 
 ### ECR
 
@@ -74,11 +73,11 @@ ECR provides **secure container image storage** with automated vulnerability sca
 
 ### ECR Pull-Through Cache
 
-Pull-through cache reduces external registry dependencies and egress costs:
+Pull-through cache reduces external registry dependencies and egress costs. For authenticated registries (Docker Hub, GHCR), creating pull-through cache rules with credentials is the recommended approach — it avoids rate limits and provides reliable, cached access to upstream images.
 
-- **Upstream Registries**: Docker Hub, ECR Public, Quay.io, GHCR, Azure Container Registry (ACR)
-- **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret
-- **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `uniqueapp` from `uniqueapp.azurecr.io`), registered as both the full URL and the short alias
+- **Supported Upstream Registries**: Docker Hub, ECR Public, Quay.io, GCR, GHCR, Azure Container Registry (ACR). Enabled registries are configured via `ecr_pull_through_cache_upstream_registries`.
+- **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret.
+- **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
 
 ### Ingress NLB, ALBs, and CloudFront VPC Origin (Infrastructure Layer)
@@ -104,13 +103,12 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 - **Cluster**: Private endpoint, KMS-encrypted secrets, API-only auth mode, 5 control plane log types
 - **Access Entries**: Management server (cluster admin) + SandboxAdministrator (sbx-only, cluster admin)
-- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server) + Nodes SG (all TCP from VPC CIDR, self, cluster)
+- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server; NLB if present) + Nodes SG (all TCP from VPC CIDR, self, cluster)
 - **CloudWatch Log Group**: `/aws/eks/eks-{naming-id}/cluster`, KMS-encrypted, configurable retention
 
 ### EKS Node Groups
 
-- **Standard**: `{naming-id}-node-group` — general workloads
-- **Large**: `{naming-id}-node-group-large` — system workloads (ingress controller, etc.)
+- Configurable pool map via `eks_node_groups` — each pool creates `{naming-id}-{pool-name}`
 - **IAM Role**: Shared role with 3 managed policies + 1 inline (ECR pull-through cache)
 
 ### EKS Addons
@@ -126,7 +124,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 ### ECR Pull-Through Cache
 
-- **Cache Rules**: Docker Hub, ECR Public, Quay.io, GHCR, ACR (conditional)
+- **Cache Rules**: Configurable via `ecr_pull_through_cache_upstream_registries`; ACR rules are conditional on `acr_registry_url`
 - **ACR Secret**: Secrets Manager with `secret_string_wo`, KMS-encrypted, resource policy for ECR service-linked role
 
 ### VPC Endpoint
@@ -157,7 +155,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 - **Terraform Version**: Pinned to `>= 1.10.0` (native S3 locking)
 - **AWS Provider**: Pinned to `~> 5.100`
 - **Control Plane Logging**: All 5 EKS log types enabled
-- **CloudWatch Retention**: Configurable per environment (default 30 days, sbx: 7 days)
+- **CloudWatch Retention**: Configurable per environment (default 7 days)
 
 ### Suppressed Security Findings and Production Guardrails
 
@@ -179,21 +177,30 @@ Key configuration options (defaults shown, override per environment):
 
 ```hcl
 # EKS
-eks_cluster_version            = "1.28"
-eks_node_group_instance_types  = ["m6i.large"]
-eks_node_group_desired_size    = 2       # min: 1, max: 4
-eks_node_group_disk_size       = 50
-eks_endpoint_private_access    = true
-eks_endpoint_public_access     = false
+eks_cluster_version           = "1.28"       # override per env
+eks_endpoint_private_access   = true
+eks_endpoint_public_access    = false
+
+# Node pools (map of pool configs — override per env)
+eks_node_groups = {
+  steady = {
+    instance_types = ["m6i.large"]
+    desired_size   = 2
+    min_size       = 0
+    max_size       = 3
+    labels         = { lifecycle = "persistent", scalability = "steady" }
+    taints         = []
+  }
+}
 
 # ECR
-ecr_enhanced_scanning_enabled  = true
+ecr_enhanced_scanning_enabled = true
 
-# ACR (pull-through cache)
-acr_registry_url = "uniquecr.azurecr.io"   # "" to disable
+# ACR (pull-through cache — "" to disable)
+acr_registry_url = "example.azurecr.io"
 
 # VPC Endpoint
-enable_eks_endpoint            = true
+enable_eks_endpoint           = true
 ```
 
 > **Note**: Ingress NLB, ALBs, and CloudFront VPC Origin are configured in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`).
@@ -242,7 +249,7 @@ enable_eks_endpoint            = true
 ### EKS Cluster
 - `eks_cluster_id`, `eks_cluster_arn`, `eks_cluster_name`, `eks_cluster_endpoint`, `eks_cluster_version`
 - `eks_cluster_security_group_id`, `eks_node_security_group_id`
-- `eks_node_group_id`, `eks_node_group_arn`
+- `eks_node_group_ids`, `eks_node_group_arns` (maps keyed by pool name)
 
 ### ECR
 - `ecr_repository_urls`, `ecr_repository_arns` (maps by repo name)
