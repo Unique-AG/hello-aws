@@ -6,6 +6,7 @@ replicaCount: 1
 
 image:
   repository: ghcr.io/berriai/litellm-database
+  tag: "litellm_stable_release_branch-v1.81.3-stable"
   pullPolicy: IfNotPresent
 
 # Service account for Bedrock access (Pod Identity association managed by Terraform)
