@@ -15,7 +15,7 @@ resources:
       # jwks_uri: http://zitadel.unique.svc.cluster.local:8080/oauth/v2/keys
       uri_param_names:
         - token
-      zitadel_project_id: '000000000000000000'  # TODO: Replace with actual project ID from Zitadel
+      zitadel_project_id: '<ZITADEL_PROJECT_ID>'
   - apiVersion: configuration.konghq.com/v1
     kind: KongClusterPlugin
     metadata:

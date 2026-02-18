@@ -3,9 +3,6 @@
 nameOverride: argo
 global:
   domain: <DOMAIN_ARGOCD>
-  nodeSelector:
-    scalability: steady
-    lifecycle: persistent
 repoServer:
   extraArgs:
     - --repo-cache-expiration=15m

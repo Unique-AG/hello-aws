@@ -77,6 +77,13 @@ aws:
   hostedZoneID: "<AWS_HOSTED_ZONE_ID>"
   kms:
     keyArn: "<KMS_KEY_ARN>"
+  eks:
+    clusterName: "<EKS_CLUSTER_NAME>"
+  vpc:
+    id: "<VPC_ID>"
+  nlb:
+    targetGroupHttpArn: "<TARGET_GROUP_HTTP_ARN>"
+    targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
   ecr:
     primary:
       accountId: "000000000000"
@@ -126,6 +133,10 @@ FROM_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$FROM")
 FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
+FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
+FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
+FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
+FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$FROM")
 FROM_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$FROM")
 FROM_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$FROM")
@@ -165,6 +176,10 @@ TO_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$CONFIG")
 TO_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$CONFIG")
 TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
+TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
+TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
+TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
+TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -229,7 +244,14 @@ replace_all "$FROM_ECR_THIRDPARTY_FULL" "$TO_ECR_THIRDPARTY_FULL"
 echo "  ECR third-party bare registry ..."
 replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
 
-# 2. KMS key ARN (before region, since ARN contains region)
+# 2. Target group ARNs (before region, since ARNs contain region)
+echo "  NLB target group HTTP ARN ..."
+replace_all "$FROM_TG_HTTP_ARN" "$TO_TG_HTTP_ARN"
+
+echo "  NLB target group HTTPS ARN ..."
+replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
+
+# 3. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
 
@@ -275,7 +297,15 @@ replace_all "$FROM_AWS_REGION" "$TO_AWS_REGION"
 echo "  Hosted zone ID ..."
 replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 
-# 8. Zitadel IDs
+# 8. EKS cluster name
+echo "  EKS cluster name ..."
+replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
+
+# 9. VPC ID
+echo "  VPC ID ..."
+replace_all "$FROM_VPC_ID" "$TO_VPC_ID"
+
+# 10. Zitadel IDs
 echo "  Zitadel project ID ..."
 replace_all "$FROM_ZITADEL_PROJECT_ID" "$TO_ZITADEL_PROJECT_ID"
 
