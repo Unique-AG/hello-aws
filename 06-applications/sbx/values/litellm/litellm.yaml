@@ -1,5 +1,5 @@
 # LiteLLM Proxy for AWS EKS
-# Uses AWS Bedrock via IRSA (no static credentials)
+# Uses AWS Bedrock via EKS Pod Identity (no static credentials)
 # Database: Aurora PostgreSQL, Cache: ElastiCache Redis (TLS)
 
 replicaCount: 1

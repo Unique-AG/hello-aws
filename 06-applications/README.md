@@ -92,7 +92,7 @@ All parameters in `<env>/instance-config.yaml`:
 └── sbx/                             # Environment-specific configuration
     ├── instance-config.yaml         # (gitignored) Real values for this env
     ├── apps/
-    │   ├── system/                   # System app specs (10 apps)
+    │   ├── system/                   # System app specs (12 apps)
     │   └── chat/                     # Chat app specs (21 apps)
     ├── charts/
     │   ├── backend-service/          # Local Helm chart for backend services
@@ -105,6 +105,8 @@ All parameters in `<env>/instance-config.yaml`:
         ├── kong/                     # Kong controller, gateway, ingress, plugins
         ├── storage-class/            # gp3 StorageClass
         ├── reloader/                 # Stakater Reloader
+        ├── aws-lb-controller/        # AWS Load Balancer Controller
+        ├── keda/                     # KEDA autoscaler
         ├── elasticsearch/            # Elasticsearch
         ├── rabbitmq-operator/        # RabbitMQ Cluster Operator
         ├── rabbitmq/                 # RabbitMQ cluster instance
@@ -135,7 +137,7 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 
 ## Application Categories
 
-### System Applications (10)
+### System Applications (12)
 
 | App | autoSync | Description |
 |-----|----------|-------------|
@@ -149,6 +151,8 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 | elasticsearch | false | Elasticsearch cluster |
 | zitadel | false | Identity provider (ExternalSecrets for DB credentials) |
 | argocd | false | ArgoCD self-management |
+| aws-lb-controller | true | AWS Load Balancer Controller (NLB/ALB provisioning) |
+| keda | true | Event-driven autoscaling (ServerSideApply for CRDs) |
 
 ### Chat Applications (21)
 
@@ -162,11 +166,42 @@ client-insights-exporter
 
 **Web Apps:** chat, admin, knowledge-upload, theme
 
-**Data:** rabbitmq (cluster instance), qdrant (vector database), litellm (LLM gateway)
+**Data:** rabbitmq (cluster instance), qdrant (vector database), litellm (LLM gateway + embedding proxy)
+
+## LiteLLM — Bedrock Model Configuration
+
+LiteLLM proxies all LLM and embedding traffic through AWS Bedrock. Models are configured
+in `values/litellm/litellm.yaml` under `proxy_config.model_list`.
+
+**Chat/completion models** use EU cross-region inference profiles (`eu.*` prefix) directly:
+```yaml
+model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+```
+
+**Embedding models** require an application inference profile because:
+1. Cohere Embed v4 requires an inference profile for on-demand invocation
+2. LiteLLM's provider mapping (`model.split(".")[0]`) breaks with the `eu.*` prefix for embeddings
+
+The workaround uses `model` for provider mapping and `model_id` for the Bedrock API call:
+```yaml
+- model_name: text-embedding-ada-002
+  litellm_params:
+    model: bedrock/cohere.embed-v4:0                    # provider mapping -> "cohere"
+    model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<PROFILE_ID>
+    aws_region_name: <AWS_REGION>
+```
+
+The application inference profile wraps the `global.cohere.embed-v4:0` system profile and
+is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
+and must be set per deployment.
+
+**Key settings:**
+- `drop_params: true` — silently drops unsupported parameters (e.g. `encoding_format: 'float'`)
+- Image tag is pinned explicitly (not tied to chart version)
 
 ## Pod Identities
 
-Workloads that require AWS IAM Pod Identity (pre-provisioned in `05-compute/terraform/iam.tf`):
+Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terraform/iam.tf`):
 
 ### System
 
