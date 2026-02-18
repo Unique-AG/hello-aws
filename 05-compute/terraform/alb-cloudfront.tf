@@ -45,9 +45,9 @@ resource "aws_security_group" "alb_cloudfront" {
   # Note: Rules are added via separate aws_security_group_rule resources
   # to avoid hitting AWS security group rules limit
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-alb-cloudfront-sg"
-  })
+  }
 }
 
 # Security Group Rules (separate resources to avoid limits)
@@ -110,9 +110,9 @@ resource "aws_lb" "cloudfront" {
   enable_http2                     = true
   enable_cross_zone_load_balancing = true
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-cloudfront-alb"
-  })
+  }
 }
 
 # Target Group for Kong NLB
@@ -147,9 +147,9 @@ resource "aws_lb_target_group" "kong_nlb" {
   # Deregistration delay
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-kong-nlb-tg"
-  })
+  }
 }
 
 # Resolve Kong NLB DNS to IP addresses and register as targets
@@ -185,9 +185,9 @@ resource "aws_acm_certificate" "internal_alb" {
   domain_name       = var.internal_alb_certificate_domain
   validation_method = "DNS"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-internal-alb-cert"
-  })
+  }
 
   lifecycle {
     create_before_destroy = true
@@ -267,9 +267,9 @@ resource "aws_security_group" "alb_websocket" {
   description = "Security group for public WebSocket ALB (CloudFront IPs only)"
   vpc_id      = local.infrastructure.vpc_id
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-alb-websocket-sg"
-  })
+  }
 }
 
 resource "aws_security_group_rule" "alb_websocket_https_ingress" {
@@ -312,9 +312,9 @@ resource "aws_lb" "websocket" {
   enable_http2                     = true
   enable_cross_zone_load_balancing = true
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-websocket-alb"
-  })
+  }
 }
 
 # Target Group for WebSocket ALB → Kong NLB
@@ -340,9 +340,9 @@ resource "aws_lb_target_group" "websocket_kong" {
 
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ws-kong-tg"
-  })
+  }
 }
 
 # Register Kong NLB IPs as targets for WebSocket ALB

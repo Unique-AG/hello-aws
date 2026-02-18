@@ -310,8 +310,8 @@ output "transit_gateway_attachment_arn" {
 }
 
 # Cross-Account IAM Outputs
-output "connectivity_account_read_only_role_arn" {
+output "connectivity_account_role_arn" {
   description = "ARN of the IAM role that allows the connectivity account to discover resources"
-  value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
+  value       = try(aws_iam_role.connectivity_account[0].arn, null)
 }
 

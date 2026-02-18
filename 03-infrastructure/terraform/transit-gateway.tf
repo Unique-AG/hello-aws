@@ -25,28 +25,25 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
   dns_support  = "enable"
   ipv6_support = "disable"
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "${module.naming.id}-transit-gateway-attachment"
-    }
-  )
+  tags = {
+    Name = "${module.naming.id}-transit-gateway-attachment"
+  }
 }
 
 #######################################
 # Cross-Account IAM Role for Connectivity Account
 #######################################
 #
-# Allows the connectivity account (landing zone) to discover resources
-# for Transit Gateway routing and CloudFront setup.
+# Allows the connectivity account to discover and manage resources
+# for Transit Gateway routing, CloudFront setup, and VPC attachments.
 #
 # Requires: var.connectivity_account_id
 #######################################
 
-resource "aws_iam_role" "connectivity_account_read_only" {
+resource "aws_iam_role" "connectivity_account" {
   count = var.enable_connectivity_account_role && var.connectivity_account_id != null ? 1 : 0
 
-  name = "${module.naming.id}-connectivity-read-only-role"
+  name = "${module.naming.id}-connectivity-cross-account-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -73,16 +70,16 @@ resource "aws_iam_role" "connectivity_account_read_only" {
     ]
   })
 
-  tags = merge(local.tags, {
-    Name = "${module.naming.id}-connectivity-read-only-role"
-  })
+  tags = {
+    Name = "${module.naming.id}-connectivity-cross-account-role"
+  }
 }
 
 resource "aws_iam_role_policy" "connectivity_transit_gateway" {
   count = var.enable_connectivity_account_role && var.connectivity_account_id != null ? 1 : 0
 
   name = "${module.naming.id}-connectivity-transit-gateway-policy"
-  role = aws_iam_role.connectivity_account_read_only[0].id
+  role = aws_iam_role.connectivity_account[0].id
 
   policy = jsonencode({
     Version = "2012-10-17"

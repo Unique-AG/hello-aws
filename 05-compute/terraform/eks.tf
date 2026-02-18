@@ -22,8 +22,6 @@ resource "aws_iam_role" "eks_cluster" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 # Attach AWS managed policies to EKS cluster role
@@ -71,8 +69,6 @@ resource "aws_eks_cluster" "main" {
     aws_cloudwatch_log_group.eks_cluster,
     aws_iam_role_policy_attachment.eks_cluster_policy
   ]
-
-  tags = local.tags
 }
 
 # EKS Access Entry for Management Server
@@ -83,9 +79,9 @@ resource "aws_eks_access_entry" "management_server" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-management-server-access"
-  })
+  }
 }
 
 # EKS Access Policy for Management Server
@@ -110,9 +106,9 @@ resource "aws_eks_access_entry" "sandbox_admin" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-sandbox-admin-access"
-  })
+  }
 }
 
 # EKS Access Policy for Sandbox Administrator
@@ -138,9 +134,9 @@ resource "aws_cloudwatch_log_group" "eks_cluster" {
   retention_in_days = var.eks_cluster_log_retention_days
   kms_key_id        = local.infrastructure.kms_key_arn
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-eks-cluster-logs"
-  })
+  }
 }
 
 # Security Group for EKS Cluster
@@ -168,20 +164,9 @@ resource "aws_security_group" "eks_cluster" {
     cidr_blocks = [local.infrastructure.vpc_cidr_block]
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-eks-cluster-sg"
-  })
-}
-
-# Security Group Rule: Allow inbound from EKS nodes to cluster
-resource "aws_security_group_rule" "eks_cluster_from_nodes" {
-  type                     = "ingress"
-  description              = "Allow inbound from EKS nodes"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.eks_nodes.id
-  security_group_id        = aws_security_group.eks_cluster.id
+  }
 }
 
 # Security Group Rule: Allow inbound from management server to cluster (if management server exists)
@@ -195,56 +180,6 @@ resource "aws_security_group_rule" "eks_cluster_from_management_server" {
   protocol                 = "tcp"
   source_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
   security_group_id        = aws_security_group.eks_cluster.id
-}
-
-# Security Group for EKS Nodes
-resource "aws_security_group" "eks_nodes" {
-  name        = "${module.naming.id}-eks-nodes"
-  description = "Security group for EKS worker nodes"
-  vpc_id      = local.infrastructure.vpc_id
-
-  # Allow node-to-node communication
-  ingress {
-    description = "Allow node-to-node communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    self        = true
-  }
-
-  # Allow inbound from VPC (for pods)
-  ingress {
-    description = "Allow inbound from VPC CIDR"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [local.infrastructure.vpc_cidr_block]
-  }
-
-  # EKS cluster control plane needs outbound access for API operations
-  # Restrict to VPC CIDR for security
-  egress {
-    description = "Allow HTTPS outbound to VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [local.infrastructure.vpc_cidr_block]
-  }
-
-  tags = merge(local.tags, {
-    Name = "${module.naming.id}-eks-nodes-sg"
-  })
-}
-
-# Security Group Rule: Allow inbound from EKS cluster to nodes
-resource "aws_security_group_rule" "eks_nodes_from_cluster" {
-  type                     = "ingress"
-  description              = "Allow inbound from EKS cluster"
-  from_port                = 1025
-  to_port                  = 65535
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.eks_cluster.id
-  security_group_id        = aws_security_group.eks_nodes.id
 }
 
 # EKS Node Group IAM Role
@@ -263,8 +198,6 @@ resource "aws_iam_role" "eks_node_group" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 # Attach AWS managed policies to node group role
@@ -331,9 +264,9 @@ resource "aws_eks_addon" "ebs_csi" {
     ignore_changes = [service_account_role_arn]
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ebs-csi-addon"
-  })
+  }
 }
 
 # CoreDNS Addon
@@ -343,8 +276,6 @@ resource "aws_eks_addon" "coredns" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.main]
-
-  tags = local.tags
 }
 
 # kube-proxy Addon
@@ -354,8 +285,6 @@ resource "aws_eks_addon" "kube_proxy" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.main]
-
-  tags = local.tags
 }
 
 # VPC CNI Addon
@@ -365,8 +294,6 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.main]
-
-  tags = local.tags
 }
 
 #######################################
@@ -413,9 +340,9 @@ resource "aws_eks_node_group" "main" {
     aws_iam_role_policy_attachment.eks_container_registry_policy
   ]
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-node-group"
-  })
+  }
 }
 
 # Large node group for system applications (Kong, etc.)
@@ -458,8 +385,8 @@ resource "aws_eks_node_group" "large" {
     aws_iam_role_policy_attachment.eks_container_registry_policy
   ]
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-node-group-large"
-  })
+  }
 }
 

@@ -22,11 +22,8 @@ resource "aws_vpc_endpoint" "eks" {
   security_group_ids  = [local.infrastructure.vpc_endpoints_security_group_id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-eks"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-eks"
+  }
 }
 

@@ -88,9 +88,9 @@ resource "aws_cloudfront_vpc_origin" "internal_alb" {
     }
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-vpc-origin"
-  })
+  }
 
   # Ensure EKS cluster, node group, ALB discovery, and CloudFront ALB are complete before creating VPC Origin
   depends_on = [
@@ -110,9 +110,9 @@ resource "aws_ram_resource_share" "vpc_origin" {
   name                      = "${module.naming.id}-cloudfront-vpc-origin-share"
   allow_external_principals = false
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-vpc-origin-share"
-  })
+  }
 
   depends_on = [aws_cloudfront_vpc_origin.internal_alb]
 }
