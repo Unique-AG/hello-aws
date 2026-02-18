@@ -8,13 +8,10 @@ resource "aws_db_subnet_group" "main" {
   name       = "subnet-group-${module.naming.id}-aurora"
   subnet_ids = local.infrastructure.isolated_subnet_ids
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "subnet-group-${module.naming.id}-aurora"
-      Purpose = "aurora-subnet-group"
-    }
-  )
+  tags = {
+    Name    = "subnet-group-${module.naming.id}-aurora"
+    Purpose = "aurora-subnet-group"
+  }
 }
 
 # Security Group for Aurora
@@ -24,11 +21,11 @@ resource "aws_security_group" "aurora" {
   vpc_id      = local.infrastructure.vpc_id
 
   ingress {
-    description = "PostgreSQL from VPC"
+    description = "PostgreSQL from private subnets"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.main.cidr_block]
+    cidr_blocks = local.infrastructure.private_subnet_cidrs
   }
 
   egress {
@@ -39,13 +36,10 @@ resource "aws_security_group" "aurora" {
     cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "sg-${module.naming.id}-aurora"
-      Purpose = "aurora-security-group"
-    }
-  )
+  tags = {
+    Name    = "sg-${module.naming.id}-aurora"
+    Purpose = "aurora-security-group"
+  }
 }
 
 # Aurora PostgreSQL Cluster
@@ -68,15 +62,13 @@ resource "aws_rds_cluster" "postgres" {
   enabled_cloudwatch_logs_exports = ["postgresql"]
   deletion_protection             = var.aurora_deletion_protection
   skip_final_snapshot             = var.aurora_skip_final_snapshot
+  final_snapshot_identifier       = var.aurora_skip_final_snapshot ? null : "aurora-${module.naming.id}-postgres-final"
   engine_mode                     = "provisioned"
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "aurora-${module.naming.id}-postgres"
-      Purpose = "postgresql-database"
-    }
-  )
+  tags = {
+    Name    = "aurora-${module.naming.id}-postgres"
+    Purpose = "postgresql-database"
+  }
 }
 
 # Aurora PostgreSQL Cluster Instances
@@ -91,11 +83,8 @@ resource "aws_rds_cluster_instance" "postgres" {
   performance_insights_enabled    = var.aurora_performance_insights_enabled
   performance_insights_kms_key_id = var.aurora_performance_insights_enabled ? local.infrastructure.kms_key_general_arn : null
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "aurora-${module.naming.id}-postgres-${count.index + 1}"
-      Purpose = "postgresql-instance"
-    }
-  )
+  tags = {
+    Name    = "aurora-${module.naming.id}-postgres-${count.index + 1}"
+    Purpose = "postgresql-instance"
+  }
 }

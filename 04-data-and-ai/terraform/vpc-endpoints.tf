@@ -10,12 +10,9 @@ resource "aws_vpc_endpoint" "aurora" {
   security_group_ids  = [data.terraform_remote_state.infrastructure.outputs.vpc_endpoints_security_group_id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-aurora"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-aurora"
+  }
 }
 
 # ElastiCache Interface Endpoint
@@ -30,10 +27,7 @@ resource "aws_vpc_endpoint" "elasticache" {
   security_group_ids  = [data.terraform_remote_state.infrastructure.outputs.vpc_endpoints_security_group_id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-elasticache"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-elasticache"
+  }
 }

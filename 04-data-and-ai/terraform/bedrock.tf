@@ -8,13 +8,10 @@ resource "aws_cloudwatch_log_group" "bedrock_logs" {
   retention_in_days = var.cloudwatch_log_retention_days
   kms_key_id        = local.infrastructure.kms_key_cloudwatch_logs_arn
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "log-${module.naming.id}-bedrock"
-      Purpose = "bedrock-model-invocation-logs"
-    }
-  )
+  tags = {
+    Name    = "log-${module.naming.id}-bedrock"
+    Purpose = "bedrock-model-invocation-logs"
+  }
 }
 
 data "aws_iam_policy_document" "bedrock_logging_assume" {
@@ -49,12 +46,9 @@ resource "aws_iam_role" "bedrock_logging" {
   name               = "role-${module.naming.id}-bedrock-logging"
   assume_role_policy = data.aws_iam_policy_document.bedrock_logging_assume[0].json
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "role-${module.naming.id}-bedrock-logging"
-    }
-  )
+  tags = {
+    Name = "role-${module.naming.id}-bedrock-logging"
+  }
 }
 
 data "aws_iam_policy_document" "bedrock_logging" {
@@ -99,7 +93,7 @@ resource "aws_bedrock_model_invocation_logging_configuration" "main" {
 # Application Inference Profiles
 # Wrap system cross-region inference profiles for per-model cost tracking and CloudWatch metrics
 # LiteLLM and workloads can invoke these via the account-scoped ARN
-resource "aws_bedrock_inference_profile" "this" {
+resource "aws_bedrock_inference_profile" "model" {
   for_each = var.bedrock_inference_profiles
 
   name = "${module.naming.id}-${each.key}"
@@ -108,13 +102,10 @@ resource "aws_bedrock_inference_profile" "this" {
     copy_from = "arn:aws:bedrock:${var.aws_region}::${each.value.source_type}/${each.value.model_id}"
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name  = "${module.naming.id}-${each.key}"
-      Model = each.value.model_id
-    }
-  )
+  tags = {
+    Name  = "${module.naming.id}-${each.key}"
+    Model = each.value.model_id
+  }
 }
 
 data "aws_bedrock_foundation_models" "available" {

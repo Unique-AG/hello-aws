@@ -6,13 +6,10 @@ resource "aws_iam_user" "s3_access" {
   name = "iam-user-${module.naming.id}-s3-access"
   path = "/service-accounts/"
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "iam-user-${module.naming.id}-s3-access"
-      Purpose = "s3-programmatic-access"
-    }
-  )
+  tags = {
+    Name    = "iam-user-${module.naming.id}-s3-access"
+    Purpose = "s3-programmatic-access"
+  }
 }
 
 data "aws_iam_policy_document" "s3_access" {
@@ -62,7 +59,7 @@ resource "aws_secretsmanager_secret" "s3_access_key_id" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_access_key_id_secret_name, Purpose = "s3-credentials" })
+  tags = { Name = var.s3_access_key_id_secret_name, Purpose = "s3-credentials" }
 }
 
 resource "aws_secretsmanager_secret" "s3_secret_access_key" {
@@ -71,7 +68,7 @@ resource "aws_secretsmanager_secret" "s3_secret_access_key" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_secret_access_key_secret_name, Purpose = "s3-credentials" })
+  tags = { Name = var.s3_secret_access_key_secret_name, Purpose = "s3-credentials" }
 }
 
 # S3 Config — infrastructure facts (Terraform-managed values)
@@ -82,7 +79,7 @@ resource "aws_secretsmanager_secret" "s3_endpoint" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_endpoint_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_endpoint_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_endpoint" {
@@ -96,7 +93,7 @@ resource "aws_secretsmanager_secret" "s3_region" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_region_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_region_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_region" {

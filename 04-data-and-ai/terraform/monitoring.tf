@@ -9,13 +9,10 @@ resource "aws_prometheus_workspace" "main" {
     log_group_arn = "${data.aws_cloudwatch_log_group.infrastructure.arn}:*"
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "prometheus-${module.naming.id}"
-      Purpose = "metrics-collection"
-    }
-  )
+  tags = {
+    Name    = "prometheus-${module.naming.id}"
+    Purpose = "metrics-collection"
+  }
 }
 
 # Security Group for Grafana VPC configuration
@@ -34,12 +31,9 @@ resource "aws_security_group" "grafana" {
     cidr_blocks = [data.aws_vpc.main.cidr_block]
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "sg-${module.naming.id}-grafana"
-    }
-  )
+  tags = {
+    Name = "sg-${module.naming.id}-grafana"
+  }
 }
 
 # Managed Grafana Workspace (VPC-only access)
@@ -58,13 +52,10 @@ resource "aws_grafana_workspace" "main" {
     security_group_ids = [aws_security_group.grafana[0].id]
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "grafana-${module.naming.id}"
-      Purpose = "visualization"
-    }
-  )
+  tags = {
+    Name    = "grafana-${module.naming.id}"
+    Purpose = "visualization"
+  }
 
   depends_on = [
     aws_iam_role.grafana,
@@ -94,12 +85,9 @@ resource "aws_iam_role" "grafana" {
   name               = "role-${module.naming.id}-grafana"
   assume_role_policy = data.aws_iam_policy_document.grafana_assume[0].json
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "role-${module.naming.id}-grafana"
-    }
-  )
+  tags = {
+    Name = "role-${module.naming.id}-grafana"
+  }
 }
 
 # Grafana → VPC ENI management (required for vpc_configuration)

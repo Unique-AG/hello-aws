@@ -16,7 +16,7 @@ resource "aws_secretsmanager_secret" "psql_host" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.psql_host_secret_name, Purpose = "database-credentials" })
+  tags = { Name = var.psql_host_secret_name, Purpose = "database-credentials" }
 }
 
 resource "aws_secretsmanager_secret_version" "psql_host" {
@@ -30,7 +30,7 @@ resource "aws_secretsmanager_secret" "psql_port" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.psql_port_secret_name, Purpose = "database-credentials" })
+  tags = { Name = var.psql_port_secret_name, Purpose = "database-credentials" }
 }
 
 resource "aws_secretsmanager_secret_version" "psql_port" {
@@ -44,7 +44,7 @@ resource "aws_secretsmanager_secret" "psql_username" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.psql_username_secret_name, Purpose = "database-credentials" })
+  tags = { Name = var.psql_username_secret_name, Purpose = "database-credentials" }
 }
 
 resource "aws_secretsmanager_secret_version" "psql_username" {
@@ -62,7 +62,7 @@ resource "aws_secretsmanager_secret" "psql_password" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.psql_password_secret_name, Purpose = "database-credentials" })
+  tags = { Name = var.psql_password_secret_name, Purpose = "database-credentials" }
 }
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ resource "aws_secretsmanager_secret" "redis_host" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.redis_host_secret_name, Purpose = "redis-credentials" })
+  tags = { Name = var.redis_host_secret_name, Purpose = "redis-credentials" }
 }
 
 resource "aws_secretsmanager_secret_version" "redis_host" {
@@ -92,7 +92,7 @@ resource "aws_secretsmanager_secret" "redis_port" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.redis_port_secret_name, Purpose = "redis-credentials" })
+  tags = { Name = var.redis_port_secret_name, Purpose = "redis-credentials" }
 }
 
 resource "aws_secretsmanager_secret_version" "redis_port" {
@@ -111,7 +111,7 @@ resource "aws_secretsmanager_secret" "encryption_key_app_repository" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.encryption_key_app_repository_secret_name, Purpose = "encryption-key" })
+  tags = { Name = var.encryption_key_app_repository_secret_name, Purpose = "encryption-key" }
 }
 
 resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
@@ -120,7 +120,7 @@ resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.encryption_key_node_chat_lxm_secret_name, Purpose = "encryption-key" })
+  tags = { Name = var.encryption_key_node_chat_lxm_secret_name, Purpose = "encryption-key" }
 }
 
 resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
@@ -129,7 +129,7 @@ resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.encryption_key_ingestion_secret_name, Purpose = "encryption-key" })
+  tags = { Name = var.encryption_key_ingestion_secret_name, Purpose = "encryption-key" }
 }
 
 # ---------------------------------------------------------------------------
@@ -142,7 +142,7 @@ resource "aws_secretsmanager_secret" "zitadel_db_user_password" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.zitadel_db_user_password_secret_name, Purpose = "zitadel" })
+  tags = { Name = var.zitadel_db_user_password_secret_name, Purpose = "zitadel" }
 }
 
 resource "aws_secretsmanager_secret" "zitadel_master_key" {
@@ -151,7 +151,7 @@ resource "aws_secretsmanager_secret" "zitadel_master_key" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.zitadel_master_key_secret_name, Purpose = "zitadel" })
+  tags = { Name = var.zitadel_master_key_secret_name, Purpose = "zitadel" }
 }
 
 # Zitadel PAT (placeholder — must be set manually after Zitadel deployment)
@@ -161,7 +161,7 @@ resource "aws_secretsmanager_secret" "zitadel_pat" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.zitadel_pat_secret_name, Purpose = "zitadel" })
+  tags = { Name = var.zitadel_pat_secret_name, Purpose = "zitadel" }
 }
 
 # ---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ resource "aws_secretsmanager_secret" "rabbitmq_password_chat" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.rabbitmq_password_chat_secret_name, Purpose = "rabbitmq" })
+  tags = { Name = var.rabbitmq_password_chat_secret_name, Purpose = "rabbitmq" }
 }
 
 # ---------------------------------------------------------------------------
@@ -189,7 +189,7 @@ resource "aws_secretsmanager_secret" "psql_connection_string" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = "psql-connection-string-${each.key}", Purpose = "database-credentials" })
+  tags = { Name = "psql-connection-string-${each.key}", Purpose = "database-credentials" }
 }
 
 # ---------------------------------------------------------------------------
@@ -202,7 +202,7 @@ resource "aws_secretsmanager_secret" "litellm_proxy_master_key" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.litellm_proxy_master_key_secret_name, Purpose = "litellm" })
+  tags = { Name = var.litellm_proxy_master_key_secret_name, Purpose = "litellm" }
 }
 
 resource "aws_secretsmanager_secret" "litellm_salt_key" {
@@ -211,7 +211,7 @@ resource "aws_secretsmanager_secret" "litellm_salt_key" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.litellm_salt_key_secret_name, Purpose = "litellm" })
+  tags = { Name = var.litellm_salt_key_secret_name, Purpose = "litellm" }
 }
 
 # OpenAI endpoint definitions — contains LiteLLM master key (seed script only, container here)
@@ -221,7 +221,7 @@ resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.azure_openai_endpoint_definitions_secret_name, Purpose = "litellm" })
+  tags = { Name = var.azure_openai_endpoint_definitions_secret_name, Purpose = "litellm" }
 }
 
 # ---------------------------------------------------------------------------
@@ -234,7 +234,7 @@ resource "aws_secretsmanager_secret" "s3_application_data_bucket" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_application_data_bucket_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_application_data_bucket_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_application_data_bucket" {
@@ -248,7 +248,7 @@ resource "aws_secretsmanager_secret" "s3_ai_data_bucket" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_ai_data_bucket_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_ai_data_bucket_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_ai_data_bucket" {
@@ -262,7 +262,7 @@ resource "aws_secretsmanager_secret" "s3_application_data_bucket_arn" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_application_data_bucket_arn_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_application_data_bucket_arn_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_application_data_bucket_arn" {
@@ -276,7 +276,7 @@ resource "aws_secretsmanager_secret" "s3_ai_data_bucket_arn" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.s3_ai_data_bucket_arn_secret_name, Purpose = "s3-config" })
+  tags = { Name = var.s3_ai_data_bucket_arn_secret_name, Purpose = "s3-config" }
 }
 
 resource "aws_secretsmanager_secret_version" "s3_ai_data_bucket_arn" {
@@ -298,7 +298,7 @@ resource "aws_secretsmanager_secret" "rds_ca_bundle" {
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, { Name = var.rds_ca_bundle_secret_name, Purpose = "rds-ssl" })
+  tags = { Name = var.rds_ca_bundle_secret_name, Purpose = "rds-ssl" }
 }
 
 resource "aws_secretsmanager_secret_version" "rds_ca_bundle" {

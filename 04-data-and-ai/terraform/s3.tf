@@ -1,14 +1,17 @@
+resource "random_string" "s3_suffix" {
+  length  = 8
+  special = false
+  upper   = false
+}
+
 # S3 Bucket for Application Data
 resource "aws_s3_bucket" "application_data" {
-  bucket = "s3-${module.naming.id}-application-data"
+  bucket = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "s3-${module.naming.id}-application-data"
-      Purpose = "application-data"
-    }
-  )
+  tags = {
+    Name    = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
+    Purpose = "application-data"
+  }
 }
 
 resource "aws_s3_bucket_versioning" "application_data" {
@@ -119,15 +122,12 @@ resource "aws_s3_bucket_lifecycle_configuration" "application_data" {
 
 # S3 Bucket for AI/ML Data
 resource "aws_s3_bucket" "ai_data" {
-  bucket = "s3-${module.naming.id}-ai-data"
+  bucket = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "s3-${module.naming.id}-ai-data"
-      Purpose = "ai-data"
-    }
-  )
+  tags = {
+    Name    = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
+    Purpose = "ai-data"
+  }
 }
 
 resource "aws_s3_bucket_versioning" "ai_data" {

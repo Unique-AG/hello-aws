@@ -178,5 +178,5 @@ output "bedrock_available_models" {
 
 output "bedrock_inference_profile_arns" {
   description = "Map of application inference profile names to their ARNs"
-  value       = { for k, v in aws_bedrock_inference_profile.this : k => v.arn }
+  value       = { for k, v in aws_bedrock_inference_profile.model : k => v.arn }
 }

@@ -1,7 +1,4 @@
 locals {
-  # Layer name for state file organization
-  layer_name = "data-and-ai"
-
   # Terraform state bucket name (computed from naming module, same as bootstrap layer)
   # Format: s3-{id_short}-tfstate
   terraform_state_bucket = "${module.naming.s3_bucket_prefix}-tfstate"
@@ -17,6 +14,7 @@ locals {
     vpc_id                      = data.terraform_remote_state.infrastructure.outputs.vpc_id
     isolated_subnet_ids         = data.terraform_remote_state.infrastructure.outputs.isolated_subnet_ids
     private_subnet_ids          = data.terraform_remote_state.infrastructure.outputs.private_subnet_ids
+    private_subnet_cidrs        = data.terraform_remote_state.infrastructure.outputs.private_subnet_cidrs
     kms_key_general_arn         = data.terraform_remote_state.infrastructure.outputs.kms_key_general_arn
     kms_key_secrets_manager_arn = data.terraform_remote_state.infrastructure.outputs.kms_key_secrets_manager_arn
     kms_key_cloudwatch_logs_arn = data.terraform_remote_state.infrastructure.outputs.kms_key_cloudwatch_logs_arn
