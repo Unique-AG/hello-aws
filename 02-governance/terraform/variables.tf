@@ -61,9 +61,15 @@ variable "semantic_version" {
 
 # Budget configuration
 variable "budget_amount" {
-  description = "Monthly budget amount in USD"
+  description = "Monthly budget amount"
   type        = number
   default     = 1000
+}
+
+variable "budget_currency" {
+  description = "Currency for budget limit (e.g., USD, EUR, CHF)"
+  type        = string
+  default     = "USD"
 }
 
 variable "budget_contact_emails" {
