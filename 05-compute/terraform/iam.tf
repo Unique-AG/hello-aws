@@ -27,9 +27,9 @@ resource "aws_iam_role" "ebs_csi" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ebs-csi-driver"
-  })
+  }
 }
 
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
@@ -63,9 +63,9 @@ resource "aws_iam_role" "cluster_secrets" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-cluster-secrets"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "cluster_secrets" {
@@ -123,9 +123,9 @@ resource "aws_iam_role" "cert_manager_route53" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-cert-manager-route53"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "cert_manager_route53" {
@@ -186,9 +186,9 @@ resource "aws_iam_role" "assistants_core" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-assistants-core"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "assistants_core" {
@@ -261,9 +261,9 @@ resource "aws_iam_role" "litellm" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-litellm"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "litellm" {
@@ -315,9 +315,9 @@ resource "aws_iam_role" "ingestion" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingestion"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "ingestion" {
@@ -371,9 +371,9 @@ resource "aws_iam_role" "ingestion_worker" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingestion-worker"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "ingestion_worker" {
@@ -439,9 +439,9 @@ resource "aws_iam_role" "speech" {
     }]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-speech"
-  })
+  }
 }
 
 resource "aws_iam_role_policy" "speech" {

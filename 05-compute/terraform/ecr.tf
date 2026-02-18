@@ -28,9 +28,9 @@ resource "aws_ecr_repository" "main" {
     kms_key         = local.infrastructure.kms_key_arn
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-${each.value.name}"
-  })
+  }
 }
 
 #######################################
@@ -105,9 +105,9 @@ resource "aws_cloudwatch_event_rule" "ecr_image_scan" {
     }
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ecr-image-scan-rule"
-  })
+  }
 }
 
 # EventBridge rule target - SNS topic for notifications (optional)
@@ -174,9 +174,9 @@ resource "aws_secretsmanager_secret" "acr_credentials" {
   description = "Azure Container Registry credentials for ECR pull-through cache"
   kms_key_id  = local.infrastructure.kms_key_secrets_manager_arn
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-acr-credentials"
-  })
+  }
 }
 
 resource "aws_secretsmanager_secret_version" "acr_credentials" {
