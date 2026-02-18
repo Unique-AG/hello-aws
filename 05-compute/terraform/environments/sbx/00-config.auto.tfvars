@@ -17,9 +17,9 @@ eks_cluster_log_retention_days   = 7
 # EKS Node Group Configuration
 eks_node_groups = {
   steady = {
-    instance_types = ["m6i.2xlarge"]
-    desired_size   = 2
-    min_size       = 0
+    instance_types  = ["m6i.2xlarge"]
+    desired_size    = 2
+    min_size        = 0
     max_size        = 4
     max_unavailable = 2
     labels = {

@@ -129,9 +129,8 @@ resource "aws_eks_access_policy_association" "sandbox_admin" {
 
 # CloudWatch Log Group for EKS Cluster
 resource "aws_cloudwatch_log_group" "eks_cluster" {
-  #checkov:skip=CKV_AWS_338: see docs/security-baseline.md
   name              = "/aws/eks/eks-${module.naming.id}/cluster"
-  retention_in_days = var.eks_cluster_log_retention_days
+  retention_in_days = max(var.eks_cluster_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_arn
 
   tags = {

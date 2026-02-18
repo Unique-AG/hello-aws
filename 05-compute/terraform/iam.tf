@@ -147,11 +147,13 @@ resource "aws_iam_role" "cert_manager_route53" {
 
 data "aws_iam_policy_document" "cert_manager_route53" {
   #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   statement {
     effect = "Allow"
     actions = [
       "route53:GetChange",
       "route53:ChangeResourceRecordSets",
+      "route53:ListResourceRecordSets",
     ]
     resources = [
       "arn:aws:route53:::hostedzone/*",
@@ -164,7 +166,6 @@ data "aws_iam_policy_document" "cert_manager_route53" {
     actions = [
       "route53:ListHostedZones",
       "route53:ListHostedZonesByName",
-      "route53:ListResourceRecordSets",
     ]
     resources = ["*"]
   }
@@ -172,6 +173,7 @@ data "aws_iam_policy_document" "cert_manager_route53" {
 
 resource "aws_iam_role_policy" "cert_manager_route53" {
   #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   name   = "route53-dns01-validation"
   role   = aws_iam_role.cert_manager_route53.id
   policy = data.aws_iam_policy_document.cert_manager_route53.json
@@ -410,25 +412,39 @@ resource "aws_iam_role" "speech" {
 }
 
 data "aws_iam_policy_document" "speech" {
-  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
   #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
+
+  # These actions do not support resource-level constraints (AWS IAM service authorization reference)
   statement {
     effect = "Allow"
     actions = [
       "transcribe:StartStreamTranscription",
       "transcribe:StartStreamTranscriptionWebSocket",
       "transcribe:StartTranscriptionJob",
-      "transcribe:GetTranscriptionJob",
       "transcribe:ListTranscriptionJobs",
-      "transcribe:DeleteTranscriptionJob",
     ]
     resources = ["*"]
+  }
+
+  # These actions support resource-level constraints — scoped to transcription jobs
+  statement {
+    effect = "Allow"
+    actions = [
+      "transcribe:GetTranscriptionJob",
+      "transcribe:DeleteTranscriptionJob",
+    ]
+    resources = ["arn:aws:transcribe:${var.aws_region}:${data.aws_caller_identity.current.account_id}:transcription-job/*"]
   }
 }
 
 resource "aws_iam_role_policy" "speech" {
-  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
   #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   name   = "transcribe-access"
   role   = aws_iam_role.speech.id
   policy = data.aws_iam_policy_document.speech.json
@@ -457,8 +473,10 @@ resource "aws_iam_role" "aws_lb_controller" {
 }
 
 data "aws_iam_policy_document" "aws_lb_controller" {
-  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
   #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   statement {
     effect = "Allow"
     actions = [
@@ -588,8 +606,10 @@ data "aws_iam_policy_document" "aws_lb_controller" {
 }
 
 resource "aws_iam_role_policy" "aws_lb_controller" {
-  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
   #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   name   = "aws-lb-controller"
   role   = aws_iam_role.aws_lb_controller.id
   policy = data.aws_iam_policy_document.aws_lb_controller.json
