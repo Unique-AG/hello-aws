@@ -112,10 +112,11 @@ proxy_config:
         max_tokens: 10000
 
     # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
-    # Maps text-embedding-ada-002 to Cohere Embed v4 via EU CRIS (1536 dims, multimodal)
+    # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
+    # Note: embedding models don't support cross-region inference profiles (eu.* prefix)
     - model_name: text-embedding-ada-002
       litellm_params:
-        model: bedrock/eu.cohere.embed-v4:0
+        model: bedrock/cohere.embed-v4:0
         aws_region_name: eu-central-2
 
   general_settings:
