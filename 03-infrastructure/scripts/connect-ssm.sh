@@ -59,6 +59,17 @@ INSTANCE_ID=""
 
 # Functions
 
+resolve_aws_region() {
+  if [ -n "${AWS_REGION:-}" ]; then
+    return
+  fi
+  AWS_REGION=$(aws configure get region 2>/dev/null || echo "")
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+    warn "AWS region not set, defaulting to ${AWS_REGION}"
+  fi
+}
+
 show_help() {
   cat << EOF
 SSM Session Manager Connection Script
@@ -124,10 +135,8 @@ get_management_server_id() {
 
   # Try to get from Terraform state
   if command -v terraform &> /dev/null && [ -d "${TERRAFORM_DIR}" ]; then
-    cd "${TERRAFORM_DIR}"
-    
     # Try to get instance ID from state
-    INSTANCE_ID=$(terraform output -raw management_server_instance_id 2>/dev/null || echo "")
+    INSTANCE_ID=$(cd "${TERRAFORM_DIR}" && terraform output -raw management_server_instance_id 2>/dev/null || echo "")
     
     if [ -n "${INSTANCE_ID}" ] && [ "${INSTANCE_ID}" != "null" ]; then
       log "Found management server instance ID: ${INSTANCE_ID}"
@@ -137,13 +146,7 @@ get_management_server_id() {
 
   # Fallback: Try to find instance by tag
   info "Trying to find management server by tags..."
-  
-  # Get current AWS region
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-    warn "AWS region not set, defaulting to ${AWS_REGION}"
-  fi
+  resolve_aws_region
 
   # Try to find instance with management server tag
   INSTANCE_ID=$(aws ec2 describe-instances \
@@ -164,10 +167,7 @@ get_management_server_id() {
 
 # Start instance if stopped
 ensure_instance_running() {
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-  fi
+  resolve_aws_region
 
   # Check instance state
   INSTANCE_STATE=$(aws ec2 describe-instances \
@@ -196,10 +196,7 @@ ensure_instance_running() {
 
 # Wait for SSM connectivity
 wait_for_ssm() {
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-  fi
+  resolve_aws_region
 
   local max_attempts=12
   local attempt=1
@@ -228,10 +225,7 @@ wait_for_ssm() {
 verify_instance() {
   info "Verifying instance ${INSTANCE_ID} is accessible via SSM..."
 
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-  fi
+  resolve_aws_region
 
   # Check if instance is in SSM and online
   local ping_status
@@ -263,10 +257,7 @@ start_interactive_session() {
   info "Type 'exit' to end the session"
   echo ""
 
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-  fi
+  resolve_aws_region
 
   aws ssm start-session \
     --target "${INSTANCE_ID}" \
@@ -279,10 +270,7 @@ start_port_forwarding() {
   info "Forwarding remote port ${REMOTE_PORT} to local port ${LOCAL_PORT}"
   echo ""
 
-  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-  fi
+  resolve_aws_region
 
   # Start SSM session in background and monitor port
   (

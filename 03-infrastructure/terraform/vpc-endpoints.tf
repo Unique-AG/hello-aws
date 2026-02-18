@@ -6,20 +6,20 @@ resource "aws_security_group" "vpc_endpoints" {
   description = "Security group for VPC interface endpoints"
   vpc_id      = aws_vpc.main.id
 
-  egress {
-    description = "HTTPS to AWS services via VPC endpoints"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = var.enable_secondary_cidr ? [var.vpc_cidr, "100.64.0.0/20"] : [var.vpc_cidr]
+  tags = {
+    Name = "sg-${module.naming.id}-vpc-endpoints"
   }
+}
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "sg-${module.naming.id}-vpc-endpoints"
-    }
-  )
+# Security Group Rule: Allow HTTPS egress to AWS services
+resource "aws_security_group_rule" "vpc_endpoints_egress" {
+  type              = "egress"
+  description       = "HTTPS to AWS services via VPC endpoints"
+  from_port         = 443
+  to_port           = 443
+  protocol          = "tcp"
+  cidr_blocks       = var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr]
+  security_group_id = aws_security_group.vpc_endpoints.id
 }
 
 # Security Group Rule: Allow HTTPS from private subnets (CIDR-based)
@@ -29,13 +29,13 @@ resource "aws_security_group_rule" "vpc_endpoints_from_vpc" {
   from_port         = 443
   to_port           = 443
   protocol          = "tcp"
-  cidr_blocks       = var.enable_secondary_cidr ? [var.vpc_cidr, "100.64.0.0/20"] : [var.vpc_cidr]
+  cidr_blocks       = var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr]
   security_group_id = aws_security_group.vpc_endpoints.id
 }
 
 # Security Group Rule: Allow HTTPS from management server to VPC endpoints
 resource "aws_security_group_rule" "vpc_endpoints_from_management_server" {
-  count = var.enable_management_server ? 1 : 0
+  count = var.management_server_enabled ? 1 : 0
 
   type                     = "ingress"
   description              = "HTTPS from management server"
@@ -96,12 +96,9 @@ resource "aws_vpc_endpoint" "s3" {
     ]
   })
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-s3"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-s3"
+  }
 }
 
 # KMS Interface Endpoint
@@ -116,12 +113,9 @@ resource "aws_vpc_endpoint" "kms" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-kms"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-kms"
+  }
 }
 
 # Secrets Manager Interface Endpoint
@@ -136,12 +130,9 @@ resource "aws_vpc_endpoint" "secrets_manager" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-secrets-manager"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-secrets-manager"
+  }
 }
 
 # ECR API Interface Endpoint
@@ -156,12 +147,9 @@ resource "aws_vpc_endpoint" "ecr_api" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ecr-api"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ecr-api"
+  }
 }
 
 # ECR Docker Registry Interface Endpoint
@@ -176,12 +164,9 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ecr-dkr"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ecr-dkr"
+  }
 }
 
 # CloudWatch Logs Interface Endpoint
@@ -196,12 +181,9 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-cloudwatch-logs"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-cloudwatch-logs"
+  }
 }
 
 # CloudWatch Metrics Interface Endpoint
@@ -216,12 +198,9 @@ resource "aws_vpc_endpoint" "cloudwatch_metrics" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-cloudwatch-metrics"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-cloudwatch-metrics"
+  }
 }
 
 # Managed Prometheus Interface Endpoint
@@ -236,12 +215,9 @@ resource "aws_vpc_endpoint" "prometheus" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-prometheus"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-prometheus"
+  }
 }
 
 # Bedrock Interface Endpoint
@@ -256,12 +232,9 @@ resource "aws_vpc_endpoint" "bedrock" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-bedrock"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-bedrock"
+  }
 }
 
 # Bedrock Runtime Interface Endpoint
@@ -276,12 +249,9 @@ resource "aws_vpc_endpoint" "bedrock_runtime" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-bedrock-runtime"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-bedrock-runtime"
+  }
 }
 
 # STS Interface Endpoint
@@ -296,12 +266,9 @@ resource "aws_vpc_endpoint" "sts" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-sts"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-sts"
+  }
 }
 
 # EC2 Interface Endpoint
@@ -316,18 +283,15 @@ resource "aws_vpc_endpoint" "ec2" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ec2"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ec2"
+  }
 }
 
 # SSM Interface Endpoint
 # Required for Systems Manager API calls
 resource "aws_vpc_endpoint" "ssm" {
-  count = var.enable_ssm_endpoints ? 1 : 0
+  count = var.ssm_endpoints_enabled ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssm"
@@ -336,18 +300,15 @@ resource "aws_vpc_endpoint" "ssm" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ssm"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ssm"
+  }
 }
 
 # SSM Messages Interface Endpoint
 # Required for Session Manager message passing
 resource "aws_vpc_endpoint" "ssm_messages" {
-  count = var.enable_ssm_endpoints ? 1 : 0
+  count = var.ssm_endpoints_enabled ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssmmessages"
@@ -356,18 +317,15 @@ resource "aws_vpc_endpoint" "ssm_messages" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ssm-messages"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ssm-messages"
+  }
 }
 
 # EC2 Messages Interface Endpoint
 # Required for EC2 instance messaging (used by Session Manager)
 resource "aws_vpc_endpoint" "ec2_messages" {
-  count = var.enable_ssm_endpoints ? 1 : 0
+  count = var.ssm_endpoints_enabled ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ec2messages"
@@ -376,12 +334,9 @@ resource "aws_vpc_endpoint" "ec2_messages" {
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpce-${module.naming.id}-ec2-messages"
-    }
-  )
+  tags = {
+    Name = "vpce-${module.naming.id}-ec2-messages"
+  }
 }
 
 

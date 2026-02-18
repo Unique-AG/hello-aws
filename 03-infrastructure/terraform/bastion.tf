@@ -15,9 +15,9 @@ resource "aws_iam_role" "ssm_instance" {
     ]
   })
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ssm-instance-role"
-  })
+  }
 }
 
 # Attach AWS managed policy for Session Manager
@@ -53,8 +53,6 @@ resource "aws_iam_role_policy" "ssm_instance_eks_access" {
 resource "aws_iam_instance_profile" "ssm_instance" {
   name = "${module.naming.id}-ssm-instance-profile"
   role = aws_iam_role.ssm_instance.name
-
-  tags = local.tags
 }
 
 # Security Group for Management Server
@@ -69,7 +67,7 @@ resource "aws_security_group" "management_server" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = var.enable_secondary_cidr ? [aws_vpc.main.cidr_block, "100.64.0.0/20"] : [aws_vpc.main.cidr_block]
+    cidr_blocks = var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block]
   }
 
   # Allow outbound to VPC (for accessing private resources)
@@ -78,7 +76,7 @@ resource "aws_security_group" "management_server" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = var.enable_secondary_cidr ? [aws_vpc.main.cidr_block, "100.64.0.0/20"] : [aws_vpc.main.cidr_block]
+    cidr_blocks = var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block]
   }
 
   # Note: IMDS (Instance Metadata Service) is link-local (169.254.169.254)
@@ -86,9 +84,9 @@ resource "aws_security_group" "management_server" {
   # IMDSv2 is enforced via instance metadata_options (http_tokens = "required")
   # If IMDS doesn't work, ensure the instance has been rebooted after metadata options were set
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-management-server-sg"
-  })
+  }
 }
 
 # Get latest Amazon Linux 2023 AMI
@@ -109,7 +107,7 @@ data "aws_ami" "amazon_linux_2023" {
 
 # EC2 Management Server
 resource "aws_instance" "management_server" {
-  count = var.enable_management_server ? 1 : 0
+  count = var.management_server_enabled ? 1 : 0
 
   ami           = var.management_server_ami != "" ? var.management_server_ami : data.aws_ami.amazon_linux_2023.id
   instance_type = var.management_server_instance_type
@@ -150,28 +148,28 @@ resource "aws_instance" "management_server" {
     encrypted   = true
     kms_key_id  = aws_kms_key.general.arn
 
-    tags = merge(local.tags, {
+    tags = {
       Name = "${module.naming.id}-management-server-root"
-    })
+    }
   }
 
   # Associate public IP only if public access is enabled
   associate_public_ip_address = var.management_server_public_access
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-management-server"
-  })
+  }
 }
 
 # Elastic IP for Management Server (if public access enabled)
 resource "aws_eip" "management_server" {
-  count = var.enable_management_server && var.management_server_public_access ? 1 : 0
+  count = var.management_server_enabled && var.management_server_public_access ? 1 : 0
 
   domain   = "vpc"
   instance = aws_instance.management_server[0].id
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-management-server-eip"
-  })
+  }
 }
 

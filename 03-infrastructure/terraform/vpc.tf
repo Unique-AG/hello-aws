@@ -4,20 +4,17 @@ resource "aws_vpc" "main" {
   enable_dns_hostnames = var.enable_dns_hostnames
   enable_dns_support   = var.enable_dns_support
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "vpc-${module.naming.id}"
-    }
-  )
+  tags = {
+    Name = "vpc-${module.naming.id}"
+  }
 }
 
 # Secondary CIDR for EKS pod networking (RFC 6598 range)
 resource "aws_vpc_ipv4_cidr_block_association" "secondary" {
-  count = var.enable_secondary_cidr ? 1 : 0
+  count = var.secondary_cidr_enabled ? 1 : 0
 
   vpc_id     = aws_vpc.main.id
-  cidr_block = "100.64.0.0/20"
+  cidr_block = local.secondary_cidr
 }
 
 # Restrict Default Security Group — deny all traffic
@@ -25,7 +22,7 @@ resource "aws_vpc_ipv4_cidr_block_association" "secondary" {
 resource "aws_default_security_group" "default" {
   vpc_id = aws_vpc.main.id
   # No ingress/egress rules = deny all
-  tags = merge(local.tags, { Name = "sg-default-${module.naming.id}-DO-NOT-USE" })
+  tags = { Name = "sg-default-${module.naming.id}-DO-NOT-USE" }
 }
 
 # VPC Flow Logs — capture all traffic for audit and troubleshooting
@@ -36,17 +33,17 @@ resource "aws_flow_log" "main" {
   log_destination          = aws_cloudwatch_log_group.vpc_flow_logs.arn
   iam_role_arn             = aws_iam_role.vpc_flow_logs.arn
   max_aggregation_interval = 60
-  tags                     = merge(local.tags, { Name = "flow-log-${module.naming.id}" })
+  tags                     = { Name = "flow-log-${module.naming.id}" }
 }
 
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "${module.naming.log_group_prefix}/vpc-flow-logs"
   retention_in_days = var.cloudwatch_log_retention_days
   kms_key_id        = aws_kms_key.cloudwatch_logs.arn
-  tags = merge(local.tags, {
+  tags = {
     Name    = "log-${module.naming.id}-vpc-flow-logs"
     Purpose = "vpc-flow-logs"
-  })
+  }
 }
 
 resource "aws_iam_role" "vpc_flow_logs" {
@@ -65,7 +62,7 @@ resource "aws_iam_role" "vpc_flow_logs" {
     ]
   })
 
-  tags = merge(local.tags, { Name = "${module.naming.id}-vpc-flow-logs" })
+  tags = { Name = "${module.naming.id}-vpc-flow-logs" }
 }
 
 resource "aws_iam_role_policy" "vpc_flow_logs" {
@@ -99,12 +96,9 @@ resource "aws_vpc_dhcp_options" "main" {
   domain_name         = "${var.aws_region}.compute.internal"
   domain_name_servers = ["AmazonProvidedDNS"] # AWS DNS resolver (VPC base IP + 2)
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "dhcp-${module.naming.id}"
-    }
-  )
+  tags = {
+    Name = "dhcp-${module.naming.id}"
+  }
 }
 
 # Associate DHCP Options with VPC
@@ -121,12 +115,9 @@ resource "aws_vpc_dhcp_options_association" "main" {
 resource "aws_internet_gateway" "main" {
   vpc_id = aws_vpc.main.id
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "igw-${module.naming.id}"
-    }
-  )
+  tags = {
+    Name = "igw-${module.naming.id}"
+  }
 }
 
 # Public Subnets (for NAT Gateway only)
@@ -139,14 +130,11 @@ resource "aws_subnet" "public" {
   availability_zone       = local.availability_zones[count.index]
   map_public_ip_on_launch = false
 
-  tags = merge(
-    local.tags,
-    {
-      Name                                        = "subnet-public-${module.naming.id}-${count.index + 1}"
-      Type                                        = "public"
-      "kubernetes.io/cluster/${module.naming.id}" = "shared"
-    }
-  )
+  tags = {
+    Name                                        = "subnet-public-${module.naming.id}-${count.index + 1}"
+    Type                                        = "public"
+    "kubernetes.io/cluster/${module.naming.id}" = "shared"
+  }
 }
 
 # Private Subnets (for workloads: EKS, compute, AI, monitoring, etc.)
@@ -158,15 +146,12 @@ resource "aws_subnet" "private" {
   cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_allocations.private.newbits, local.subnet_allocations.private.start + count.index)
   availability_zone = local.availability_zones[count.index]
 
-  tags = merge(
-    local.tags,
-    {
-      Name                                        = "subnet-private-${module.naming.id}-${count.index + 1}"
-      Type                                        = "private"
-      "kubernetes.io/role/internal-elb"           = "1" # For EKS internal load balancers
-      "kubernetes.io/cluster/${module.naming.id}" = "shared"
-    }
-  )
+  tags = {
+    Name                                        = "subnet-private-${module.naming.id}-${count.index + 1}"
+    Type                                        = "private"
+    "kubernetes.io/role/internal-elb"           = "1" # For EKS internal load balancers
+    "kubernetes.io/cluster/${module.naming.id}" = "shared"
+  }
 }
 
 # Isolated Subnets (for databases: RDS, ElastiCache)
@@ -178,14 +163,11 @@ resource "aws_subnet" "isolated" {
   cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_allocations.isolated.newbits, local.subnet_allocations.isolated.start + count.index)
   availability_zone = local.availability_zones[count.index]
 
-  tags = merge(
-    local.tags,
-    {
-      Name    = "subnet-isolated-${module.naming.id}-${count.index + 1}"
-      Type    = "isolated"
-      Purpose = "database"
-    }
-  )
+  tags = {
+    Name    = "subnet-isolated-${module.naming.id}-${count.index + 1}"
+    Type    = "isolated"
+    Purpose = "database"
+  }
 }
 
 # NAT Gateway HA guard — warn if production uses single NAT
@@ -202,12 +184,9 @@ resource "aws_eip" "nat" {
 
   domain = "vpc"
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "eip-nat-${module.naming.id}-${count.index + 1}"
-    }
-  )
+  tags = {
+    Name = "eip-nat-${module.naming.id}-${count.index + 1}"
+  }
 
   depends_on = [aws_internet_gateway.main]
 }
@@ -223,12 +202,9 @@ resource "aws_nat_gateway" "main" {
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "nat-${module.naming.id}-${count.index + 1}"
-    }
-  )
+  tags = {
+    Name = "nat-${module.naming.id}-${count.index + 1}"
+  }
 
   depends_on = [aws_internet_gateway.main]
 }
@@ -243,12 +219,9 @@ resource "aws_route_table" "public" {
     gateway_id = aws_internet_gateway.main.id
   }
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "rt-public-${module.naming.id}"
-    }
-  )
+  tags = {
+    Name = "rt-public-${module.naming.id}"
+  }
 }
 
 # Route Table Associations for Public Subnets
@@ -267,12 +240,9 @@ resource "aws_route_table" "private" {
 
   vpc_id = aws_vpc.main.id
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "rt-private-${module.naming.id}-${count.index + 1}"
-    }
-  )
+  tags = {
+    Name = "rt-private-${module.naming.id}-${count.index + 1}"
+  }
 }
 
 # NAT Gateway route for private subnets (conditional on NAT being enabled)
@@ -301,12 +271,9 @@ resource "aws_route_table" "isolated" {
   # No default route - isolated from internet
   # Only VPC-internal routing
 
-  tags = merge(
-    local.tags,
-    {
-      Name = "rt-isolated-${module.naming.id}-${count.index + 1}"
-    }
-  )
+  tags = {
+    Name = "rt-isolated-${module.naming.id}-${count.index + 1}"
+  }
 }
 
 # Route Table Associations for Isolated Subnets

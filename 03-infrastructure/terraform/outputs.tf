@@ -258,17 +258,17 @@ output "ssm_instance_profile_name" {
 
 output "management_server_instance_id" {
   description = "Instance ID of the management server (if enabled)"
-  value       = var.enable_management_server ? aws_instance.management_server[0].id : null
+  value       = var.management_server_enabled ? aws_instance.management_server[0].id : null
 }
 
 output "management_server_private_ip" {
   description = "Private IP address of the management server"
-  value       = var.enable_management_server ? aws_instance.management_server[0].private_ip : null
+  value       = var.management_server_enabled ? aws_instance.management_server[0].private_ip : null
 }
 
 output "management_server_public_ip" {
   description = "Public IP address of the management server (if public access enabled)"
-  value       = var.enable_management_server && var.management_server_public_access ? aws_eip.management_server[0].public_ip : null
+  value       = var.management_server_enabled && var.management_server_public_access ? aws_eip.management_server[0].public_ip : null
 }
 
 output "management_server_security_group_id" {
@@ -285,16 +285,16 @@ output "ec2_endpoint_id" {
 # SSM Endpoint Outputs
 output "ssm_endpoint_id" {
   description = "ID of the SSM Interface Endpoint"
-  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ssm[0].id : null
+  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ssm[0].id : null
 }
 
 output "ssm_messages_endpoint_id" {
   description = "ID of the SSM Messages Interface Endpoint"
-  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ssm_messages[0].id : null
+  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ssm_messages[0].id : null
 }
 
 output "ec2_messages_endpoint_id" {
   description = "ID of the EC2 Messages Interface Endpoint"
-  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ec2_messages[0].id : null
+  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ec2_messages[0].id : null
 }
 

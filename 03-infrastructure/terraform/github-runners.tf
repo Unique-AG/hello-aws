@@ -1,5 +1,5 @@
 resource "aws_security_group" "github_runners" {
-  count = var.enable_github_runners ? 1 : 0
+  count = var.github_runners_enabled ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"
   description = "Security group for GitHub Actions self-hosted runners"
@@ -22,42 +22,33 @@ resource "aws_security_group" "github_runners" {
     description = "HTTP outbound"
   }
 
-  # Outbound to VPC endpoints
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
-    description = "HTTPS to VPC endpoints"
-  }
-
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-github-runners-sg"
-  })
+  }
 }
 
 resource "aws_subnet" "github_runners" {
-  count = var.enable_github_runners ? length(local.availability_zones) : 0
+  count = var.github_runners_enabled ? length(local.availability_zones) : 0
 
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_allocations.runners.newbits, local.subnet_allocations.runners.start + count.index) # /26 subnets, non-overlapping
   availability_zone = local.availability_zones[count.index]
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-github-runners-${local.availability_zones[count.index]}"
     Type = "github-runners"
-  })
+  }
 }
 
 resource "aws_route_table_association" "github_runners" {
-  count = var.enable_github_runners && var.enable_nat_gateway ? length(aws_subnet.github_runners) : 0
+  count = var.github_runners_enabled && var.enable_nat_gateway ? length(aws_subnet.github_runners) : 0
 
   subnet_id      = aws_subnet.github_runners[count.index].id
   route_table_id = aws_route_table.private[count.index].id
 }
 
 resource "aws_iam_role" "github_runners" {
-  count = var.enable_github_runners ? 1 : 0
+  count = var.github_runners_enabled ? 1 : 0
 
   name = "${module.naming.id}-github-runners"
 
@@ -73,12 +64,10 @@ resource "aws_iam_role" "github_runners" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 resource "aws_iam_role_policy" "github_runners" {
-  count = var.enable_github_runners ? 1 : 0
+  count = var.github_runners_enabled ? 1 : 0
 
   name = "github-runners-policy"
   role = aws_iam_role.github_runners[0].id
@@ -141,38 +130,3 @@ resource "aws_iam_role_policy" "github_runners" {
   })
 }
 
-# resource "aws_codebuild_project" "github_runners" {
-#   count = var.enable_github_runners ? 1 : 0
-#
-#   name          = "${module.naming.id}-github-runners"
-#   description   = "GitHub Actions self-hosted runners with VPC access"
-#   build_timeout = 60
-#   service_role  = aws_iam_role.github_runners[0].arn
-#
-#   artifacts {
-#     type = "NO_ARTIFACTS"
-#   }
-#
-#   environment {
-#     compute_type                = "BUILD_GENERAL1_SMALL"
-#     image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-#     type                        = "LINUX_CONTAINER"
-#     image_pull_credentials_type = "CODEBUILD"
-#     privileged_mode             = true
-#   }
-#
-#   source {
-#     type            = "GITHUB"
-#     location        = "https://github.com/Unique-AG/hello-aws.git"
-#     git_clone_depth = 1
-#     buildspec       = "buildspec.yml"
-#   }
-#
-#   vpc_config {
-#     vpc_id             = aws_vpc.main.id
-#     subnets            = aws_subnet.github_runners[*].id
-#     security_group_ids = [aws_security_group.github_runners[0].id]
-#   }
-#
-#   tags = local.tags
-# }
