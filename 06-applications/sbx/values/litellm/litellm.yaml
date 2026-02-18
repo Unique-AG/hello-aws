@@ -127,6 +127,7 @@ proxy_config:
     disable_error_logs: false
 
   litellm_settings:
+    drop_params: true
     turn_off_message_logging: false
     max_budget: 10000
     budget_duration: 30d
