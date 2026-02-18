@@ -2,7 +2,7 @@ resource "aws_budgets_budget" "monthly_budget" {
   name         = "budget-${module.naming.id}-monthly"
   budget_type  = "COST"
   limit_amount = tostring(var.budget_amount)
-  limit_unit   = "USD"
+  limit_unit   = var.budget_currency
   time_unit    = "MONTHLY"
 
   notification {
