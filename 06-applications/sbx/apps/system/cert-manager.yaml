@@ -1,0 +1,27 @@
+spec:
+  name: cert-manager
+  autoSync: true
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: cert-manager
+      repoURL: https://charts.jetstack.io
+      targetRevision: 1.17.2
+      helm:
+        releaseName: cert-manager
+        valueFiles:
+          - $values/06-applications/sbx/values/cert-manager/cert-manager.yaml
+    - chart: raw
+      repoURL: https://bedag.github.io/helm-charts
+      targetRevision: 2.0.0
+      helm:
+        releaseName: clusterissuer-route53-dns
+        valueFiles:
+          - $values/06-applications/sbx/values/cert-manager/cluster-issuer-route53.yaml
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jsonPointers:
+        - /webhooks/0/namespaceSelector/matchExpressions
+      name: cert-manager-webhook

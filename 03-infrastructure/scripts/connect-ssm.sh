@@ -37,7 +37,6 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-BOLD='\033[1m'
 NC='\033[0m'
 
 log()     { echo -e "${GREEN}[✓]${NC} $1"; }
@@ -58,17 +57,6 @@ MANAGEMENT_SERVER=false
 INSTANCE_ID=""
 
 # Functions
-
-resolve_aws_region() {
-  if [ -n "${AWS_REGION:-}" ]; then
-    return
-  fi
-  AWS_REGION=$(aws configure get region 2>/dev/null || echo "")
-  if [ -z "${AWS_REGION}" ]; then
-    AWS_REGION="eu-central-2"
-    warn "AWS region not set, defaulting to ${AWS_REGION}"
-  fi
-}
 
 show_help() {
   cat << EOF
@@ -135,8 +123,10 @@ get_management_server_id() {
 
   # Try to get from Terraform state
   if command -v terraform &> /dev/null && [ -d "${TERRAFORM_DIR}" ]; then
+    cd "${TERRAFORM_DIR}"
+    
     # Try to get instance ID from state
-    INSTANCE_ID=$(cd "${TERRAFORM_DIR}" && terraform output -raw management_server_instance_id 2>/dev/null || echo "")
+    INSTANCE_ID=$(terraform output -raw management_server_instance_id 2>/dev/null || echo "")
     
     if [ -n "${INSTANCE_ID}" ] && [ "${INSTANCE_ID}" != "null" ]; then
       log "Found management server instance ID: ${INSTANCE_ID}"
@@ -146,7 +136,13 @@ get_management_server_id() {
 
   # Fallback: Try to find instance by tag
   info "Trying to find management server by tags..."
-  resolve_aws_region
+  
+  # Get current AWS region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+    warn "AWS region not set, defaulting to ${AWS_REGION}"
+  fi
 
   # Try to find instance with management server tag
   INSTANCE_ID=$(aws ec2 describe-instances \
@@ -167,7 +163,10 @@ get_management_server_id() {
 
 # Start instance if stopped
 ensure_instance_running() {
-  resolve_aws_region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+  fi
 
   # Check instance state
   INSTANCE_STATE=$(aws ec2 describe-instances \
@@ -196,7 +195,10 @@ ensure_instance_running() {
 
 # Wait for SSM connectivity
 wait_for_ssm() {
-  resolve_aws_region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+  fi
 
   local max_attempts=12
   local attempt=1
@@ -225,7 +227,10 @@ wait_for_ssm() {
 verify_instance() {
   info "Verifying instance ${INSTANCE_ID} is accessible via SSM..."
 
-  resolve_aws_region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+  fi
 
   # Check if instance is in SSM and online
   local ping_status
@@ -245,9 +250,9 @@ verify_instance() {
     return 0
   fi
 
-  error "Instance ${INSTANCE_ID} is not accessible via SSM. Ensure:"
-  error "  1. Instance has SSM agent installed and running"
-  error "  2. Instance has IAM role with AmazonSSMManagedInstanceCore policy"
+  warn "Instance ${INSTANCE_ID} is not accessible via SSM. Ensure:"
+  warn "  1. Instance has SSM agent installed and running"
+  warn "  2. Instance has IAM role with AmazonSSMManagedInstanceCore policy"
   error "  3. SSM VPC endpoints are configured (if in private subnet)"
 }
 
@@ -257,7 +262,10 @@ start_interactive_session() {
   info "Type 'exit' to end the session"
   echo ""
 
-  resolve_aws_region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+  fi
 
   aws ssm start-session \
     --target "${INSTANCE_ID}" \
@@ -270,7 +278,10 @@ start_port_forwarding() {
   info "Forwarding remote port ${REMOTE_PORT} to local port ${LOCAL_PORT}"
   echo ""
 
-  resolve_aws_region
+  AWS_REGION="${AWS_REGION:-$(aws configure get region)}"
+  if [ -z "${AWS_REGION}" ]; then
+    AWS_REGION="eu-central-2"
+  fi
 
   # Start SSM session in background and monitor port
   (
@@ -316,7 +327,7 @@ start_port_forwarding() {
   MONITOR_PID=$!
   
   # Trap Ctrl+C to clean up
-  trap "kill ${MONITOR_PID} 2>/dev/null; pkill -f 'aws ssm start-session.*${LOCAL_PORT}' 2>/dev/null; exit" INT TERM
+  trap 'kill '"${MONITOR_PID}"' 2>/dev/null; pkill -f "aws ssm start-session.*'"${LOCAL_PORT}"'" 2>/dev/null; exit' INT TERM
   
   # Wait for the monitor process
   wait ${MONITOR_PID}
@@ -327,7 +338,6 @@ start_port_forwarding() {
   
   if [ "${exit_code}" -ne 0 ]; then
     error "Port forwarding failed to establish"
-    return 1
   fi
 }
 

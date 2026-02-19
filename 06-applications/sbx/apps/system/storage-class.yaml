@@ -1,0 +1,14 @@
+spec:
+  name: storage-class-gp3
+  autoSync: true
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: storage-class-gp3
+        valueFiles:
+          - $values/06-applications/sbx/values/storage-class/gp3.yaml

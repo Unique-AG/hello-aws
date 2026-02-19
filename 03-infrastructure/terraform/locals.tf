@@ -1,7 +1,4 @@
 locals {
-  # Secondary CIDR for EKS pod networking (RFC 6598 range)
-  secondary_cidr = "100.64.0.0/20"
-
   # Terraform state bucket name (computed from naming module, same as bootstrap layer)
   # Format: s3-{id_short}-tfstate
   # This matches the bootstrap layer's bucket name generation

@@ -1,0 +1,10 @@
+# Using public images for sbx - private ECR not accessible
+watchGlobally: true
+reloader:
+  deployment:
+    image:
+      name: ghcr.io/stakater/reloader
+      tag: v1.4.2
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+  logFormat: json

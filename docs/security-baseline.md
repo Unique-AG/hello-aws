@@ -16,6 +16,37 @@ This is a living document. Security posture is being hardened on an ongoing basi
 | CKV_AWS_111 | `aws_kms_key.terraform_state` | KMS key policy grants root account write access to manage key lifecycle — required for key administration |
 | CKV_AWS_356 | `aws_kms_key.terraform_state` | KMS key policy uses `Resource: *` which is self-referential (refers to the key itself, not all resources) |
 
+### 03-infrastructure
+
+#### Trivy
+
+| Rule | Severity | Resource | Rationale |
+|---|---|---|---|
+| AVD-AWS-0053 | HIGH | `aws_lb.websocket` | Public-facing by design — WebSocket ALB serves client connections that cannot traverse CloudFront |
+| AVD-AWS-0054 | CRITICAL | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, HTTP is sufficient for private VPC traffic |
+| AVD-AWS-0104 | CRITICAL | `aws_security_group.github_runners` | Runners require HTTPS (443) egress to `0.0.0.0/0` for GitHub API and package registries; scoped to port 443 only |
+
+#### Checkov
+
+| Rule | Resource | Rationale |
+|---|---|---|
+| CKV_AWS_91 | `aws_lb.ingress_nlb`, `aws_lb.websocket` | ALB access logging deferred — requires dedicated S3 log bucket with ELB write policy. CloudFront access logs provide partial coverage for the internal ALB. Public WebSocket ALB has no compensating control. **Remediation: provision log bucket before production.** |
+| CKV_AWS_150 | `aws_lb.ingress_nlb` | Deletion protection controlled by `var.alb_deletion_protection`; disabled in sandbox for fast teardown |
+| CKV_AWS_290 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions do not support resource-level constraints (AWS API limitation) |
+| CKV_AWS_355 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions require `Resource: *` (AWS API limitation) |
+| CKV_AWS_338 | `aws_cloudwatch_log_group.vpc_flow_logs` | Retention is variable-driven per environment (7d sbx, 30d default, 365d prod) |
+
+### 04-data-and-ai
+
+#### Checkov
+
+| Rule | Resource | Rationale |
+|---|---|---|
+| CKV_AWS_162 | `aws_rds_cluster.postgres` | Zitadel uses password-based auth managed via AWS Secrets Manager (`manage_master_user_password`); Zitadel's Go database driver (`internal/database/postgres/pg.go`) hardcodes username/password auth with no extensibility point for IAM token-based auth |
+| CKV_AWS_118 | `aws_rds_cluster_instance.postgres` | Enhanced monitoring deferred — requires a dedicated IAM role (trivial to create). CloudWatch metrics and Performance Insights provide baseline observability; Enhanced Monitoring adds OS-level metrics (process CPU, memory, disk I/O). **Remediation: add IAM role + `monitoring_interval` before production.** |
+| CKV_AWS_31 | `aws_elasticache_replication_group.redis` | No AUTH token — risk accepted. Compensating controls: VPC isolation (isolated subnets), security group restricts to VPC CIDR, TLS enabled, KMS at-rest encryption. Residual risk: any VPC-internal process can execute Redis commands without authentication. **Remediation: evaluate RBAC or IAM auth for defense-in-depth before production.** |
+| CKV_AWS_273 | `aws_iam_user.s3_access` | Chat service `S3BucketStrategy` (Node.js `@unique-ag/chat`) uses a non-standard S3 client requiring explicit access keys; AWS SDK default credential chain (IRSA/Pod Identity) not supported by this client. Compensating controls: keys stored in Secrets Manager with KMS encryption, IAM policy scoped to specific S3 buckets and KMS key. **Technical debt: evaluate migrating to an AWS SDK-compatible client to enable Pod Identity.** |
+
 ### 05-compute
 
 #### Trivy (`.trivyignore`)
@@ -29,13 +60,12 @@ This is a living document. Security posture is being hardened on an ongoing basi
 
 | Rule | Resource | Rationale |
 |---|---|---|
-| CKV_AWS_91 | `aws_lb.cloudfront`, `aws_lb.websocket` | ALB access logging deferred until S3 log bucket is provisioned |
-| CKV_AWS_2 | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, ALB forwards to Kong NLB over private network |
-| CKV_AWS_163 | `aws_ecr_repository.main` | `scan_on_push` is variable-driven per repo; registry-level enhanced scanning provides continuous coverage |
-| CKV_AWS_51 | `aws_ecr_repository.main` | `image_tag_mutability` is intentionally variable-driven per repo |
-| CKV_AWS_338 | `aws_cloudwatch_log_group.eks_cluster` | Retention is variable-driven per environment (7d sbx, 30d default, 365d prod) |
-| CKV_AWS_355 | `cert_manager_route53`, `speech` | Route53 List and Transcribe actions do not support resource-level constraints (AWS API limitation) |
-| CKV_AWS_290 | `speech` | Transcribe write actions do not support resource-level constraints (AWS API limitation) |
+| CKV_AWS_163 | `aws_ecr_repository.main` | `scan_on_push` is variable-driven per repo; registry-level enhanced scanning (`CONTINUOUS_SCAN` with `*` filter) provides strictly superior coverage — re-evaluates images when new CVEs are published |
+| CKV_AWS_51 | `aws_ecr_repository.main` | `image_tag_mutability` is variable-driven per repo to support CI/CD patterns using mutable tags (e.g., `latest`, branch tags). Production repos should use `IMMUTABLE` tags; enforced via SCP (see below) |
+| CKV_AWS_111 | `speech`, `aws_lb_controller` | `speech`: Transcribe streaming actions (`StartStreamTranscription`, `StartTranscriptionJob`) do not support resource-level constraints (AWS API limitation). `aws_lb_controller`: dynamically manages ELB/EC2 resources whose ARNs cannot be predetermined; tag-based conditions recommended for production hardening (see [official policy](https://github.com/kubernetes-sigs/aws-load-balancer-controller/blob/main/docs/install/iam_policy.json)) |
+| CKV_AWS_290 | `speech`, `aws_lb_controller` | Same rationale as CKV_AWS_111 — write actions that either lack resource-level support (Transcribe) or require dynamic resource creation (LB controller) |
+| CKV_AWS_355 | `cert_manager_route53`, `speech`, `aws_lb_controller` | `cert_manager_route53`: `ListHostedZones` and `ListHostedZonesByName` do not support resource-level constraints (AWS API limitation). `speech` and `aws_lb_controller`: same rationale as CKV_AWS_111 |
+| CKV_AWS_356 | `cert_manager_route53`, `speech`, `aws_lb_controller` | Same resources as CKV_AWS_355 — checkov flags `*` for actions it considers restrictable, but these are either genuinely unscopable (Route53 List, Transcribe streaming) or dynamically managed (LB controller) |
 
 ## Sandbox Environment Relaxations
 
@@ -76,7 +106,6 @@ The following settings are overridden in sbx `00-config.auto.tfvars` to enable f
 |---|---|---|---|
 | `eks_endpoint_public_access` | `true` | `false` | EKS API accessible from internet |
 | `eks_endpoint_public_access_cidrs` | `["0.0.0.0/0"]` | `[]` | No CIDR restriction on public access |
-| `eks_cluster_log_retention_days` | `7` days | `365` days (recommended) | Reduced audit trail for compliance |
 | `alb_deletion_protection` | `false` | `true` | ALBs can be accidentally deleted |
 
 ## Production Guardrails via SCP

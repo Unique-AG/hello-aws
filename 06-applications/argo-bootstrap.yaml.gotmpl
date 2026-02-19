@@ -1,0 +1,32 @@
+# ArgoCD bootstrap helmfile for AWS
+# Bootstraps ArgoCD and ApplicationSets controller.
+# Run once: helmfile -e sbx -f argo-bootstrap.yaml sync
+environments:
+  sbx:
+    values:
+      -
+        self:
+          namespace: unique
+---
+repositories:
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+
+releases:
+  - name: argo
+    createNamespace: true
+    namespace: {{ .Values.self.namespace }}
+    chart: argo/argo-cd
+    version: 8.0.0
+    values:
+      - {{ .Environment.Name }}/values/argo/argo.yaml
+
+  - name: argo-appsets
+    needs:
+      - argo
+    createNamespace: true
+    namespace: {{ .Values.self.namespace }}
+    chart: argo/argocd-apps
+    version: 2.0.2
+    values:
+      - {{ .Environment.Name }}/values/argo/argo-appsets.yaml

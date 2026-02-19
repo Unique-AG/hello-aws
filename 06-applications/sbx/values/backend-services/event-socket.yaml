@@ -1,0 +1,16 @@
+# Event Socket backend service configuration (AWS sbx)
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-event-socket
+  tag: "2026.06.1"
+
+routes:
+  gateway:
+    namespace: unique
+  hostname: <DOMAIN_API>
+  pathPrefix: /event-socket
+  paths:
+    versioned:
+      enabled: true
+    probe:
+      enabled: true

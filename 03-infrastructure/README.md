@@ -2,7 +2,7 @@
 
 ## Overview
 
-The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, and an optional management server. This layer establishes the network foundation that all other layers depend on.
+The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
 
 ## Design Rationale
 
@@ -25,7 +25,7 @@ The infrastructure layer implements a **four-tier subnet architecture** followin
   - Direct access only from private subnets via security groups
 
 - **GitHub Runner Subnets** (`/26`, 64 IPs): Host self-hosted GitHub Actions runners
-  - Conditional on `github_runners_enabled`
+  - Conditional on `enable_github_runners`
   - Associated with private route tables only when NAT Gateway is enabled
 
 An optional **secondary CIDR** (`100.64.0.0/20`, RFC 6598) can be enabled for EKS pod networking, keeping pod IPs separate from node IPs.
@@ -55,7 +55,7 @@ The VPC default security group is locked down with **no ingress or egress rules*
 
 VPC endpoints provide **private connectivity** to AWS services without internet access:
 
-- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket and ECR layer bucket)
+- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket, application-data and ai-data S3 buckets, and ECR layer bucket)
 - **Interface Endpoints**: SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, STS, KMS, EC2
 - **Private Access**: All AWS service access stays within the VPC
 
@@ -76,6 +76,29 @@ An optional EC2 management server provides:
 - **NAT Gateway Alarms**: `ErrorPortAllocation` and `PacketsDropCount` per gateway, wired to SNS
 - **NAT HA Guard**: `check` block warns if `single_nat_gateway = true` in production
 
+### Ingress NLB, ALBs, and CloudFront VPC Origin
+
+The infrastructure layer manages the full ingress load balancing stack, keeping networking resources independent of EKS:
+
+- **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
+- **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
+- **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.rbcn.ai`), used for TLS termination on both ALBs.
+- **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
+
+Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
+
+For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingress NLB → Ingress controller`
+
+> **Future**: The ambition is to consolidate the two ALBs into a single ALB once CloudFront VPC Origins support WebSocket traffic.
+
+### Transit Gateway (Optional)
+
+When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity account), the VPC is attached to the Transit Gateway for hub-and-spoke network connectivity:
+
+- **VPC Attachment**: Private subnets, DNS support enabled
+- **Cross-Account IAM Role**: Optional read-only role (`enable_connectivity_account_role`) allows the connectivity account to discover VPCs, subnets, EKS clusters, and load balancers for Transit Gateway routing and CloudFront setup
+
 ## Resources
 
 ### VPC and Networking
@@ -91,12 +114,12 @@ An optional EC2 management server provides:
 ### VPC Endpoints
 
 - **Interface Endpoints**: SSM, Secrets Manager, ECR (API + DKR), CloudWatch (Logs + Metrics), Prometheus, Bedrock, Bedrock Runtime, STS, KMS, EC2, EC2 Messages, SSM Messages
-- **Gateway Endpoints**: S3 (with restrictive bucket-scoped policy)
+- **Gateway Endpoints**: S3 (with policy scoped to Terraform state, application S3 buckets, and ECR layers)
 - **Security Group**: Restricted ingress/egress to VPC CIDR
 
 ### KMS Keys
 
-- **General Purpose Key**: EKS, EBS, S3, RDS, ElastiCache, ECR, SNS (with `kms:CreateGrant` for EC2 and RDS)
+- **General Purpose Key**: EKS, EBS, S3, RDS, ElastiCache, ECR, SNS (with `kms:CreateGrant` for EC2, Auto Scaling, and RDS)
 - **Secrets Manager Key**: Secrets Manager + ECR Pull Through Cache
 - **CloudWatch Logs Key**: CloudWatch Log Groups
 - **Prometheus Key** (optional): Managed Prometheus workspace
@@ -125,6 +148,33 @@ An optional EC2 management server provides:
 - **SNS Topic**: KMS-encrypted alerts topic
 - **CloudWatch Alarms**: NAT Gateway port allocation errors and packet drops
 
+### Ingress NLB
+
+- **Security Group**: Inbound HTTP/HTTPS from VPC (ALBs), outbound to EKS pods (VPC CIDR)
+- **Network Load Balancer**: Internal, cross-zone enabled, private subnets
+- **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
+- **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group
+
+### ALBs for CloudFront
+
+- **CloudFront ALB**: Internal, security group restricted to CloudFront managed prefix list (HTTPS ingress only)
+- **WebSocket ALB**: Public (in public subnets), security group restricted to CloudFront managed prefix list
+- **Target Groups**: Both ALBs forward to Ingress NLB IPs (resolved via DNS), HTTP port 80
+- **HTTPS Listeners**: TLS 1.3 policy, ACM wildcard certificate
+- **HTTP Listener**: CloudFront ALB forwards to NLB; WebSocket ALB redirects HTTP → HTTPS
+- **ACM Certificate**: DNS-validated wildcard certificate for the environment domain
+
+### CloudFront VPC Origin
+
+- **VPC Origin**: Points to the internal CloudFront ALB, HTTPS-only origin protocol
+- **AWS RAM Share**: Shares VPC Origin with connectivity account (us-east-1, as CloudFront is global)
+- **Principal Association**: Connectivity account receives RAM invitation
+
+### Transit Gateway (Optional)
+
+- **VPC Attachment**: Connects to Transit Gateway shared via AWS RAM, private subnets, DNS support enabled
+- **Cross-Account IAM Role**: Read-only for connectivity account (EC2 describe, EKS describe, ELB describe)
+
 ### GitHub Runners (Optional)
 
 - **Subnets**: /26 per AZ, non-overlapping with other tiers
@@ -141,7 +191,7 @@ An optional EC2 management server provides:
 - **Private Subnets**: Workloads in private subnets (no public IPs)
 - **Isolated Subnets**: Databases with no internet access
 - **VPC-Only Management Server**: No internet egress from jump server
-- **S3 Endpoint Policy**: Scoped to Terraform state and ECR layer buckets only
+- **S3 Endpoint Policy**: Scoped to Terraform state, application S3 buckets, and ECR layer buckets only
 
 ### Encryption
 
@@ -222,26 +272,26 @@ Key configuration options:
 ```hcl
 # VPC Configuration
 vpc_cidr              = "10.1.0.0/19"
-secondary_cidr_enabled = true  # 100.64.0.0/20 for EKS pods
+enable_secondary_cidr = true  # 100.64.0.0/20 for EKS pods
 
 # NAT Gateway
 enable_nat_gateway = true
 single_nat_gateway = true  # Single NAT for non-prod (HA guard warns in prod)
 
 # Management Server
-management_server_enabled        = true
+enable_management_server        = true
 management_server_ami           = ""      # Use golden AMI ID here
 management_server_instance_type = "t3.medium"
 management_server_public_access = false   # Session Manager only
 
 # GitHub Runners
-github_runners_enabled = true
+enable_github_runners = true
 
 # Monitoring
 alert_email_endpoints = ["ops@example.com"]
 
 # VPC Endpoints
-ssm_endpoints_enabled            = true
+enable_ssm_endpoints            = true
 enable_secrets_manager_endpoint = true
 enable_bedrock_endpoint         = true
 
@@ -249,6 +299,13 @@ enable_bedrock_endpoint         = true
 # These values come from your landing zone or connectivity account
 # route53_private_zone_domain = "sbx.example.com"
 # route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
+
+# Ingress NLB + ALB + CloudFront VPC Origin
+# enable_ingress_nlb defaults to true — NLB is created with infrastructure
+alb_deletion_protection         = false        # Disable for sbx teardown
+enable_cloudfront_vpc_origin    = true
+internal_alb_certificate_domain = "*.sbx.rbcn.ai"
+connectivity_account_id         = "198666613175"
 ```
 
 > **Note**: The Route 53 private zone values (`route53_private_zone_domain` and `route53_private_zone_id`) are commented out by default. If your deployment uses a Route 53 Private Hosted Zone (e.g., from a connectivity account in a hub-and-spoke topology), uncomment and set these values in `environments/{env}/00-config.auto.tfvars` before deploying. Without them, the VPC association with the private hosted zone is skipped.
@@ -315,6 +372,22 @@ After deployment:
 - `management_server_security_group_id`
 - `ssm_instance_profile_arn`, `ssm_instance_profile_name`, `ssm_instance_role_arn`
 
+### Transit Gateway
+- `transit_gateway_attachment_id`, `transit_gateway_attachment_arn`
+- `connectivity_account_read_only_role_arn`
+
+### Ingress NLB
+- `ingress_nlb_dns_name`, `ingress_nlb_arn`, `ingress_nlb_security_group_id`
+- `ingress_target_group_http_arn`, `ingress_target_group_https_arn`
+
+### ALBs
+- `cloudfront_alb_arn`, `cloudfront_alb_dns_name`, `cloudfront_alb_security_group_id`
+- `websocket_alb_dns_name`
+- `internal_alb_certificate_arn`, `internal_alb_certificate_validation_records`
+
+### CloudFront VPC Origin
+- `cloudfront_vpc_origin_id`, `cloudfront_vpc_origin_arn`
+
 ### DNS
 - `route53_private_zone_id`, `route53_private_zone_domain`
 
@@ -327,3 +400,6 @@ After deployment:
 - [AWS Well-Architected Framework - Security](https://docs.aws.amazon.com/wellarchitected/latest/security-pillar/welcome.html)
 - [EBS Encryption by Default](https://docs.aws.amazon.com/ebs/latest/userguide/encryption-by-default.html)
 - [IMDSv2 Best Practices](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html)
+- [CloudFront VPC Origins](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-vpc-origins.html)
+- [AWS Load Balancer Controller - TargetGroupBinding](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/targetgroupbinding/targetgroupbinding/)
+- [AWS RAM Resource Sharing](https://docs.aws.amazon.com/ram/latest/userguide/what-is.html)

@@ -1,0 +1,31 @@
+# Qdrant Vector Database for AWS EKS
+# Using public Qdrant images
+replicaCount: 1
+
+image:
+  repository: qdrant/qdrant
+  tag: v1.13.1
+  useUnprivilegedImage: true
+
+# nodeSelector removed - sbx nodes don't have these labels
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 1Gi
+  limits:
+    memory: 2Gi
+
+persistence:
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  storageClassName: gp3
+
+startupProbe:
+  enabled: true
+  failureThreshold: 30
+  periodSeconds: 30
+
+service:
+  type: ClusterIP

@@ -37,14 +37,19 @@ output "eks_cluster_security_group_id" {
   value       = aws_security_group.eks_cluster.id
 }
 
-output "eks_node_group_id" {
-  description = "ID of the EKS node group"
-  value       = aws_eks_node_group.main.id
+output "eks_node_security_group_id" {
+  description = "Security group ID attached to the EKS nodes"
+  value       = aws_security_group.eks_nodes.id
 }
 
-output "eks_node_group_arn" {
-  description = "ARN of the EKS node group"
-  value       = aws_eks_node_group.main.arn
+output "eks_node_group_ids" {
+  description = "Map of EKS node group names to IDs"
+  value       = { for k, v in aws_eks_node_group.pool : k => v.id }
+}
+
+output "eks_node_group_arns" {
+  description = "Map of EKS node group names to ARNs"
+  value       = { for k, v in aws_eks_node_group.pool : k => v.arn }
 }
 
 # ECR Repository Outputs
@@ -156,60 +161,10 @@ output "pod_identity_speech_role_arn" {
   value       = aws_iam_role.speech.arn
 }
 
-# ALB Outputs (for external CloudFront/connectivity setup)
-# These outputs help external systems discover ALBs created by AWS Load Balancer Controller
-
-output "eks_cluster_name_for_alb_discovery" {
-  description = "EKS cluster name - use this value as a variable in connectivity layer to discover ALBs by tag. Since there's NO Terraform state connection, provide this value manually or via naming convention. Example: data.aws_lbs with tags = { 'elbv2.k8s.aws/cluster' = this_value }"
-  value       = aws_eks_cluster.main.name
-}
-
-# Note: ALB DNS names are dynamic and created by AWS Load Balancer Controller
-# Since there's NO Terraform state connection between connectivity and hello-aws:
-# 1. Get the cluster name from this output (manually or via naming convention)
-# 2. In connectivity layer, use it as a variable:
-#    variable "eks_cluster_name" { default = "eks-uq-dogfood-sbx-euc2" }
-# 3. Discover ALBs via AWS API (no state dependency):
-#    data "aws_lbs" "eks_albs" {
-#      tags = { "elbv2.k8s.aws/cluster" = var.eks_cluster_name }
-#    }
-
-# CloudFront VPC Origin Outputs
-output "cloudfront_vpc_origin_id" {
-  description = "ID of the CloudFront VPC Origin (for use in connectivity layer)"
-  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].id, null)
-}
-
-output "cloudfront_vpc_origin_arn" {
-  description = "ARN of the CloudFront VPC Origin"
-  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].arn, null)
-}
-
-output "internal_alb_dns_name" {
-  description = "DNS name of the internal ALB (for CloudFront VPC Origin endpoint configuration)"
-  value       = try(local.internal_alb_dns_name, null)
-}
-
-# ALB for CloudFront Outputs
-output "cloudfront_alb_arn" {
-  description = "ARN of the ALB created for CloudFront VPC Origin"
-  value       = try(aws_lb.cloudfront[0].arn, null)
-}
-
-output "cloudfront_alb_dns_name" {
-  description = "DNS name of the ALB created for CloudFront VPC Origin"
-  value       = try(aws_lb.cloudfront[0].dns_name, null)
-}
-
-output "cloudfront_alb_security_group_id" {
-  description = "Security group ID of the ALB created for CloudFront VPC Origin"
-  value       = try(aws_security_group.alb_cloudfront[0].id, null)
-}
-
-# WebSocket ALB Outputs (public ALB for CloudFront standard origin)
-output "websocket_alb_dns_name" {
-  description = "DNS name of the public WebSocket ALB (for CloudFront standard origin)"
-  value       = try(aws_lb.websocket[0].dns_name, null)
+# Pod Identity Role: AWS Load Balancer Controller
+output "pod_identity_aws_lb_controller_role_arn" {
+  description = "IAM role ARN for AWS Load Balancer Controller"
+  value       = aws_iam_role.aws_lb_controller.arn
 }
 
 # VPC Endpoints

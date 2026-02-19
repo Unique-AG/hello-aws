@@ -45,6 +45,7 @@ resource "aws_vpc_security_group_egress_rule" "elasticache_to_vpc" {
 
 # ElastiCache Redis Replication Group
 resource "aws_elasticache_replication_group" "redis" {
+  #checkov:skip=CKV_AWS_31: see docs/security-baseline.md
   replication_group_id = "redis-${module.naming.id}"
   description          = "Redis cluster for ${var.environment} environment"
   engine               = "redis"
@@ -95,7 +96,7 @@ resource "aws_elasticache_parameter_group" "redis" {
 # CloudWatch Log Group for ElastiCache
 resource "aws_cloudwatch_log_group" "elasticache" {
   name              = "${module.naming.log_group_prefix}/elasticache"
-  retention_in_days = var.cloudwatch_log_retention_days
+  retention_in_days = max(var.cloudwatch_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_cloudwatch_logs_arn
 
   tags = {

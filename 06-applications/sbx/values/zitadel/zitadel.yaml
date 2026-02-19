@@ -1,0 +1,137 @@
+# Zitadel for AWS EKS
+# Using public images
+chownImage:
+  repository: alpine
+  tag: "3.19"
+image:
+  repository: ghcr.io/zitadel/zitadel
+  tag: v2.71.13
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
+ingress:
+  enabled: false
+securityContext:
+  allowPrivilegeEscalation: false
+env:
+  - name: ZITADEL_DATABASE_POSTGRES_USER_USERNAME
+    value: z1t4d3l
+  - name: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+  - name: ZITADEL_DATABASE_POSTGRES_HOST
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_DATABASE_POSTGRES_HOST
+  - name: ZITADEL_DATABASE_POSTGRES_PORT
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_DATABASE_POSTGRES_PORT
+  - name: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+  - name: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+zitadel:
+  dbSslCaCrtSecret: zitadel-certs
+  masterkeySecretName: systemzitadel
+  secretConfig:
+    Database:
+      postgres:
+        Database: zitadel
+        MaxOpenConns: 50
+        MaxIdleConns: 10
+        MaxConnLifetime: 1h
+        MaxConnIdleTime: 5m
+        Options:
+        User:
+          SSL:
+            Mode: verify-full
+            RootCert: /.secrets/ca.crt
+            Cert:
+            Key:
+        Admin:
+          SSL:
+            Mode: verify-full
+            RootCert: /.secrets/ca.crt
+            Cert:
+            Key:
+    FirstInstance:
+      Org:
+        Name: Cluster IAM
+        Human:
+          Username: root@cluster-iam.localhost
+          Password: "RootPassword1!"
+  configmapConfig:
+    ExternalDomain: <DOMAIN_IDENTITY>
+    ExternalPort: 443
+    ExternalSecure: true
+    LogStore:
+      Access:
+        Stdout:
+          Enabled: true
+    TLS:
+      Enabled: false
+    UserAgentCookie:
+      Name: uniqueid.useragent
+    Login:
+      LanguageCookieName: uniqueid.login.lang
+      CSRFCookieName: uniqueid.login.csrf
+    Quotas:
+      Access:
+        ExhaustedCookieKey: uniqueid.quota.exhausted
+    SystemDefaults:
+      Multifactors:
+        OTP:
+          Issuer: UNIQUE
+      KeyConfig:
+        PrivateKeyLifetime: 2160h
+        PublicKeyLifetime: 8760h
+    DefaultInstance:
+      InstanceName: UNIQUE
+      DefaultLanguage: en
+      DomainPolicy:
+        UserLoginMustBeDomain: false
+        ValidateOrgDomain: false
+      LoginPolicy:
+        AllowDomainDiscovery: true
+        AllowRegister: false
+      PrivacyPolicy:
+        TOSLink: https://www.unique.ch/terms
+        PrivacyLink: https://www.unique.ch/privacy
+        SupportEmail: support@unique.ch
+        HideLoginNameSuffix: true
+        ErrorMsgPopup: false
+        DisableWatermark: true
+    FirstInstance:
+      InstanceName: UNIQUE
+      DefaultLanguage: en
+      DomainPolicy:
+        UserLoginMustBeDomain: false
+        ValidateOrgDomain: false
+      LoginPolicy:
+        AllowDomainDiscovery: true
+        AllowRegister: false
+replicaCount: 2
+resources:
+  requests:
+    cpu: 500m
+    memory: 1Gi
+  limits:
+    memory: 1Gi
+initJob:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 512Mi
+    limits:
+      memory: 512Mi

@@ -31,23 +31,29 @@ kms_deletion_window           = 0
 cloudwatch_log_retention_days = 7
 
 # Bastion and Management Server Configuration (sandbox environment)
-ssm_endpoints_enabled            = true
-management_server_enabled        = true
+enable_ssm_endpoints            = true
+enable_management_server        = true
 management_server_public_access = false       # Use Session Manager for access
 management_server_instance_type = "t3.medium" # Upgraded from t3.micro for better performance (4 GB RAM vs 1 GB)
 management_server_disk_size     = 30
 management_server_monitoring    = false
 
 # GitHub Runners
-github_runners_enabled = true
+enable_github_runners = true
 
 # Secondary CIDR for EKS pod networking
-secondary_cidr_enabled = true
+enable_secondary_cidr = true
 
 # Route 53 Private Hosted Zone Configuration
 # Associates this VPC with the Route 53 Private Hosted Zone from landing zone
 # This enables DNS resolution across all VPCs associated with the zone
-# Uncomment and set to your hosted zone values before deploying:
-# route53_private_zone_domain = "sbx.example.com"
-# route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
+route53_private_zone_domain = "sbx.example.com"       # Your Route 53 private hosted zone domain
+route53_private_zone_id     = "Z0000000000000000000"  # Your Route 53 private hosted zone ID
+
+# Ingress NLB + ALB + CloudFront VPC Origin
+# enable_ingress_nlb defaults to true — NLB is created with infrastructure
+alb_deletion_protection         = false
+enable_cloudfront_vpc_origin    = true
+internal_alb_certificate_domain = "*.sbx.example.com"  # ACM wildcard certificate domain
+connectivity_account_id         = "000000000000"        # Connectivity/networking account ID for RAM sharing
 

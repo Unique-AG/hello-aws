@@ -258,17 +258,17 @@ output "ssm_instance_profile_name" {
 
 output "management_server_instance_id" {
   description = "Instance ID of the management server (if enabled)"
-  value       = var.management_server_enabled ? aws_instance.management_server[0].id : null
+  value       = var.enable_management_server ? aws_instance.management_server[0].id : null
 }
 
 output "management_server_private_ip" {
   description = "Private IP address of the management server"
-  value       = var.management_server_enabled ? aws_instance.management_server[0].private_ip : null
+  value       = var.enable_management_server ? aws_instance.management_server[0].private_ip : null
 }
 
 output "management_server_public_ip" {
   description = "Public IP address of the management server (if public access enabled)"
-  value       = var.management_server_enabled && var.management_server_public_access ? aws_eip.management_server[0].public_ip : null
+  value       = var.enable_management_server && var.management_server_public_access ? aws_eip.management_server[0].public_ip : null
 }
 
 output "management_server_security_group_id" {
@@ -285,17 +285,17 @@ output "ec2_endpoint_id" {
 # SSM Endpoint Outputs
 output "ssm_endpoint_id" {
   description = "ID of the SSM Interface Endpoint"
-  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ssm[0].id : null
+  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ssm[0].id : null
 }
 
 output "ssm_messages_endpoint_id" {
   description = "ID of the SSM Messages Interface Endpoint"
-  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ssm_messages[0].id : null
+  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ssm_messages[0].id : null
 }
 
 output "ec2_messages_endpoint_id" {
   description = "ID of the EC2 Messages Interface Endpoint"
-  value       = var.ssm_endpoints_enabled ? aws_vpc_endpoint.ec2_messages[0].id : null
+  value       = var.enable_ssm_endpoints ? aws_vpc_endpoint.ec2_messages[0].id : null
 }
 
 # Transit Gateway Outputs
@@ -310,8 +310,91 @@ output "transit_gateway_attachment_arn" {
 }
 
 # Cross-Account IAM Outputs
-output "connectivity_account_role_arn" {
+output "connectivity_account_read_only_role_arn" {
   description = "ARN of the IAM role that allows the connectivity account to discover resources"
-  value       = try(aws_iam_role.connectivity_account[0].arn, null)
+  value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
+}
+
+#######################################
+# Ingress NLB Outputs
+#######################################
+
+output "ingress_nlb_dns_name" {
+  description = "DNS name of the Terraform-managed Ingress NLB"
+  value       = try(aws_lb.ingress_nlb[0].dns_name, null)
+}
+
+output "ingress_nlb_arn" {
+  description = "ARN of the Terraform-managed Ingress NLB"
+  value       = try(aws_lb.ingress_nlb[0].arn, null)
+}
+
+output "ingress_nlb_security_group_id" {
+  description = "Security group ID of the Ingress NLB"
+  value       = try(aws_security_group.ingress_nlb[0].id, null)
+}
+
+output "ingress_target_group_http_arn" {
+  description = "ARN of the Ingress HTTP target group (for TargetGroupBinding)"
+  value       = try(aws_lb_target_group.ingress_http[0].arn, null)
+}
+
+output "ingress_target_group_https_arn" {
+  description = "ARN of the Ingress HTTPS target group (for TargetGroupBinding)"
+  value       = try(aws_lb_target_group.ingress_https[0].arn, null)
+}
+
+#######################################
+# ALB for CloudFront Outputs
+#######################################
+
+output "cloudfront_alb_arn" {
+  description = "ARN of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_lb.cloudfront[0].arn, null)
+}
+
+output "cloudfront_alb_dns_name" {
+  description = "DNS name of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_lb.cloudfront[0].dns_name, null)
+}
+
+output "cloudfront_alb_security_group_id" {
+  description = "Security group ID of the ALB created for CloudFront VPC Origin"
+  value       = try(aws_security_group.alb_cloudfront[0].id, null)
+}
+
+output "websocket_alb_dns_name" {
+  description = "DNS name of the public WebSocket ALB (for CloudFront standard origin)"
+  value       = try(aws_lb.websocket[0].dns_name, null)
+}
+
+output "internal_alb_certificate_validation_records" {
+  description = "DNS validation records for the internal ALB certificate"
+  value = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? {
+    for dvo in aws_acm_certificate.internal_alb[0].domain_validation_options : dvo.domain_name => {
+      name  = dvo.resource_record_name
+      type  = dvo.resource_record_type
+      value = dvo.resource_record_value
+    }
+  } : {}
+}
+
+output "internal_alb_certificate_arn" {
+  description = "ARN of the internal ALB certificate"
+  value       = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? aws_acm_certificate.internal_alb[0].arn : null
+}
+
+#######################################
+# CloudFront VPC Origin Outputs
+#######################################
+
+output "cloudfront_vpc_origin_id" {
+  description = "ID of the CloudFront VPC Origin (for use in connectivity layer)"
+  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].id, null)
+}
+
+output "cloudfront_vpc_origin_arn" {
+  description = "ARN of the CloudFront VPC Origin"
+  value       = try(aws_cloudfront_vpc_origin.internal_alb[0].arn, null)
 }
 

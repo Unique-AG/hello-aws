@@ -15,26 +15,38 @@ eks_endpoint_public_access_cidrs = ["0.0.0.0/0"]
 eks_cluster_log_retention_days   = 7
 
 # EKS Node Group Configuration
-eks_node_group_instance_types = ["m6i.2xlarge"]
-eks_node_group_desired_size   = 1
-eks_node_group_min_size       = 1
-eks_node_group_max_size       = 2
+eks_node_groups = {
+  steady = {
+    instance_types  = ["m6i.2xlarge"]
+    desired_size    = 2
+    min_size        = 0
+    max_size        = 4
+    max_unavailable = 2
+    labels = {
+      lifecycle   = "persistent"
+      scalability = "steady"
+    }
+    taints = []
+  }
+  rapid = {
+    instance_types = ["m6i.2xlarge"]
+    desired_size   = 0
+    min_size       = 0
+    max_size       = 3
+    labels = {
+      lifecycle   = "ephemeral"
+      scalability = "rapid"
+    }
+  }
+}
 
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
-  "uniquecr.azurecr.io",
-  "uniquecr",
+  "example.azurecr.io",  # Your Azure Container Registry URL
+  "example",             # ACR short alias (extracted from URL)
+  "quay.io",
 ]
-
-# ALB Configuration (disable deletion protection for sbx teardown)
-alb_deletion_protection = false
 
 # VPC Endpoints
 enable_eks_endpoint = true
-
-# CloudFront VPC Origin (optional — set kong_nlb_dns_name after Kong is deployed)
-# kong_nlb_dns_name          = null  # Set after Kong NLB is deployed
-# kong_nlb_security_group_id = null  # Set to EKS node SG after deployment
-enable_cloudfront_vpc_origin    = false
-internal_alb_certificate_domain = "*.sbx.rbcn.ai"

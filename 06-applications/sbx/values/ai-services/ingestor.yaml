@@ -1,0 +1,25 @@
+# AWS-specific configuration for Docling ingestor service
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/ingestors
+  tag: "2026.06.1"
+
+env:
+  REDIS_PORT: "6380"
+  REDIS_USE_TLS: "true"
+
+secretProvider: null
+
+routes:
+  skipCrdCheck: true
+
+serviceAccount:
+  create: true
+
+nodeSelector: null
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+extraEnvSecrets:
+  - ingestor-secrets

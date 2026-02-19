@@ -1,0 +1,25 @@
+# Scope Management backend service configuration (AWS sbx)
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-scope-management
+  tag: "2026.06.1"
+
+extraRoutes:
+  scim:
+    enabled: true
+    annotations:
+      konghq.com/plugins: unique-route-metrics
+    parentRefs:
+      - name: kong
+        namespace: unique
+        group: gateway.networking.k8s.io
+        kind: Gateway
+    hostnames:
+      - <DOMAIN_API>
+    matches:
+      - path:
+          type: PathPrefix
+          value: /scim
+
+extraEnvSecrets:
+  - scope-management-secrets

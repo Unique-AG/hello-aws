@@ -1,0 +1,43 @@
+# Base configuration for all backend services (AWS sbx)
+#
+# Domain: <DOMAIN_BASE>
+# Secrets: AWS Secrets Manager via ExternalSecrets
+# Images: ECR pull-through cache
+
+env:
+  ADMIN_FRONTEND_URL: https://<DOMAIN_BASE>/admin
+  CHAT_FRONTEND_URL: https://<DOMAIN_BASE>/chat
+  CORS_ALLOWED_ORIGINS: https://<DOMAIN_BASE>
+  INGESTION_UPLOAD_API_URL: https://<DOMAIN_API>/scoped/ingestion/upload
+  UNIQUE_INSTALLATION_ID: <DOMAIN_BASE>
+  ZITADEL_HOST: https://<DOMAIN_IDENTITY>
+  ZITADEL_PROJECT_ID: "<ZITADEL_PROJECT_ID>"
+  ZITADEL_ROOT_ORG_ID: "<ZITADEL_ORG_ID>"
+
+routes:
+  hostname: <DOMAIN_API>
+  skipCrdCheck: true
+
+# Disable Azure secretProvider (use ExternalSecrets for AWS instead)
+# Secrets are pulled from AWS Secrets Manager via ClusterSecretStore
+secretProvider: null
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 220Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+nodeSelector: null
+
+serviceAccount:
+  workloadIdentity:
+    enabled: false
+
+keda:
+  skipCrdCheck: true
