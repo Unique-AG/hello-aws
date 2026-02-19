@@ -66,6 +66,10 @@ resource "aws_security_group" "management_server" {
   # IMDSv2 is enforced via instance metadata_options (http_tokens = "required")
   # If IMDS doesn't work, ensure the instance has been rebooted after metadata options were set
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "${module.naming.id}-management-server-sg"
   }

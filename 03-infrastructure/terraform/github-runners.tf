@@ -5,6 +5,10 @@ resource "aws_security_group" "github_runners" {
   description = "Security group for GitHub Actions self-hosted runners"
   vpc_id      = aws_vpc.main.id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "${module.naming.id}-github-runners-sg"
   }

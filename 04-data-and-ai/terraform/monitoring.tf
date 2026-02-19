@@ -23,6 +23,10 @@ resource "aws_security_group" "grafana" {
   description = "Security group for Managed Grafana workspace ENIs"
   vpc_id      = local.infrastructure.vpc_id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "sg-${module.naming.id}-grafana"
   }

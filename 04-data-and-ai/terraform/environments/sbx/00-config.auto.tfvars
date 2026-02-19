@@ -15,6 +15,7 @@ aurora_instance_class      = "db.t4g.medium"
 aurora_instance_count      = 1
 aurora_deletion_protection = false
 aurora_skip_final_snapshot = true
+s3_force_destroy           = true
 
 # ElastiCache Configuration (sandbox-specific)
 elasticache_node_type                  = "cache.t3.micro"

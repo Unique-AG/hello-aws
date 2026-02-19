@@ -7,10 +7,6 @@ locals {
   # This matches the bootstrap layer's bucket name generation
   terraform_state_bucket = "${module.naming.s3_bucket_prefix}-tfstate"
 
-  # KMS key alias for Terraform state encryption (computed from naming module, same as bootstrap layer)
-  # Format: alias/kms-{id}-tfstate
-  terraform_state_kms_key_id = "alias/kms-${module.naming.id}-tfstate"
-
   # Availability zones (configurable per environment)
   availability_zones = slice(data.aws_availability_zones.available.names, 0, var.availability_zone_count)
 

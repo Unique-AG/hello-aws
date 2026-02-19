@@ -15,6 +15,10 @@ resource "aws_security_group" "elasticache" {
   description = "Security group for ElastiCache Redis cluster"
   vpc_id      = local.infrastructure.vpc_id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name    = "sg-${module.naming.id}-elasticache"
     Purpose = "elasticache-security-group"

@@ -4,6 +4,10 @@ resource "aws_security_group" "vpc_endpoints" {
   description = "Security group for VPC interface endpoints"
   vpc_id      = aws_vpc.main.id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "sg-${module.naming.id}-vpc-endpoints"
   }

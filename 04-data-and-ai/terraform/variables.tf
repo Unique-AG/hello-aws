@@ -209,6 +209,12 @@ variable "rabbitmq_password_chat_secret_name" {
   default     = "rabbitmq-password-chat"
 }
 
+variable "s3_force_destroy" {
+  description = "Allow Terraform to destroy non-empty S3 buckets. Set true only for sandbox teardown."
+  type        = bool
+  default     = false
+}
+
 variable "s3_application_data_bucket_secret_name" {
   description = "Secret name for S3 application data bucket name"
   type        = string

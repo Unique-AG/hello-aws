@@ -42,6 +42,10 @@ resource "aws_security_group" "alb_cloudfront" {
   description = "Security group for ALB used as CloudFront VPC Origin (forwards to Kong NLB)"
   vpc_id      = local.infrastructure.vpc_id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "${module.naming.id}-alb-cloudfront-sg"
   }
@@ -258,6 +262,10 @@ resource "aws_security_group" "alb_websocket" {
   name        = "${module.naming.id}-alb-websocket"
   description = "Security group for public WebSocket ALB (CloudFront IPs only)"
   vpc_id      = local.infrastructure.vpc_id
+
+  lifecycle {
+    create_before_destroy = true
+  }
 
   tags = {
     Name = "${module.naming.id}-alb-websocket-sg"

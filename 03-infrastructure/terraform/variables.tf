@@ -10,20 +10,6 @@ variable "aws_account_id" {
   default     = null
 }
 
-# Terraform State Configuration (for remote state access to bootstrap layer)
-# These are optional - if not provided, will be computed from naming module (same as bootstrap layer)
-variable "terraform_state_bucket" {
-  description = "S3 bucket name for Terraform state (from bootstrap layer). If not provided, computed from naming module."
-  type        = string
-  default     = null
-}
-
-variable "terraform_state_kms_key_id" {
-  description = "KMS key ID/ARN for Terraform state encryption (from bootstrap layer). If not provided, computed from naming module."
-  type        = string
-  default     = null
-}
-
 variable "org" {
   description = "Organization identifier"
   type        = string

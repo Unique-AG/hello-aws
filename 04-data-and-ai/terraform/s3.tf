@@ -6,7 +6,8 @@ resource "random_string" "s3_suffix" {
 
 # S3 Bucket for Application Data
 resource "aws_s3_bucket" "application_data" {
-  bucket = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
+  bucket        = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
+  force_destroy = var.s3_force_destroy
 
   tags = {
     Name    = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
@@ -122,7 +123,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "application_data" {
 
 # S3 Bucket for AI/ML Data
 resource "aws_s3_bucket" "ai_data" {
-  bucket = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
+  bucket        = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
+  force_destroy = var.s3_force_destroy
 
   tags = {
     Name    = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"

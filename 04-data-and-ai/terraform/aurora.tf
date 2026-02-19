@@ -20,6 +20,10 @@ resource "aws_security_group" "aurora" {
   description = "Security group for Aurora PostgreSQL cluster"
   vpc_id      = local.infrastructure.vpc_id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name    = "sg-${module.naming.id}-aurora"
     Purpose = "aurora-security-group"

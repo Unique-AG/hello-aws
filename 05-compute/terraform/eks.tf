@@ -145,6 +145,10 @@ resource "aws_security_group" "eks_cluster" {
   description = "Security group for EKS cluster (control plane and node communication)"
   vpc_id      = local.infrastructure.vpc_id
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name = "${module.naming.id}-eks-cluster-sg"
   }
