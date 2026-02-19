@@ -25,7 +25,7 @@ The infrastructure layer implements a **four-tier subnet architecture** followin
   - Direct access only from private subnets via security groups
 
 - **GitHub Runner Subnets** (`/26`, 64 IPs): Host self-hosted GitHub Actions runners
-  - Conditional on `github_runners_enabled`
+  - Conditional on `enable_github_runners`
   - Associated with private route tables only when NAT Gateway is enabled
 
 An optional **secondary CIDR** (`100.64.0.0/20`, RFC 6598) can be enabled for EKS pod networking, keeping pod IPs separate from node IPs.
@@ -272,26 +272,26 @@ Key configuration options:
 ```hcl
 # VPC Configuration
 vpc_cidr              = "10.1.0.0/19"
-secondary_cidr_enabled = true  # 100.64.0.0/20 for EKS pods
+enable_secondary_cidr = true  # 100.64.0.0/20 for EKS pods
 
 # NAT Gateway
 enable_nat_gateway = true
 single_nat_gateway = true  # Single NAT for non-prod (HA guard warns in prod)
 
 # Management Server
-management_server_enabled        = true
+enable_management_server        = true
 management_server_ami           = ""      # Use golden AMI ID here
 management_server_instance_type = "t3.medium"
 management_server_public_access = false   # Session Manager only
 
 # GitHub Runners
-github_runners_enabled = true
+enable_github_runners = true
 
 # Monitoring
 alert_email_endpoints = ["ops@example.com"]
 
 # VPC Endpoints
-ssm_endpoints_enabled            = true
+enable_ssm_endpoints            = true
 enable_secrets_manager_endpoint = true
 enable_bedrock_endpoint         = true
 

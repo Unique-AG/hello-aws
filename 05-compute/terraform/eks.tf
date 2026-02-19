@@ -22,6 +22,8 @@ resource "aws_iam_role" "eks_cluster" {
       }
     ]
   })
+
+  tags = local.tags
 }
 
 # Attach AWS managed policies to EKS cluster role
@@ -69,6 +71,8 @@ resource "aws_eks_cluster" "main" {
     aws_cloudwatch_log_group.eks_cluster,
     aws_iam_role_policy_attachment.eks_cluster_policy
   ]
+
+  tags = local.tags
 }
 
 # EKS Access Entry for Management Server
@@ -79,9 +83,9 @@ resource "aws_eks_access_entry" "management_server" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${module.naming.id}-management-server-access"
-  }
+  })
 }
 
 # EKS Access Policy for Management Server
@@ -106,9 +110,9 @@ resource "aws_eks_access_entry" "sandbox_admin" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${module.naming.id}-sandbox-admin-access"
-  }
+  })
 }
 
 # EKS Access Policy for Sandbox Administrator
@@ -133,9 +137,9 @@ resource "aws_cloudwatch_log_group" "eks_cluster" {
   retention_in_days = max(var.eks_cluster_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_arn
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${module.naming.id}-eks-cluster-logs"
-  }
+  })
 }
 
 # Security Group for EKS Cluster (control plane ENIs + managed node communication)
@@ -148,9 +152,20 @@ resource "aws_security_group" "eks_cluster" {
     create_before_destroy = true
   }
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${module.naming.id}-eks-cluster-sg"
-  }
+  })
+}
+
+# Security Group Rule: Allow inbound from EKS nodes to cluster
+resource "aws_security_group_rule" "eks_cluster_from_nodes" {
+  type                     = "ingress"
+  description              = "Allow inbound from EKS nodes"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_nodes.id
+  security_group_id        = aws_security_group.eks_cluster.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_vpc_endpoints" {
@@ -274,6 +289,8 @@ resource "aws_iam_role" "eks_node_group" {
       }
     ]
   })
+
+  tags = local.tags
 }
 
 # Attach AWS managed policies to node group role
@@ -340,9 +357,9 @@ resource "aws_eks_addon" "ebs_csi" {
     ignore_changes = [service_account_role_arn]
   }
 
-  tags = {
+  tags = merge(local.tags, {
     Name = "${module.naming.id}-ebs-csi-addon"
-  }
+  })
 }
 
 # CoreDNS Addon
