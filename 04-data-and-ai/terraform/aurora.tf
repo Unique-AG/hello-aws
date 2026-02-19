@@ -20,26 +20,28 @@ resource "aws_security_group" "aurora" {
   description = "Security group for Aurora PostgreSQL cluster"
   vpc_id      = local.infrastructure.vpc_id
 
-  ingress {
-    description = "PostgreSQL from private subnets"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = local.infrastructure.private_subnet_cidrs
-  }
-
-  egress {
-    description = "Allow outbound to VPC"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [data.aws_vpc.main.cidr_block]
-  }
-
   tags = {
     Name    = "sg-${module.naming.id}-aurora"
     Purpose = "aurora-security-group"
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "aurora_from_private_subnets" {
+  for_each = toset(local.infrastructure.private_subnet_cidrs)
+
+  security_group_id = aws_security_group.aurora.id
+  description       = "PostgreSQL from private subnet (${each.value})"
+  from_port         = 5432
+  to_port           = 5432
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+}
+
+resource "aws_vpc_security_group_egress_rule" "aurora_to_vpc" {
+  security_group_id = aws_security_group.aurora.id
+  description       = "Allow outbound to VPC"
+  ip_protocol       = "-1"
+  cidr_ipv4         = data.aws_vpc.main.cidr_block
 }
 
 # Aurora PostgreSQL Cluster

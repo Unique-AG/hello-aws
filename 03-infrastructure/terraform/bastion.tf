@@ -61,24 +61,6 @@ resource "aws_security_group" "management_server" {
   description = "Security group for management/jump server"
   vpc_id      = aws_vpc.main.id
 
-  # Allow SSH from VPC (for Session Manager port forwarding)
-  ingress {
-    description = "SSH from VPC (for Session Manager port forwarding)"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block]
-  }
-
-  # Allow outbound to VPC (for accessing private resources)
-  egress {
-    description = "Allow all outbound to VPC"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block]
-  }
-
   # Note: IMDS (Instance Metadata Service) is link-local (169.254.169.254)
   # Security groups do NOT control IMDS access - it's handled at the hypervisor level
   # IMDSv2 is enforced via instance metadata_options (http_tokens = "required")
@@ -87,6 +69,26 @@ resource "aws_security_group" "management_server" {
   tags = {
     Name = "${module.naming.id}-management-server-sg"
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "management_server_ssh" {
+  for_each = toset(var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
+
+  security_group_id = aws_security_group.management_server.id
+  description       = "SSH from VPC (Session Manager port forwarding)"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+}
+
+resource "aws_vpc_security_group_egress_rule" "management_server_to_vpc" {
+  for_each = toset(var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
+
+  security_group_id = aws_security_group.management_server.id
+  description       = "Allow all outbound to VPC (${each.value})"
+  ip_protocol       = "-1"
+  cidr_ipv4         = each.value
 }
 
 # Get latest Amazon Linux 2023 AMI

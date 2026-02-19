@@ -42,53 +42,45 @@ resource "aws_security_group" "alb_cloudfront" {
   description = "Security group for ALB used as CloudFront VPC Origin (forwards to Kong NLB)"
   vpc_id      = local.infrastructure.vpc_id
 
-  # Note: Rules are added via separate aws_security_group_rule resources
-  # to avoid hitting AWS security group rules limit
-
   tags = {
     Name = "${module.naming.id}-alb-cloudfront-sg"
   }
 }
 
-# Security Group Rules (separate resources to avoid limits)
-resource "aws_security_group_rule" "alb_cloudfront_https_ingress" {
+# Note: HTTP ingress rule removed — CloudFront managed prefix list exceeds 60 rules limit
+# CloudFront VPC Origin uses HTTPS to connect to the ALB
+
+resource "aws_vpc_security_group_ingress_rule" "alb_cloudfront_https" {
   count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
 
-  type              = "ingress"
+  security_group_id = aws_security_group.alb_cloudfront[0].id
   description       = "Allow HTTPS from CloudFront VPC Origin"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  prefix_list_ids   = [data.aws_ec2_managed_prefix_list.cloudfront.id]
-  security_group_id = aws_security_group.alb_cloudfront[0].id
+  ip_protocol       = "tcp"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
 }
 
-# Note: HTTP ingress rule removed due to AWS security group rules limit
-# CloudFront VPC Origin uses HTTPS to connect to the ALB
-# The CloudFront managed prefix list contains many IP ranges that exceed the 60 rules limit
-
-resource "aws_security_group_rule" "alb_cloudfront_https_egress" {
+resource "aws_vpc_security_group_egress_rule" "alb_cloudfront_https" {
   count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
 
-  type              = "egress"
+  security_group_id = aws_security_group.alb_cloudfront[0].id
   description       = "Allow HTTPS outbound to Kong NLB"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
-  security_group_id = aws_security_group.alb_cloudfront[0].id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
-resource "aws_security_group_rule" "alb_cloudfront_http_egress" {
+resource "aws_vpc_security_group_egress_rule" "alb_cloudfront_http" {
   count = var.kong_nlb_dns_name != null && var.kong_nlb_security_group_id != null ? 1 : 0
 
-  type              = "egress"
+  security_group_id = aws_security_group.alb_cloudfront[0].id
   description       = "Allow HTTP outbound to Kong NLB"
   from_port         = 80
   to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
-  security_group_id = aws_security_group.alb_cloudfront[0].id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
 # Internal ALB for CloudFront VPC Origin
@@ -272,28 +264,26 @@ resource "aws_security_group" "alb_websocket" {
   }
 }
 
-resource "aws_security_group_rule" "alb_websocket_https_ingress" {
+resource "aws_vpc_security_group_ingress_rule" "alb_websocket_https" {
   count = var.kong_nlb_dns_name != null ? 1 : 0
 
-  type              = "ingress"
+  security_group_id = aws_security_group.alb_websocket[0].id
   description       = "Allow HTTPS from CloudFront edge servers"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  prefix_list_ids   = [data.aws_ec2_managed_prefix_list.cloudfront.id]
-  security_group_id = aws_security_group.alb_websocket[0].id
+  ip_protocol       = "tcp"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.cloudfront.id
 }
 
-resource "aws_security_group_rule" "alb_websocket_http_egress" {
+resource "aws_vpc_security_group_egress_rule" "alb_websocket_http" {
   count = var.kong_nlb_dns_name != null ? 1 : 0
 
-  type              = "egress"
+  security_group_id = aws_security_group.alb_websocket[0].id
   description       = "Allow HTTP outbound to Kong NLB"
   from_port         = 80
   to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = [local.infrastructure.vpc_cidr_block]
-  security_group_id = aws_security_group.alb_websocket[0].id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
 # Public ALB for WebSocket traffic

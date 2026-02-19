@@ -5,26 +5,31 @@ resource "aws_security_group" "github_runners" {
   description = "Security group for GitHub Actions self-hosted runners"
   vpc_id      = aws_vpc.main.id
 
-  # Outbound to internet (for GitHub API, package registries)
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS outbound for GitHub API and registries"
-  }
-
-  egress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP outbound"
-  }
-
   tags = {
     Name = "${module.naming.id}-github-runners-sg"
   }
+}
+
+resource "aws_vpc_security_group_egress_rule" "github_runners_https" {
+  count = var.github_runners_enabled ? 1 : 0
+
+  security_group_id = aws_security_group.github_runners[0].id
+  description       = "HTTPS outbound for GitHub API and registries"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_egress_rule" "github_runners_http" {
+  count = var.github_runners_enabled ? 1 : 0
+
+  security_group_id = aws_security_group.github_runners[0].id
+  description       = "HTTP outbound"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 resource "aws_subnet" "github_runners" {

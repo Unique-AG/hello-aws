@@ -139,40 +139,40 @@ resource "aws_cloudwatch_log_group" "eks_cluster" {
   }
 }
 
-# Security Group for EKS Cluster
+# Security Group for EKS Cluster (control plane ENIs + managed node communication)
 resource "aws_security_group" "eks_cluster" {
   name        = "${module.naming.id}-eks-cluster"
-  description = "Security group for EKS cluster control plane"
+  description = "Security group for EKS cluster (control plane and node communication)"
   vpc_id      = local.infrastructure.vpc_id
-
-  # Allow inbound from VPC endpoints security group (for kubectl from within VPC)
-  ingress {
-    description     = "Allow inbound from VPC endpoints"
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [local.infrastructure.vpc_endpoints_security_group_id]
-  }
-
-  # EKS cluster control plane needs outbound access for API operations
-  # Restrict to VPC CIDR for security
-  egress {
-    description = "Allow HTTPS outbound to VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [local.infrastructure.vpc_cidr_block]
-  }
 
   tags = {
     Name = "${module.naming.id}-eks-cluster-sg"
   }
 }
 
-# Security Group Rule: Allow inbound from management server to cluster (if management server exists)
-resource "aws_security_group_rule" "eks_cluster_from_management_server" {
+resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_vpc_endpoints" {
+  security_group_id            = aws_security_group.eks_cluster.id
+  description                  = "Allow HTTPS from VPC endpoints (kubectl from within VPC)"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = local.infrastructure.vpc_endpoints_security_group_id
+}
+
+resource "aws_vpc_security_group_egress_rule" "eks_cluster_to_vpc" {
+  security_group_id = aws_security_group.eks_cluster.id
+  description       = "Allow HTTPS outbound to VPC"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# Allow inbound from management server to cluster (if management server exists)
+resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_management_server" {
   count = try(data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id, null) != null ? 1 : 0
 
+<<<<<<< HEAD
   type                     = "ingress"
   description              = "Allow inbound from management server for kubectl access"
   from_port                = 443
@@ -180,6 +180,14 @@ resource "aws_security_group_rule" "eks_cluster_from_management_server" {
   protocol                 = "tcp"
   source_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
   security_group_id        = aws_security_group.eks_cluster.id
+=======
+  security_group_id            = aws_security_group.eks_cluster.id
+  description                  = "Allow HTTPS from management server for kubectl access"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
+>>>>>>> cb78cec (fix: migrate all SG rules to aws_vpc_security_group_*_rule resources)
 }
 
 # EKS Node Group IAM Role

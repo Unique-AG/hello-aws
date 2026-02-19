@@ -1,6 +1,4 @@
 # Security Group for VPC Interface Endpoints
-# Note: All ingress rules are managed via separate aws_security_group_rule resources
-# to avoid conflicts between inline rules and separate rule resources
 resource "aws_security_group" "vpc_endpoints" {
   name        = "${module.naming.id}-vpc-endpoints-sg"
   description = "Security group for VPC interface endpoints"
@@ -11,39 +9,37 @@ resource "aws_security_group" "vpc_endpoints" {
   }
 }
 
-# Security Group Rule: Allow HTTPS egress to AWS services
-resource "aws_security_group_rule" "vpc_endpoints_egress" {
-  type              = "egress"
+resource "aws_vpc_security_group_egress_rule" "vpc_endpoints_to_vpc" {
+  for_each = toset(var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
+
+  security_group_id = aws_security_group.vpc_endpoints.id
   description       = "HTTPS to AWS services via VPC endpoints"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr]
-  security_group_id = aws_security_group.vpc_endpoints.id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
-# Security Group Rule: Allow HTTPS from private subnets (CIDR-based)
-resource "aws_security_group_rule" "vpc_endpoints_from_vpc" {
-  type              = "ingress"
-  description       = "HTTPS from VPC (primary and secondary CIDRs)"
+resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_vpc" {
+  for_each = toset(var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
+
+  security_group_id = aws_security_group.vpc_endpoints.id
+  description       = "HTTPS from VPC (${each.value})"
   from_port         = 443
   to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr]
-  security_group_id = aws_security_group.vpc_endpoints.id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
-# Security Group Rule: Allow HTTPS from management server to VPC endpoints
-resource "aws_security_group_rule" "vpc_endpoints_from_management_server" {
+resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_management_server" {
   count = var.management_server_enabled ? 1 : 0
 
-  type                     = "ingress"
-  description              = "HTTPS from management server"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.management_server.id
-  security_group_id        = aws_security_group.vpc_endpoints.id
+  security_group_id            = aws_security_group.vpc_endpoints.id
+  description                  = "HTTPS from management server"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.management_server.id
 }
 
 # S3 Gateway Endpoint

@@ -15,26 +15,28 @@ resource "aws_security_group" "elasticache" {
   description = "Security group for ElastiCache Redis cluster"
   vpc_id      = local.infrastructure.vpc_id
 
-  ingress {
-    description = "Redis TLS from private subnets (port 6380 for auto-TLS in Node.js apps)"
-    from_port   = 6380
-    to_port     = 6380
-    protocol    = "tcp"
-    cidr_blocks = local.infrastructure.private_subnet_cidrs
-  }
-
-  egress {
-    description = "Allow outbound to VPC"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = [data.aws_vpc.main.cidr_block]
-  }
-
   tags = {
     Name    = "sg-${module.naming.id}-elasticache"
     Purpose = "elasticache-security-group"
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "elasticache_from_private_subnets" {
+  for_each = toset(local.infrastructure.private_subnet_cidrs)
+
+  security_group_id = aws_security_group.elasticache.id
+  description       = "Redis TLS from private subnet (${each.value})"
+  from_port         = 6380
+  to_port           = 6380
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+}
+
+resource "aws_vpc_security_group_egress_rule" "elasticache_to_vpc" {
+  security_group_id = aws_security_group.elasticache.id
+  description       = "Allow outbound to VPC"
+  ip_protocol       = "-1"
+  cidr_ipv4         = data.aws_vpc.main.cidr_block
 }
 
 # ElastiCache Redis Replication Group

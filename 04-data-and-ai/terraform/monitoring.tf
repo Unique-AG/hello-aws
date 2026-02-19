@@ -23,17 +23,20 @@ resource "aws_security_group" "grafana" {
   description = "Security group for Managed Grafana workspace ENIs"
   vpc_id      = local.infrastructure.vpc_id
 
-  egress {
-    description = "HTTPS to VPC for data source access"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.main.cidr_block]
-  }
-
   tags = {
     Name = "sg-${module.naming.id}-grafana"
   }
+}
+
+resource "aws_vpc_security_group_egress_rule" "grafana_to_vpc" {
+  count = var.enable_managed_grafana ? 1 : 0
+
+  security_group_id = aws_security_group.grafana[0].id
+  description       = "HTTPS to VPC for data source access"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = data.aws_vpc.main.cidr_block
 }
 
 # Managed Grafana Workspace (VPC-only access)
