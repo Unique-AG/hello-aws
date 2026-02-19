@@ -1,5 +1,5 @@
 # Environment-specific configuration
-# Common values (aws_region, aws_account_id, org, org_moniker, product, product_name, semantic_version)
+# Common values (aws_region, aws_account_id, org, org_moniker, product, product_moniker, semantic_version)
 # are loaded from ../../common.auto.tfvars
 #
 # Default values (enable_* flags, retention, etc.) are defined in variables.tf

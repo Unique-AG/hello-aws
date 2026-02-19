@@ -1,0 +1,29 @@
+resource "aws_budgets_budget" "monthly_budget" {
+  name         = "budget-${module.naming.id}-monthly"
+  budget_type  = "COST"
+  limit_amount = tostring(var.budget_amount)
+  limit_unit   = var.budget_currency
+  time_unit    = "MONTHLY"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = var.budget_contact_emails
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"
+    subscriber_email_addresses = var.budget_contact_emails
+  }
+
+  lifecycle {
+    ignore_changes = [time_period_start]
+  }
+
+  tags = local.tags
+}

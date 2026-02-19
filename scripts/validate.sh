@@ -37,6 +37,9 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Track overall validation result
+VALIDATION_FAILED=false
+
 # Parse arguments
 LAYER="${1:-}"
 ENV="${2:-dev}"
@@ -194,12 +197,12 @@ if [[ "$SKIP_INIT" != "true" ]]; then
     INIT_ARGS+=("-backend-config=${BACKEND_CONFIG}")
   fi
 
-  if terraform init "${INIT_ARGS[@]}" > /dev/null 2>&1; then
+  if terraform init ${INIT_ARGS[@]+"${INIT_ARGS[@]}"} > /dev/null 2>&1; then
     echo -e "${GREEN}✅ Terraform initialized${NC}"
   else
     echo -e "${RED}❌ Failed to initialize Terraform${NC}"
     echo -e "${YELLOW}   Running init with verbose output...${NC}"
-    terraform init "${INIT_ARGS[@]}"
+    terraform init ${INIT_ARGS[@]+"${INIT_ARGS[@]}"}
     exit 1
   fi
   echo ""
@@ -269,10 +272,12 @@ if [[ "$TFLINT_AVAILABLE" == "true" ]]; then
     if tflint --chdir="$TERRAFORM_DIR"; then
       echo -e "${GREEN}✅ tflint passed${NC}"
     else
-      echo -e "${YELLOW}⚠️  tflint found issues (non-blocking)${NC}"
+      echo -e "${RED}❌ tflint found issues${NC}"
+      VALIDATION_FAILED=true
     fi
   else
-    echo -e "${YELLOW}⚠️  Failed to initialize tflint (non-blocking)${NC}"
+    echo -e "${RED}❌ Failed to initialize tflint${NC}"
+    VALIDATION_FAILED=true
   fi
   echo ""
 fi
@@ -291,7 +296,7 @@ if [[ "$SHELLCHECK_AVAILABLE" == "true" ]]; then
       if shellcheck -x "$script" 2>/dev/null; then
         echo -e "${GREEN}   ✅ $(basename "$script")${NC}"
       else
-        echo -e "${YELLOW}   ⚠️  $(basename "$script") has issues${NC}"
+        echo -e "${RED}   ❌ $(basename "$script") has issues${NC}"
         SHELLCHECK_FAILED=true
       fi
     done <<< "$SHELL_SCRIPTS"
@@ -299,7 +304,8 @@ if [[ "$SHELLCHECK_AVAILABLE" == "true" ]]; then
     if [[ "$SHELLCHECK_FAILED" == "false" ]]; then
       echo -e "${GREEN}✅ shellcheck passed${NC}"
     else
-      echo -e "${YELLOW}⚠️  shellcheck found issues (non-blocking)${NC}"
+      echo -e "${RED}❌ shellcheck found issues${NC}"
+      VALIDATION_FAILED=true
     fi
   else
     echo -e "${GREEN}✅ No shell scripts found to check${NC}"
@@ -316,11 +322,27 @@ fi
 if [[ "$TRIVY_AVAILABLE" == "true" ]]; then
   echo -e "${YELLOW}🔒 Step 6: Running trivy IaC security scan...${NC}"
 
-  if trivy fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0 "$TERRAFORM_DIR"; then
+  # shellcheck disable=SC2054
+  TRIVY_ARGS=(fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0)
+  # Use root .trivyignore for suppressed findings (see docs/security-baseline.md)
+  if [[ -f "$PROJECT_ROOT/.trivyignore" ]]; then
+    TRIVY_ARGS+=(--ignorefile "$PROJECT_ROOT/.trivyignore")
+  fi
+  # Pass tfvars so trivy can resolve variables (avoids null-value panics in adaptDefaultTags)
+  if [[ -f "$COMMON_CONFIG" ]]; then
+    TRIVY_ARGS+=(--tf-vars "$COMMON_CONFIG")
+  fi
+  if [[ -f "$CONFIG_FILE" ]]; then
+    TRIVY_ARGS+=(--tf-vars "$CONFIG_FILE")
+  fi
+  TRIVY_ARGS+=("$TERRAFORM_DIR")
+
+  if trivy "${TRIVY_ARGS[@]}"; then
     echo -e "${GREEN}✅ trivy passed (no HIGH/CRITICAL misconfigurations)${NC}"
   else
-    echo -e "${YELLOW}⚠️  trivy found security issues (non-blocking)${NC}"
+    echo -e "${RED}❌ trivy found security issues${NC}"
     echo -e "${YELLOW}   Run 'trivy fs --scanners misconfig ${TERRAFORM_DIR}' for details${NC}"
+    VALIDATION_FAILED=true
   fi
   echo ""
 else
@@ -342,8 +364,9 @@ if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   if checkov -d "$TERRAFORM_DIR" "${CHECKOV_ARGS[@]}"; then
     echo -e "${GREEN}✅ checkov passed${NC}"
   else
-    echo -e "${YELLOW}⚠️  checkov found compliance issues (non-blocking)${NC}"
+    echo -e "${RED}❌ checkov found compliance issues${NC}"
     echo -e "${YELLOW}   Run 'checkov -d ${TERRAFORM_DIR} --framework terraform' for details${NC}"
+    VALIDATION_FAILED=true
   fi
   echo ""
 else
@@ -356,7 +379,11 @@ fi
 # Summary
 #######################################
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo -e "${GREEN}✅ Validation Complete!${NC}"
+if [[ "$VALIDATION_FAILED" == "true" ]]; then
+  echo -e "${RED}❌ Validation Failed${NC}"
+else
+  echo -e "${GREEN}✅ Validation Complete!${NC}"
+fi
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "${BLUE}📊 Summary:${NC}"
@@ -376,6 +403,13 @@ if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   echo -e "   ✅ Compliance scanning (checkov) completed"
 fi
 echo ""
+
+if [[ "$VALIDATION_FAILED" == "true" ]]; then
+  echo -e "${RED}Fix the issues above and re-run validation.${NC}"
+  echo ""
+  exit 1
+fi
+
 echo -e "${BLUE}📝 Next Steps:${NC}"
 echo -e "   Run deployment: ./scripts/deploy.sh ${LAYER} ${ENV}"
 echo ""

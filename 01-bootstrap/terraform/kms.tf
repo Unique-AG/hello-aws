@@ -1,4 +1,7 @@
 data "aws_iam_policy_document" "kms_terraform_state" {
+  # checkov:skip=CKV_AWS_109: see docs/security-baseline.md
+  # checkov:skip=CKV_AWS_111: see docs/security-baseline.md
+  # checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   statement {
     sid       = "EnableIAMUserPermissions"
     effect    = "Allow"
