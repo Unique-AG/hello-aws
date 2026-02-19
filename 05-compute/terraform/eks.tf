@@ -190,22 +190,12 @@ resource "aws_vpc_security_group_egress_rule" "eks_cluster_to_vpc" {
 resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_management_server" {
   count = try(data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id, null) != null ? 1 : 0
 
-<<<<<<< HEAD
-  type                     = "ingress"
-  description              = "Allow inbound from management server for kubectl access"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  source_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
-  security_group_id        = aws_security_group.eks_cluster.id
-=======
   security_group_id            = aws_security_group.eks_cluster.id
   description                  = "Allow HTTPS from management server for kubectl access"
   from_port                    = 443
   to_port                      = 443
   ip_protocol                  = "tcp"
   referenced_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
->>>>>>> cb78cec (fix: migrate all SG rules to aws_vpc_security_group_*_rule resources)
 }
 
 # Security Group for EKS Nodes
