@@ -1,32 +1,38 @@
 resource "aws_security_group" "github_runners" {
-  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
   count = var.enable_github_runners ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"
   description = "Security group for GitHub Actions self-hosted runners"
   vpc_id      = aws_vpc.main.id
 
-  # Outbound to internet (for GitHub API, package registries)
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS outbound for GitHub API and registries"
-  }
-
-  # Outbound to VPC endpoints
-  egress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [var.vpc_cidr]
-    description = "HTTPS to VPC endpoints"
-  }
-
   tags = {
     Name = "${module.naming.id}-github-runners-sg"
   }
+}
+
+# Outbound to internet (for GitHub API, package registries)
+resource "aws_vpc_security_group_egress_rule" "github_runners_https_internet" {
+  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
+  count = var.enable_github_runners ? 1 : 0
+
+  security_group_id = aws_security_group.github_runners[0].id
+  description       = "HTTPS outbound for GitHub API and registries"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+# Outbound to VPC endpoints
+resource "aws_vpc_security_group_egress_rule" "github_runners_https_vpc" {
+  count = var.enable_github_runners ? 1 : 0
+
+  security_group_id = aws_security_group.github_runners[0].id
+  description       = "HTTPS to VPC endpoints"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = aws_vpc.main.cidr_block
 }
 
 resource "aws_subnet" "github_runners" {
