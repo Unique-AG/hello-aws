@@ -1,0 +1,14 @@
+spec:
+  name: reloader
+  autoSync: true
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: reloader
+      repoURL: https://stakater.github.io/stakater-charts
+      targetRevision: 2.1.3
+      helm:
+        releaseName: reloader
+        valueFiles:
+          - $values/06-applications/sbx/values/reloader/reloader.yaml

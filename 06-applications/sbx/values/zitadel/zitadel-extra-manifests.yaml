@@ -1,0 +1,64 @@
+extraManifests:
+
+- apiVersion: external-secrets.io/v1beta1
+  kind: ExternalSecret
+  metadata:
+    name: systemzitadel
+    annotations:
+      external-secrets.io/managed: "true"
+      argocd.argoproj.io/sync-wave: "-1"
+      # helm.sh/hook: pre-install,pre-upgrade
+      # helm.sh/hook-weight: "-1"
+  spec:
+    refreshInterval: 1h
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: aws-secrets-manager
+    target:
+      name: systemzitadel
+    data:
+      - secretKey: ZITADEL_DATABASE_POSTGRES_HOST
+        remoteRef:
+          key: psql-host
+      - secretKey: ZITADEL_DATABASE_POSTGRES_PORT
+        remoteRef:
+          key: psql-port
+      - secretKey: ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME
+        remoteRef:
+          key: psql-username
+      - secretKey: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+        remoteRef:
+          key: psql-password
+      - secretKey: ZITADEL_DATABASE_POSTGRES_USER_PASSWORD
+        remoteRef:
+          key: zitadel-db-user-password
+      - secretKey: masterkey
+        remoteRef:
+          key: zitadel-master-key
+
+# AWS RDS CA Certificate - pulled from Secrets Manager
+# The certificate is stored in Secrets Manager by Terraform (04-data-and-ai layer)
+# and automatically fetched from AWS trust store: https://truststore.pki.rds.amazonaws.com/{region}/{region}-bundle.pem
+- apiVersion: external-secrets.io/v1beta1
+  kind: ExternalSecret
+  metadata:
+    name: zitadel-certs
+    annotations:
+      external-secrets.io/managed: "true"
+      argocd.argoproj.io/sync-wave: "-1"
+      # helm.sh/hook: pre-install,pre-upgrade
+      # helm.sh/hook-weight: "-1"
+  spec:
+    refreshInterval: 24h
+    secretStoreRef:
+      kind: ClusterSecretStore
+      name: aws-secrets-manager
+    target:
+      name: zitadel-certs
+      template:
+        data:
+          ca.crt: '{{ "{{ .rds_ca_bundle }}" }}'
+    data:
+      - secretKey: rds_ca_bundle
+        remoteRef:
+          key: rds-ca-bundle

@@ -1,0 +1,8 @@
+# Configuration (theme) backend service configuration (AWS sbx)
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-configuration
+  tag: "2026.06.1"
+
+extraEnvSecrets:
+  - configuration-secrets

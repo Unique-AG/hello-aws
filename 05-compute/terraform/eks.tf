@@ -129,9 +129,8 @@ resource "aws_eks_access_policy_association" "sandbox_admin" {
 
 # CloudWatch Log Group for EKS Cluster
 resource "aws_cloudwatch_log_group" "eks_cluster" {
-  #checkov:skip=CKV_AWS_338: see docs/security-baseline.md
   name              = "/aws/eks/eks-${module.naming.id}/cluster"
-  retention_in_days = var.eks_cluster_log_retention_days
+  retention_in_days = max(var.eks_cluster_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_arn
 
   tags = {
@@ -152,6 +151,17 @@ resource "aws_security_group" "eks_cluster" {
   tags = {
     Name = "${module.naming.id}-eks-cluster-sg"
   }
+}
+
+# Security Group Rule: Allow inbound from EKS nodes to cluster
+resource "aws_security_group_rule" "eks_cluster_from_nodes" {
+  type                     = "ingress"
+  description              = "Allow inbound from EKS nodes"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_nodes.id
+  security_group_id        = aws_security_group.eks_cluster.id
 }
 
 resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_vpc_endpoints" {
@@ -176,22 +186,79 @@ resource "aws_vpc_security_group_egress_rule" "eks_cluster_to_vpc" {
 resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_management_server" {
   count = try(data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id, null) != null ? 1 : 0
 
-<<<<<<< HEAD
-  type                     = "ingress"
-  description              = "Allow inbound from management server for kubectl access"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  source_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
-  security_group_id        = aws_security_group.eks_cluster.id
-=======
   security_group_id            = aws_security_group.eks_cluster.id
   description                  = "Allow HTTPS from management server for kubectl access"
   from_port                    = 443
   to_port                      = 443
   ip_protocol                  = "tcp"
   referenced_security_group_id = data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id
->>>>>>> cb78cec (fix: migrate all SG rules to aws_vpc_security_group_*_rule resources)
+}
+
+# Security Group for EKS Nodes
+resource "aws_security_group" "eks_nodes" {
+  name        = "${module.naming.id}-eks-nodes"
+  description = "Security group for EKS worker nodes"
+  vpc_id      = local.infrastructure.vpc_id
+
+  tags = {
+    Name = "${module.naming.id}-eks-nodes-sg"
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_self" {
+  #checkov:skip=CKV_AWS_24: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_25: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_260: see docs/security-baseline.md
+  security_group_id            = aws_security_group.eks_nodes.id
+  description                  = "Allow node-to-node communication"
+  from_port                    = 0
+  to_port                      = 65535
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_from_vpc" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow inbound from VPC CIDR"
+  from_port         = 0
+  to_port           = 65535
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_https_to_vpc" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow HTTPS outbound to VPC"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG
+# NLB health checks target pod IPs directly; the EKS managed cluster SG
+# (applied to all nodes) must allow this traffic for health checks to pass.
+resource "aws_security_group_rule" "eks_cluster_sg_from_nlb" {
+  count = local.infrastructure.ingress_nlb_security_group_id != null ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow inbound from Ingress NLB for health checks"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = local.infrastructure.ingress_nlb_security_group_id
+  security_group_id        = aws_eks_cluster.main.vpc_config[0].cluster_security_group_id
+}
+
+# Security Group Rule: Allow inbound from EKS cluster to nodes
+resource "aws_security_group_rule" "eks_nodes_from_cluster" {
+  type                     = "ingress"
+  description              = "Allow inbound from EKS cluster"
+  from_port                = 1025
+  to_port                  = 65535
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.eks_cluster.id
+  security_group_id        = aws_security_group.eks_nodes.id
 }
 
 # EKS Node Group IAM Role
@@ -257,7 +324,7 @@ resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "eks-pod-identity-agent"
   resolve_conflicts_on_update = "OVERWRITE"
-  depends_on                  = [aws_eks_node_group.main]
+  depends_on                  = [aws_eks_node_group.pool]
 }
 
 # EBS CSI Driver Addon - Required for PersistentVolumeClaims with gp3 storage
@@ -270,7 +337,7 @@ resource "aws_eks_addon" "ebs_csi" {
   addon_version               = var.eks_ebs_csi_driver_version
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
 
   lifecycle {
     ignore_changes = [service_account_role_arn]
@@ -287,7 +354,7 @@ resource "aws_eks_addon" "coredns" {
   addon_name                  = "coredns"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
 }
 
 # kube-proxy Addon
@@ -296,7 +363,7 @@ resource "aws_eks_addon" "kube_proxy" {
   addon_name                  = "kube-proxy"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
 }
 
 # VPC CNI Addon
@@ -305,38 +372,82 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_name                  = "vpc-cni"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  depends_on = [aws_eks_node_group.main]
+  depends_on = [aws_eks_node_group.pool]
 }
 
 #######################################
-# EKS Node Group
+# EKS Node Groups
 #######################################
 
-# EKS Node Group
-resource "aws_eks_node_group" "main" {
+# Launch template to attach the eks_nodes security group to managed node groups.
+# EKS managed node groups don't expose a security_group_ids attribute directly;
+# a launch template is the only way to add additional SGs beyond the auto-created
+# cluster security group.
+resource "aws_launch_template" "eks_nodes" {
+  #checkov:skip=CKV_AWS_341: see docs/security-baseline.md
+  for_each = var.eks_node_groups
+
+  name = "${module.naming.id}-${each.key}"
+
+  vpc_security_group_ids = [
+    aws_security_group.eks_nodes.id,
+  ]
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = each.value.disk_size
+      volume_type = "gp3"
+      encrypted   = true
+      kms_key_id  = local.infrastructure.kms_key_arn
+    }
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
+  tags = {
+    Name = "${module.naming.id}-${each.key}"
+  }
+}
+
+resource "aws_eks_node_group" "pool" {
+  for_each = var.eks_node_groups
+
   cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "${module.naming.id}-node-group"
+  node_group_name = "${module.naming.id}-${each.key}"
   node_role_arn   = aws_iam_role.eks_node_group.arn
   subnet_ids      = local.infrastructure.private_subnet_ids
 
-  instance_types = var.eks_node_group_instance_types
-  capacity_type  = var.eks_node_group_capacity_type
-  disk_size      = var.eks_node_group_disk_size
+  instance_types = each.value.instance_types
+  capacity_type  = each.value.capacity_type
+
+  launch_template {
+    id      = aws_launch_template.eks_nodes[each.key].id
+    version = aws_launch_template.eks_nodes[each.key].latest_version
+  }
 
   scaling_config {
-    desired_size = var.eks_node_group_desired_size
-    min_size     = var.eks_node_group_min_size
-    max_size     = var.eks_node_group_max_size
+    desired_size = each.value.desired_size
+    min_size     = each.value.min_size
+    max_size     = each.value.max_size
   }
 
   update_config {
-    max_unavailable = var.eks_node_group_update_config.max_unavailable
+    max_unavailable = each.value.max_unavailable
   }
 
-  labels = var.eks_node_group_labels
+  labels = {
+    lifecycle   = each.value.labels.lifecycle
+    scalability = each.value.labels.scalability
+  }
 
   dynamic "taint" {
-    for_each = var.eks_node_group_taints
+    for_each = each.value.taints
     content {
       key    = taint.value.key
       value  = taint.value.value
@@ -344,7 +455,6 @@ resource "aws_eks_node_group" "main" {
     }
   }
 
-  # Ensure cluster is ready before creating node group
   depends_on = [
     aws_eks_cluster.main,
     aws_iam_role_policy_attachment.eks_worker_node_policy,
@@ -353,52 +463,7 @@ resource "aws_eks_node_group" "main" {
   ]
 
   tags = {
-    Name = "${module.naming.id}-node-group"
-  }
-}
-
-# Large node group for system applications (Kong, etc.)
-resource "aws_eks_node_group" "large" {
-  cluster_name    = aws_eks_cluster.main.name
-  node_group_name = "${module.naming.id}-node-group-large"
-  node_role_arn   = aws_iam_role.eks_node_group.arn
-  subnet_ids      = local.infrastructure.private_subnet_ids
-
-  instance_types = var.eks_node_group_instance_types
-  capacity_type  = var.eks_node_group_capacity_type
-  disk_size      = var.eks_node_group_disk_size
-
-  scaling_config {
-    desired_size = var.eks_node_group_desired_size
-    min_size     = var.eks_node_group_min_size
-    max_size     = var.eks_node_group_max_size
-  }
-
-  update_config {
-    max_unavailable = var.eks_node_group_update_config.max_unavailable
-  }
-
-  labels = var.eks_node_group_labels
-
-  dynamic "taint" {
-    for_each = var.eks_node_group_taints
-    content {
-      key    = taint.value.key
-      value  = taint.value.value
-      effect = taint.value.effect
-    }
-  }
-
-  # Ensure cluster is ready before creating node group
-  depends_on = [
-    aws_eks_cluster.main,
-    aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
-    aws_iam_role_policy_attachment.eks_container_registry_policy
-  ]
-
-  tags = {
-    Name = "${module.naming.id}-node-group-large"
+    Name = "${module.naming.id}-${each.key}"
   }
 }
 

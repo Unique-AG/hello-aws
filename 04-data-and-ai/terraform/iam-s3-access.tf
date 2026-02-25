@@ -3,6 +3,7 @@
 # Access key is created by .scripts/seed-secrets.sh (not in Terraform to avoid secrets in state)
 
 resource "aws_iam_user" "s3_access" {
+  #checkov:skip=CKV_AWS_273: see docs/security-baseline.md
   name = "iam-user-${module.naming.id}-s3-access"
   path = "/service-accounts/"
 

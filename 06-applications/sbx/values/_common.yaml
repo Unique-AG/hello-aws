@@ -1,0 +1,8 @@
+# Common values for sbx environment
+
+# ECR Registry Configuration
+# Base ECR registry URL for pull-through cache
+ecr:
+  registry: "<ECR_REGISTRY_THIRDPARTY_BARE>"
+  pullThroughCache:
+    prefix: "uniquecr"

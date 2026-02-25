@@ -1,0 +1,17 @@
+spec:
+  name: web-app-chat
+  autoSync: false
+  sources:
+    - repoURL: "<GITHUB_REPO_URL>"
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - repoURL: ghcr.io/unique-ag/helm-charts
+      chart: web-app
+      targetRevision: 5.0.0
+      helm:
+        releaseName: web-app-chat
+        valueFiles:
+          - $values/06-applications/defaults/web-apps/chat.yaml
+          - $values/06-applications/sbx/values/web-apps/_all.yaml
+          - $values/06-applications/sbx/values/web-apps/chat.yaml
+        valuesObject: {}

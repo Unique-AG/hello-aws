@@ -1,0 +1,5 @@
+# Client Insights Exporter backend service configuration (AWS sbx)
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/backend-service-client-insights-exporter
+  tag: "2026.06.1"

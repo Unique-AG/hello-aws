@@ -48,11 +48,12 @@ SKIP_INIT="${3:-false}"
 # Validate arguments
 if [[ -z "$LAYER" ]]; then
   echo -e "${RED}❌ Error: Layer is required${NC}"
-  echo -e "${YELLOW}   Usage: ./scripts/validate.sh [layer] [environment]${NC}"
+  echo -e "${YELLOW}   Usage: ./scripts/validate.sh [layer] [environment] [skip_init]${NC}"
   echo -e "${YELLOW}   Examples:${NC}"
   echo -e "${YELLOW}     ./scripts/validate.sh bootstrap sbx${NC}"
   echo -e "${YELLOW}     ./scripts/validate.sh governance dev${NC}"
-  echo -e "${YELLOW}     ./scripts/validate.sh infrastructure prod${NC}"
+  echo -e "${YELLOW}     ./scripts/validate.sh infrastructure prod true${NC}"
+  echo -e "${YELLOW}     ./scripts/validate.sh all sbx true              # Validate all layers${NC}"
   exit 1
 fi
 
@@ -74,6 +75,53 @@ get_layer_dir_name() {
     *) echo "" ;;
   esac
 }
+
+#######################################
+# Handle "all" — validate every layer
+#######################################
+if [[ "$LAYER" == "all" ]]; then
+  ALL_FAILED=false
+  TERRAFORM_LAYERS=(bootstrap governance infrastructure data-and-ai compute)
+
+  for layer in "${TERRAFORM_LAYERS[@]}"; do
+    layer_dir_name=$(get_layer_dir_name "$layer")
+    # Skip layers that don't have the environment config
+    if [[ ! -f "${PROJECT_ROOT}/${layer_dir_name}/terraform/environments/${ENV}/00-config.auto.tfvars" ]]; then
+      echo -e "${YELLOW}⏭️  Skipping ${layer} (no ${ENV} config found)${NC}"
+      echo ""
+      continue
+    fi
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}▶ ${layer}${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    if ! "$SCRIPT_DIR/validate.sh" "$layer" "$ENV" "$SKIP_INIT"; then
+      ALL_FAILED=true
+    fi
+    echo ""
+  done
+
+  # 06-applications (uses its own validation script)
+  APPS_VALIDATE="${PROJECT_ROOT}/06-applications/scripts/validate.sh"
+  if [[ -x "$APPS_VALIDATE" && -d "${PROJECT_ROOT}/06-applications/${ENV}" ]]; then
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${BLUE}▶ applications${NC}"
+    echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    if ! "$APPS_VALIDATE" "$ENV" --skip-placeholders; then
+      ALL_FAILED=true
+    fi
+    echo ""
+  fi
+
+  # Final summary
+  echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  if [[ "$ALL_FAILED" == "true" ]]; then
+    echo -e "${RED}❌ One or more layers failed validation${NC}"
+    exit 1
+  else
+    echo -e "${GREEN}✅ All layers validated successfully${NC}"
+    exit 0
+  fi
+fi
 
 # Get layer directory
 LAYER_DIR_NAME=$(get_layer_dir_name "$LAYER")

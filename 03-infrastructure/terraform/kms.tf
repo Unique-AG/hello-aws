@@ -54,17 +54,35 @@ resource "aws_kms_key" "general" {
         Resource = "*"
       },
       {
-        Sid    = "Allow EC2"
+        Sid    = "Allow EC2 and Auto Scaling direct key usage"
         Effect = "Allow"
         Principal = {
-          Service = "ec2.amazonaws.com"
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          Service = [
+            "ec2.amazonaws.com",
+            "autoscaling.amazonaws.com"
+          ]
         }
         Action = [
           "kms:Encrypt",
           "kms:Decrypt",
           "kms:ReEncrypt*",
           "kms:GenerateDataKey*",
-          "kms:DescribeKey",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow EC2 and Auto Scaling grant creation"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/autoscaling.amazonaws.com/AWSServiceRoleForAutoScaling"
+          Service = [
+            "ec2.amazonaws.com",
+            "autoscaling.amazonaws.com"
+          ]
+        }
+        Action = [
           "kms:CreateGrant"
         ]
         Resource = "*"
@@ -73,7 +91,7 @@ resource "aws_kms_key" "general" {
         }
       },
       {
-        Sid    = "Allow RDS"
+        Sid    = "Allow RDS direct key usage"
         Effect = "Allow"
         Principal = {
           Service = "rds.amazonaws.com"
@@ -83,7 +101,17 @@ resource "aws_kms_key" "general" {
           "kms:Decrypt",
           "kms:ReEncrypt*",
           "kms:GenerateDataKey*",
-          "kms:DescribeKey",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "Allow RDS grant creation"
+        Effect = "Allow"
+        Principal = {
+          Service = "rds.amazonaws.com"
+        }
+        Action = [
           "kms:CreateGrant"
         ]
         Resource = "*"

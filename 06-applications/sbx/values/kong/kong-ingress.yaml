@@ -1,0 +1,83 @@
+# Kong Ingress Resources for AWS EKS
+# Updated for AWS environment with <DNS_ZONE> domain
+resources:
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-web-apps
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "true"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_BASE>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kong-gateway-proxy
+                    port:
+                      name: kong-proxy-tls
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - <DOMAIN_BASE>
+          secretName: kong-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-backend-services
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "true"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_API>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kong-gateway-proxy
+                    port:
+                      name: kong-proxy-tls
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - <DOMAIN_API>
+          secretName: kong-api-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-zitadel
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "false"  # Don't strip path for Zitadel
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_IDENTITY>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: zitadel
+                    port:
+                      number: 8080
+                path: /
+                pathType: Prefix
+      tls:
+        - hosts:
+            - <DOMAIN_IDENTITY>
+          secretName: kong-zitadel-tls

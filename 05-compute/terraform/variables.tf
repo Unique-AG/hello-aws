@@ -115,66 +115,29 @@ variable "eks_cluster_log_retention_days" {
 }
 
 # EKS Node Group Configuration
-variable "eks_node_group_instance_types" {
-  description = "List of EC2 instance types for EKS node group"
-  type        = list(string)
-  default     = ["m6i.large"]
-}
-
-variable "eks_node_group_desired_size" {
-  description = "Desired number of nodes in the EKS node group"
-  type        = number
-  default     = 2
-}
-
-variable "eks_node_group_min_size" {
-  description = "Minimum number of nodes in the EKS node group"
-  type        = number
-  default     = 1
-}
-
-variable "eks_node_group_max_size" {
-  description = "Maximum number of nodes in the EKS node group"
-  type        = number
-  default     = 4
-}
-
-variable "eks_node_group_disk_size" {
-  description = "Disk size in GB for EKS node group instances"
-  type        = number
-  default     = 50
-}
-
-variable "eks_node_group_capacity_type" {
-  description = "Type of capacity associated with the EKS node group (ON_DEMAND or SPOT)"
-  type        = string
-  default     = "ON_DEMAND"
-}
-
-variable "eks_node_group_update_config" {
-  description = "Configuration for node group updates"
-  type = object({
-    max_unavailable = number
-  })
-  default = {
-    max_unavailable = 1
-  }
-}
-
-variable "eks_node_group_labels" {
-  description = "Key-value map of Kubernetes labels to apply to nodes"
-  type        = map(string)
-  default     = {}
-}
-
-variable "eks_node_group_taints" {
-  description = "List of Kubernetes taints to apply to nodes"
-  type = list(object({
-    key    = string
-    value  = string
-    effect = string
+variable "eks_node_groups" {
+  description = "Map of EKS node group configurations. Keys are pool names (e.g., steady, rapid)."
+  type = map(object({
+    instance_types  = optional(list(string), ["m6i.large"])
+    capacity_type   = optional(string, "ON_DEMAND")
+    disk_size       = optional(number, 100)
+    desired_size    = optional(number, 0)
+    min_size        = optional(number, 0)
+    max_size        = optional(number, 3)
+    max_unavailable = optional(number, 1)
+    labels = optional(object({
+      lifecycle   = string
+      scalability = string
+    }), { lifecycle = "ephemeral", scalability = "rapid" })
+    taints = optional(list(object({
+      key    = string
+      value  = string
+      effect = string
+      })), [
+      { key = "scalability", value = "rapid", effect = "NO_SCHEDULE" },
+      { key = "lifecycle", value = "ephemeral", effect = "NO_SCHEDULE" }
+    ])
   }))
-  default = []
 }
 
 # ECR Repository Configuration
@@ -276,13 +239,6 @@ variable "acr_password" {
   type        = string
   default     = ""
   ephemeral   = true
-}
-
-# Connectivity Account Configuration
-variable "connectivity_account_id" {
-  description = "AWS account ID of the connectivity account for RAM sharing (CloudFront VPC Origin)"
-  type        = string
-  default     = null
 }
 
 

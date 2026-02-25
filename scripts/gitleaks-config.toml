@@ -141,15 +141,26 @@ title = "Hello AWS Secret Detection"
   description = "Hardcoded Password"
   regex = '''(?i)password[=:][\s"']*(admin|root|password|123456|qwerty)'''
   tags = ["password", "hardcoded"]
+  [rules.allowlist]
+    paths = [
+      '''zitadel\.yaml$''',  # Zitadel default master key placeholder (overridden via ExternalSecrets)
+    ]
 
 [[rules]]
   id = "terraform-secret"
   description = "Terraform Secret Variable"
   regex = '''(?i)(secret|token|key|password|access_key|secret_key)[_]*[=:]\s*["']([^"'\s]{8,})["']'''
+  secretGroup = 2
   tags = ["terraform", "secret"]
   [rules.allowlist]
     paths = [
       '''\.md$''',                   # Placeholder values in documentation
+    ]
+    stopwords = [
+      "topology.kubernetes.io/zone",  # Kubernetes topology spread constraint
+      "scalability",                   # Kubernetes node selector label
+      "lifecycle",                     # Kubernetes node selector label
+      "RootPassword1!",               # Zitadel default master key placeholder
     ]
 
 [[rules]]

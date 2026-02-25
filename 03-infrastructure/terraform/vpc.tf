@@ -11,7 +11,7 @@ resource "aws_vpc" "main" {
 
 # Secondary CIDR for EKS pod networking (RFC 6598 range)
 resource "aws_vpc_ipv4_cidr_block_association" "secondary" {
-  count = var.secondary_cidr_enabled ? 1 : 0
+  count = var.enable_secondary_cidr ? 1 : 0
 
   vpc_id     = aws_vpc.main.id
   cidr_block = local.secondary_cidr
@@ -37,6 +37,7 @@ resource "aws_flow_log" "main" {
 }
 
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  #checkov:skip=CKV_AWS_338: see docs/security-baseline.md
   name              = "${module.naming.log_group_prefix}/vpc-flow-logs"
   retention_in_days = var.cloudwatch_log_retention_days
   kms_key_id        = aws_kms_key.cloudwatch_logs.arn

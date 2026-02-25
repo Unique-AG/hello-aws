@@ -1,0 +1,63 @@
+env:
+  GUNICORN_WORKERS: 2
+  GUNICORN_THREADS: 4
+  GUNICORN_TIMEOUT: 300
+  PORT: 8080
+  LOG_LEVEL: INFO
+  DOCLING_ARTIFACTS_PATH: /artifacts/docling-models
+  DOWNLOAD_MODELS: "true"
+  MAX_CONCURRENT_JOBS_PER_REPLICA: 4
+  REDIS_DB: 5
+  REDIS_JOB_TTL_SECONDS: 3600
+  REDIS_QUEUE_BLOCK_TIMEOUT: 1
+
+probes:
+  enabled: true
+  liveness:
+    httpGet:
+      path: /probe
+      port: 8080
+  readiness:
+    httpGet:
+      path: /probe
+      port: 8080
+  startup:
+    httpGet:
+      path: /probe
+      port: 8080
+    failureThreshold: 30
+    periodSeconds: 10
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 3
+    memory: 6Gi
+  limits:
+    cpu: 4
+    memory: 6Gi
+
+securityContext:
+  readOnlyRootFilesystem: false
+
+serviceAccount:
+  enabled: true
+
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
+
+volumes:
+  - name: tmp-volume
+    emptyDir:
+      sizeLimit: 20Gi
+  - name: docling-models
+    persistentVolumeClaim:
+      claimName: docling-models-pvc
+
+volumeMounts:
+  - mountPath: /tmp
+    name: tmp-volume
+  - mountPath: /artifacts/docling-models
+    name: docling-models

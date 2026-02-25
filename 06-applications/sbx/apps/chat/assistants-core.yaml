@@ -1,0 +1,16 @@
+spec:
+  name: assistants-core
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - repoURL: ghcr.io/unique-ag/helm-charts
+      chart: ai-service
+      targetRevision: 2.1.1
+      helm:
+        releaseName: assistants-core
+        valueFiles:
+          - $values/06-applications/defaults/ai-services/assistants-core.yaml
+          - $values/06-applications/sbx/values/ai-services/assistants-core.yaml
+        valuesObject: {}

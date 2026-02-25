@@ -28,6 +28,7 @@ locals {
     cloudwatch_log_group_infrastructure_name = data.terraform_remote_state.infrastructure.outputs.cloudwatch_log_group_infrastructure_name
     route53_private_zone_id                  = data.terraform_remote_state.infrastructure.outputs.route53_private_zone_id
     route53_private_zone_domain              = data.terraform_remote_state.infrastructure.outputs.route53_private_zone_domain
+    ingress_nlb_security_group_id            = try(data.terraform_remote_state.infrastructure.outputs.ingress_nlb_security_group_id, null)
   }
 
   # ACR alias extracted from registry URL (e.g., "uniqueapp" from "uniqueapp.azurecr.io")

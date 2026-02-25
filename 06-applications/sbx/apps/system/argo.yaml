@@ -1,0 +1,21 @@
+spec:
+  name: argocd
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: argo-cd
+      repoURL: https://argoproj.github.io/argo-helm
+      targetRevision: 8.0.0
+      helm:
+        releaseName: argo
+        valueFiles:
+          - $values/06-applications/sbx/values/argo/argo.yaml
+    - chart: argocd-apps
+      repoURL: https://argoproj.github.io/argo-helm
+      targetRevision: 2.0.2
+      helm:
+        releaseName: argo-appsets
+        valueFiles:
+          - $values/06-applications/sbx/values/argo/argo-appsets.yaml

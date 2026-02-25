@@ -1,21 +1,19 @@
 resource "aws_security_group" "github_runners" {
-  count = var.github_runners_enabled ? 1 : 0
+  count = var.enable_github_runners ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"
   description = "Security group for GitHub Actions self-hosted runners"
   vpc_id      = aws_vpc.main.id
-
-  lifecycle {
-    create_before_destroy = true
-  }
 
   tags = {
     Name = "${module.naming.id}-github-runners-sg"
   }
 }
 
-resource "aws_vpc_security_group_egress_rule" "github_runners_https" {
-  count = var.github_runners_enabled ? 1 : 0
+# Outbound to internet (for GitHub API, package registries)
+resource "aws_vpc_security_group_egress_rule" "github_runners_https_internet" {
+  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
+  count = var.enable_github_runners ? 1 : 0
 
   security_group_id = aws_security_group.github_runners[0].id
   description       = "HTTPS outbound for GitHub API and registries"
@@ -25,19 +23,20 @@ resource "aws_vpc_security_group_egress_rule" "github_runners_https" {
   cidr_ipv4         = "0.0.0.0/0"
 }
 
-resource "aws_vpc_security_group_egress_rule" "github_runners_http" {
-  count = var.github_runners_enabled ? 1 : 0
+# Outbound to VPC endpoints
+resource "aws_vpc_security_group_egress_rule" "github_runners_https_vpc" {
+  count = var.enable_github_runners ? 1 : 0
 
   security_group_id = aws_security_group.github_runners[0].id
-  description       = "HTTP outbound"
-  from_port         = 80
-  to_port           = 80
+  description       = "HTTPS to VPC endpoints"
+  from_port         = 443
+  to_port           = 443
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_ipv4         = aws_vpc.main.cidr_block
 }
 
 resource "aws_subnet" "github_runners" {
-  count = var.github_runners_enabled ? length(local.availability_zones) : 0
+  count = var.enable_github_runners ? length(local.availability_zones) : 0
 
   vpc_id            = aws_vpc.main.id
   cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_allocations.runners.newbits, local.subnet_allocations.runners.start + count.index) # /26 subnets, non-overlapping
@@ -50,14 +49,14 @@ resource "aws_subnet" "github_runners" {
 }
 
 resource "aws_route_table_association" "github_runners" {
-  count = var.github_runners_enabled && var.enable_nat_gateway ? length(aws_subnet.github_runners) : 0
+  count = var.enable_github_runners && var.enable_nat_gateway ? length(aws_subnet.github_runners) : 0
 
   subnet_id      = aws_subnet.github_runners[count.index].id
   route_table_id = aws_route_table.private[count.index].id
 }
 
 resource "aws_iam_role" "github_runners" {
-  count = var.github_runners_enabled ? 1 : 0
+  count = var.enable_github_runners ? 1 : 0
 
   name = "${module.naming.id}-github-runners"
 
@@ -73,10 +72,11 @@ resource "aws_iam_role" "github_runners" {
       }
     ]
   })
+
 }
 
 resource "aws_iam_role_policy" "github_runners" {
-  count = var.github_runners_enabled ? 1 : 0
+  count = var.enable_github_runners ? 1 : 0
 
   name = "github-runners-policy"
   role = aws_iam_role.github_runners[0].id
@@ -138,4 +138,3 @@ resource "aws_iam_role_policy" "github_runners" {
     ]
   })
 }
-

@@ -1,0 +1,8 @@
+# Knowledge Upload web app configuration (AWS sbx)
+
+env:
+  SELF_URL: https://<DOMAIN_BASE>/knowledge-upload
+
+image:
+  repository: <ECR_REGISTRY_PRIMARY>/web-app-knowledge-upload
+  tag: "2026.06.1"

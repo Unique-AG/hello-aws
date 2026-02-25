@@ -1,0 +1,23 @@
+spec:
+  name: zitadel
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: zitadel
+      repoURL: https://charts.zitadel.com
+      targetRevision: 8.13.1
+      helm:
+        releaseName: zitadel
+        valueFiles:
+          - $values/06-applications/sbx/values/zitadel/zitadel.yaml
+          - $values/06-applications/sbx/values/zitadel/zitadel-extra-manifests.yaml
+        valuesObject:
+          zitadel:
+            secretConfig:
+              FirstInstance:
+                Org:
+                  Machine:
+                    Pat:
+                      ExpirationDate: "2029-01-01T00:00:00Z"
