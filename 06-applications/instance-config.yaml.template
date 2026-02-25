@@ -18,6 +18,7 @@ domain:
 
 aws:
   region: <AWS_REGION>                  # e.g. eu-central-2
+  accountId: "<AWS_ACCOUNT_ID>"         # AWS account ID (used in Bedrock inference profile ARNs)
   hostedZoneID: <AWS_HOSTED_ZONE_ID>    # Route 53 hosted zone ID
   kms:
     keyArn: <KMS_KEY_ARN>              # KMS key ARN for EBS encryption
@@ -30,6 +31,8 @@ aws:
     targetGroupHttpsArn: <TARGET_GROUP_HTTPS_ARN>  # terraform output -raw ingress_nlb_target_group_https_arn
   redis:
     url: <REDIS_URL>                               # e.g. rediss://master.<cluster>.cache.amazonaws.com:6380/0
+  bedrock:
+    cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"  # Application inference profile ID for Cohere Embed v4
   ecr:
     primary:                            # ECR for Unique application images
       accountId: "000000000000"

@@ -74,6 +74,7 @@ domain:
   dnsZone: "<DNS_ZONE>"
 aws:
   region: "<AWS_REGION>"
+  accountId: "<AWS_ACCOUNT_ID>"
   hostedZoneID: "<AWS_HOSTED_ZONE_ID>"
   kms:
     keyArn: "<KMS_KEY_ARN>"
@@ -86,6 +87,8 @@ aws:
     targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
   redis:
     url: "<REDIS_URL>"
+  bedrock:
+    cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
   ecr:
     primary:
       accountId: "000000000000"
@@ -129,6 +132,7 @@ FROM_DOMAIN_IDENTITY=$(yq '.domain.identity' "$FROM")
 FROM_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$FROM")
 FROM_DNS_ZONE=$(yq '.domain.dnsZone' "$FROM")
 FROM_AWS_REGION=$(yq '.aws.region' "$FROM")
+FROM_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$FROM")
 FROM_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$FROM")
 FROM_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$FROM")
 FROM_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$FROM")
@@ -140,6 +144,7 @@ FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
+FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
 FROM_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$FROM")
 FROM_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$FROM")
 FROM_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$FROM")
@@ -173,6 +178,7 @@ TO_DOMAIN_IDENTITY=$(yq '.domain.identity' "$CONFIG")
 TO_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$CONFIG")
 TO_DNS_ZONE=$(yq '.domain.dnsZone' "$CONFIG")
 TO_AWS_REGION=$(yq '.aws.region' "$CONFIG")
+TO_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$CONFIG")
 TO_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$CONFIG")
 TO_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$CONFIG")
 TO_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$CONFIG")
@@ -184,6 +190,7 @@ TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
+TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -262,6 +269,14 @@ replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
 # 3. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
+
+# 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
+echo "  Bedrock Cohere Embed v4 profile ID ..."
+replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
+
+# 3c. AWS account ID (before region, since ARNs contain both)
+echo "  AWS account ID ..."
+replace_all "$FROM_AWS_ACCOUNT_ID" "$TO_AWS_ACCOUNT_ID"
 
 # 3. Repository URL (before domain, since URL contains github.com not our domain)
 echo "  Repository URL ..."
