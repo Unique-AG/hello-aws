@@ -67,6 +67,7 @@ This is a living document. Security posture is being hardened on an ongoing basi
 | CKV_AWS_355 | `cert_manager_route53`, `speech`, `aws_lb_controller` | `cert_manager_route53`: `ListHostedZones` and `ListHostedZonesByName` do not support resource-level constraints (AWS API limitation). `speech` and `aws_lb_controller`: same rationale as CKV_AWS_111 |
 | CKV_AWS_356 | `cert_manager_route53`, `speech`, `aws_lb_controller` | Same resources as CKV_AWS_355 — checkov flags `*` for actions it considers restrictable, but these are either genuinely unscopable (Route53 List, Transcribe streaming) or dynamically managed (LB controller) |
 | CKV_AWS_341 | `aws_launch_template.eks_nodes` | IMDS hop limit set to 2 — required for EKS. Pods access the instance metadata service through the node's network namespace, adding one network hop. AWS recommends `http_put_response_hop_limit = 2` for containerized workloads. IMDSv2 (`http_tokens = required`) is enforced. |
+| CKV_AWS_24, CKV_AWS_25, CKV_AWS_260 | `aws_vpc_security_group_ingress_rule.eks_nodes_self` | Checkov false positive — rule uses `referenced_security_group_id` (self-referencing, node-to-node only), not `0.0.0.0/0`. Checkov's `AbsSecurityGroupUnrestrictedIngress` does not recognize `referenced_security_group_id` on `aws_vpc_security_group_ingress_rule` resources ([checkov#6624](https://github.com/bridgecrewio/checkov/issues/6624)). |
 
 ### 06-applications
 

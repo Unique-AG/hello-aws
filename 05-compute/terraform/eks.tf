@@ -206,9 +206,9 @@ resource "aws_security_group" "eks_nodes" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "eks_nodes_self" {
-  #checkov:skip=CKV_AWS_24: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
-  #checkov:skip=CKV_AWS_25: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
-  #checkov:skip=CKV_AWS_260: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
+  #checkov:skip=CKV_AWS_24: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_25: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_260: see docs/security-baseline.md
   security_group_id            = aws_security_group.eks_nodes.id
   description                  = "Allow node-to-node communication"
   from_port                    = 0
