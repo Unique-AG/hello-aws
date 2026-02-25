@@ -200,37 +200,39 @@ resource "aws_security_group" "eks_nodes" {
   description = "Security group for EKS worker nodes"
   vpc_id      = local.infrastructure.vpc_id
 
-  # Allow node-to-node communication
-  ingress {
-    description = "Allow node-to-node communication"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    self        = true
-  }
-
-  # Allow inbound from VPC (for pods)
-  ingress {
-    description = "Allow inbound from VPC CIDR"
-    from_port   = 0
-    to_port     = 65535
-    protocol    = "tcp"
-    cidr_blocks = [local.infrastructure.vpc_cidr_block]
-  }
-
-  # EKS cluster control plane needs outbound access for API operations
-  # Restrict to VPC CIDR for security
-  egress {
-    description = "Allow HTTPS outbound to VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [local.infrastructure.vpc_cidr_block]
-  }
-
   tags = {
     Name = "${module.naming.id}-eks-nodes-sg"
   }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_self" {
+  #checkov:skip=CKV_AWS_24: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
+  #checkov:skip=CKV_AWS_25: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
+  #checkov:skip=CKV_AWS_260: Self-referencing SG rule (node-to-node); checkov false positive on referenced_security_group_id
+  security_group_id            = aws_security_group.eks_nodes.id
+  description                  = "Allow node-to-node communication"
+  from_port                    = 0
+  to_port                      = 65535
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_from_vpc" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow inbound from VPC CIDR"
+  from_port         = 0
+  to_port           = 65535
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_https_to_vpc" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow HTTPS outbound to VPC"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
 # Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG

@@ -24,6 +24,4 @@ resource "aws_budgets_budget" "monthly_budget" {
   lifecycle {
     ignore_changes = [time_period_start]
   }
-
-  tags = local.tags
 }
