@@ -138,39 +138,3 @@ resource "aws_iam_role_policy" "github_runners" {
     ]
   })
 }
-
-# resource "aws_codebuild_project" "github_runners" {
-#   count = var.enable_github_runners ? 1 : 0
-#
-#   name          = "${module.naming.id}-github-runners"
-#   description   = "GitHub Actions self-hosted runners with VPC access"
-#   build_timeout = 60
-#   service_role  = aws_iam_role.github_runners[0].arn
-#
-#   artifacts {
-#     type = "NO_ARTIFACTS"
-#   }
-#
-#   environment {
-#     compute_type                = "BUILD_GENERAL1_SMALL"
-#     image                       = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
-#     type                        = "LINUX_CONTAINER"
-#     image_pull_credentials_type = "CODEBUILD"
-#     privileged_mode             = true
-#   }
-#
-#   source {
-#     type            = "GITHUB"
-#     location        = "https://github.com/Unique-AG/hello-aws.git"
-#     git_clone_depth = 1
-#     buildspec       = "buildspec.yml"
-#   }
-#
-#   vpc_config {
-#     vpc_id             = aws_vpc.main.id
-#     subnets            = aws_subnet.github_runners[*].id
-#     security_group_ids = [aws_security_group.github_runners[0].id]
-#   }
-#
-#   tags = local.tags
-# }
