@@ -1,7 +1,7 @@
 global:
   defaultStorageClass: gp3
   security:
-    allowInsecureImages: true
+    allowInsecureImages: true # see docs/security-baseline.md
 
 useCertManager: true
 

@@ -467,9 +467,9 @@ resource "aws_iam_role" "aws_lb_controller" {
   name               = "${module.naming.id}-aws-lb-controller"
   assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-aws-lb-controller"
-  })
+  }
 }
 
 data "aws_iam_policy_document" "aws_lb_controller" {

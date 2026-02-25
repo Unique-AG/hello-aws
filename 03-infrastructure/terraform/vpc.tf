@@ -11,7 +11,7 @@ resource "aws_vpc" "main" {
 
 # Secondary CIDR for EKS pod networking (RFC 6598 range)
 resource "aws_vpc_ipv4_cidr_block_association" "secondary" {
-  count = var.secondary_cidr_enabled ? 1 : 0
+  count = var.enable_secondary_cidr ? 1 : 0
 
   vpc_id     = aws_vpc.main.id
   cidr_block = local.secondary_cidr

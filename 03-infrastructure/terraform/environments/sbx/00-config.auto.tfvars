@@ -47,13 +47,13 @@ enable_secondary_cidr = true
 # Route 53 Private Hosted Zone Configuration
 # Associates this VPC with the Route 53 Private Hosted Zone from landing zone
 # This enables DNS resolution across all VPCs associated with the zone
-route53_private_zone_domain = "sbx.example.com"       # Your Route 53 private hosted zone domain
-route53_private_zone_id     = "Z0000000000000000000"  # Your Route 53 private hosted zone ID
+route53_private_zone_domain = "sbx.example.com"      # Your Route 53 private hosted zone domain
+route53_private_zone_id     = "Z0000000000000000000" # Your Route 53 private hosted zone ID
 
 # Ingress NLB + ALB + CloudFront VPC Origin
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
 alb_deletion_protection         = false
 enable_cloudfront_vpc_origin    = true
-internal_alb_certificate_domain = "*.sbx.example.com"  # ACM wildcard certificate domain
-connectivity_account_id         = "000000000000"        # Connectivity/networking account ID for RAM sharing
+internal_alb_certificate_domain = "*.sbx.example.com" # ACM wildcard certificate domain
+connectivity_account_id         = "000000000000"      # Connectivity/networking account ID for RAM sharing
 

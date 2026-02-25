@@ -28,6 +28,8 @@ aws:
   nlb:
     targetGroupHttpArn: <TARGET_GROUP_HTTP_ARN>    # terraform output -raw ingress_nlb_target_group_http_arn
     targetGroupHttpsArn: <TARGET_GROUP_HTTPS_ARN>  # terraform output -raw ingress_nlb_target_group_https_arn
+  redis:
+    url: <REDIS_URL>                               # e.g. rediss://master.<cluster>.cache.amazonaws.com:6380/0
   ecr:
     primary:                            # ECR for Unique application images
       accountId: "000000000000"

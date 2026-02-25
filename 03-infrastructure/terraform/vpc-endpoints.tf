@@ -14,7 +14,7 @@ resource "aws_security_group" "vpc_endpoints" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "vpc_endpoints_to_vpc" {
-  for_each = toset(var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
+  for_each = toset(var.enable_secondary_cidr ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
 
   security_group_id = aws_security_group.vpc_endpoints.id
   description       = "HTTPS to AWS services via VPC endpoints"
@@ -25,7 +25,7 @@ resource "aws_vpc_security_group_egress_rule" "vpc_endpoints_to_vpc" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_vpc" {
-  for_each = toset(var.secondary_cidr_enabled ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
+  for_each = toset(var.enable_secondary_cidr ? [var.vpc_cidr, local.secondary_cidr] : [var.vpc_cidr])
 
   security_group_id = aws_security_group.vpc_endpoints.id
   description       = "HTTPS from VPC (${each.value})"
@@ -36,7 +36,7 @@ resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_vpc" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "vpc_endpoints_from_management_server" {
-  count = var.management_server_enabled ? 1 : 0
+  count = var.enable_management_server ? 1 : 0
 
   security_group_id            = aws_security_group.vpc_endpoints.id
   description                  = "HTTPS from management server"
@@ -310,7 +310,7 @@ resource "aws_vpc_endpoint" "ec2" {
 # SSM Interface Endpoint
 # Required for Systems Manager API calls
 resource "aws_vpc_endpoint" "ssm" {
-  count = var.ssm_endpoints_enabled ? 1 : 0
+  count = var.enable_ssm_endpoints ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssm"
@@ -327,7 +327,7 @@ resource "aws_vpc_endpoint" "ssm" {
 # SSM Messages Interface Endpoint
 # Required for Session Manager message passing
 resource "aws_vpc_endpoint" "ssm_messages" {
-  count = var.ssm_endpoints_enabled ? 1 : 0
+  count = var.enable_ssm_endpoints ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ssmmessages"
@@ -344,7 +344,7 @@ resource "aws_vpc_endpoint" "ssm_messages" {
 # EC2 Messages Interface Endpoint
 # Required for EC2 instance messaging (used by Session Manager)
 resource "aws_vpc_endpoint" "ec2_messages" {
-  count = var.ssm_endpoints_enabled ? 1 : 0
+  count = var.enable_ssm_endpoints ? 1 : 0
 
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ec2messages"

@@ -27,48 +27,77 @@ resource "aws_security_group" "ingress_nlb" {
   description = "Security group for ingress NLB (inbound from ALBs, outbound to EKS pods)"
   vpc_id      = aws_vpc.main.id
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingress-nlb-sg"
-  })
+  }
 }
 
-# Allow inbound HTTP from VPC (ALBs forward to NLB on port 80)
-resource "aws_security_group_rule" "ingress_nlb_http_ingress" {
+# Allow inbound HTTP from CloudFront ALB
+resource "aws_security_group_rule" "ingress_nlb_http_from_cloudfront_alb" {
   count = var.enable_ingress_nlb ? 1 : 0
 
-  type              = "ingress"
-  description       = "Allow HTTP from VPC (ALBs)"
-  from_port         = 80
-  to_port           = 80
-  protocol          = "tcp"
-  cidr_blocks       = [aws_vpc.main.cidr_block]
+  type                     = "ingress"
+  description              = "Allow HTTP from CloudFront ALB"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb_cloudfront[0].id
+  security_group_id        = aws_security_group.ingress_nlb[0].id
+}
+
+# Allow inbound HTTP from WebSocket ALB
+resource "aws_security_group_rule" "ingress_nlb_http_from_websocket_alb" {
+  count = var.enable_ingress_nlb ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow HTTP from WebSocket ALB"
+  from_port                = 80
+  to_port                  = 80
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb_websocket[0].id
+  security_group_id        = aws_security_group.ingress_nlb[0].id
+}
+
+# Allow inbound HTTPS from CloudFront ALB
+resource "aws_security_group_rule" "ingress_nlb_https_from_cloudfront_alb" {
+  count = var.enable_ingress_nlb ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow HTTPS from CloudFront ALB"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb_cloudfront[0].id
+  security_group_id        = aws_security_group.ingress_nlb[0].id
+}
+
+# Allow inbound HTTPS from WebSocket ALB
+resource "aws_security_group_rule" "ingress_nlb_https_from_websocket_alb" {
+  count = var.enable_ingress_nlb ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow HTTPS from WebSocket ALB"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = aws_security_group.alb_websocket[0].id
+  security_group_id        = aws_security_group.ingress_nlb[0].id
+}
+
+# TODO: Transit Gateway ingress — restrict to TGW CIDRs in the next PR (hardening pass)
+
+# Allow outbound to EKS pods (primary + secondary CIDR when pod networking uses RFC 6598 range)
+resource "aws_vpc_security_group_egress_rule" "ingress_nlb_to_pods" {
+  for_each = var.enable_ingress_nlb ? toset(
+    var.enable_secondary_cidr ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block]
+  ) : toset([])
+
   security_group_id = aws_security_group.ingress_nlb[0].id
-}
-
-# Allow inbound HTTPS from VPC (ALBs forward to NLB on port 443)
-resource "aws_security_group_rule" "ingress_nlb_https_ingress" {
-  count = var.enable_ingress_nlb ? 1 : 0
-
-  type              = "ingress"
-  description       = "Allow HTTPS from VPC (ALBs)"
-  from_port         = 443
-  to_port           = 443
-  protocol          = "tcp"
-  cidr_blocks       = [aws_vpc.main.cidr_block]
-  security_group_id = aws_security_group.ingress_nlb[0].id
-}
-
-# Allow outbound to EKS pods (VPC CIDR covers pod IPs in private subnets)
-resource "aws_security_group_rule" "ingress_nlb_egress" {
-  count = var.enable_ingress_nlb ? 1 : 0
-
-  type              = "egress"
-  description       = "Allow outbound to EKS pods"
+  description       = "Allow outbound to EKS pods (${each.value})"
   from_port         = 0
   to_port           = 65535
-  protocol          = "tcp"
-  cidr_blocks       = [aws_vpc.main.cidr_block]
-  security_group_id = aws_security_group.ingress_nlb[0].id
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
 }
 
 #######################################
@@ -77,7 +106,7 @@ resource "aws_security_group_rule" "ingress_nlb_egress" {
 
 resource "aws_lb" "ingress_nlb" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
-  #checkov:skip=CKV_AWS_150: Deletion protection controlled by var.alb_deletion_protection; disabled in sandbox
+  #checkov:skip=CKV_AWS_150: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name               = "${module.naming.id_short}-ingress-nlb"
@@ -88,9 +117,9 @@ resource "aws_lb" "ingress_nlb" {
 
   enable_cross_zone_load_balancing = true
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingress-nlb"
-  })
+  }
 }
 
 #######################################
@@ -118,9 +147,9 @@ resource "aws_lb_target_group" "ingress_http" {
 
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingress-http-tg"
-  })
+  }
 }
 
 resource "aws_lb_target_group" "ingress_https" {
@@ -142,9 +171,9 @@ resource "aws_lb_target_group" "ingress_https" {
 
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingress-https-tg"
-  })
+  }
 }
 
 #######################################

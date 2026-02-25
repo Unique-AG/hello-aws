@@ -36,7 +36,7 @@ secretFrom:
 env:
   LITELLM_LOG: "INFO"
   LITELLM_MODE: PRODUCTION
-  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
+  REDIS_URL: "<REDIS_URL>"
 
 # Migration job for Prisma schema
 hooks:

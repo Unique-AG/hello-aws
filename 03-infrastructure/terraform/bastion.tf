@@ -76,7 +76,7 @@ resource "aws_security_group" "management_server" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "management_server_ssh" {
-  for_each = toset(var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
+  for_each = toset(var.enable_secondary_cidr ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
 
   security_group_id = aws_security_group.management_server.id
   description       = "SSH from VPC (Session Manager port forwarding)"
@@ -87,7 +87,7 @@ resource "aws_vpc_security_group_ingress_rule" "management_server_ssh" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "management_server_to_vpc" {
-  for_each = toset(var.secondary_cidr_enabled ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
+  for_each = toset(var.enable_secondary_cidr ? [aws_vpc.main.cidr_block, local.secondary_cidr] : [aws_vpc.main.cidr_block])
 
   security_group_id = aws_security_group.management_server.id
   description       = "Allow all outbound to VPC (${each.value})"
@@ -113,7 +113,7 @@ data "aws_ami" "amazon_linux_2023" {
 
 # EC2 Management Server
 resource "aws_instance" "management_server" {
-  count = var.management_server_enabled ? 1 : 0
+  count = var.enable_management_server ? 1 : 0
 
   ami           = var.management_server_ami != "" ? var.management_server_ami : data.aws_ami.amazon_linux_2023.id
   instance_type = var.management_server_instance_type
@@ -169,7 +169,7 @@ resource "aws_instance" "management_server" {
 
 # Elastic IP for Management Server (if public access enabled)
 resource "aws_eip" "management_server" {
-  count = var.management_server_enabled && var.management_server_public_access ? 1 : 0
+  count = var.enable_management_server && var.management_server_public_access ? 1 : 0
 
   domain   = "vpc"
   instance = aws_instance.management_server[0].id

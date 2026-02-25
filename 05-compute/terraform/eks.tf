@@ -22,8 +22,6 @@ resource "aws_iam_role" "eks_cluster" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 # Attach AWS managed policies to EKS cluster role
@@ -71,8 +69,6 @@ resource "aws_eks_cluster" "main" {
     aws_cloudwatch_log_group.eks_cluster,
     aws_iam_role_policy_attachment.eks_cluster_policy
   ]
-
-  tags = local.tags
 }
 
 # EKS Access Entry for Management Server
@@ -83,9 +79,9 @@ resource "aws_eks_access_entry" "management_server" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-management-server-access"
-  })
+  }
 }
 
 # EKS Access Policy for Management Server
@@ -110,9 +106,9 @@ resource "aws_eks_access_entry" "sandbox_admin" {
   kubernetes_groups = []
   type              = "STANDARD"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-sandbox-admin-access"
-  })
+  }
 }
 
 # EKS Access Policy for Sandbox Administrator
@@ -137,9 +133,9 @@ resource "aws_cloudwatch_log_group" "eks_cluster" {
   retention_in_days = max(var.eks_cluster_log_retention_days, 365)
   kms_key_id        = local.infrastructure.kms_key_arn
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-eks-cluster-logs"
-  })
+  }
 }
 
 # Security Group for EKS Cluster (control plane ENIs + managed node communication)
@@ -152,9 +148,9 @@ resource "aws_security_group" "eks_cluster" {
     create_before_destroy = true
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-eks-cluster-sg"
-  })
+  }
 }
 
 # Security Group Rule: Allow inbound from EKS nodes to cluster
@@ -232,9 +228,9 @@ resource "aws_security_group" "eks_nodes" {
     cidr_blocks = [local.infrastructure.vpc_cidr_block]
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-eks-nodes-sg"
-  })
+  }
 }
 
 # Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG
@@ -279,8 +275,6 @@ resource "aws_iam_role" "eks_node_group" {
       }
     ]
   })
-
-  tags = local.tags
 }
 
 # Attach AWS managed policies to node group role
@@ -347,9 +341,9 @@ resource "aws_eks_addon" "ebs_csi" {
     ignore_changes = [service_account_role_arn]
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ebs-csi-addon"
-  })
+  }
 }
 
 # CoreDNS Addon
@@ -359,8 +353,6 @@ resource "aws_eks_addon" "coredns" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.pool]
-
-  tags = local.tags
 }
 
 # kube-proxy Addon
@@ -370,8 +362,6 @@ resource "aws_eks_addon" "kube_proxy" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.pool]
-
-  tags = local.tags
 }
 
 # VPC CNI Addon
@@ -381,13 +371,47 @@ resource "aws_eks_addon" "vpc_cni" {
   resolve_conflicts_on_update = "OVERWRITE"
 
   depends_on = [aws_eks_node_group.pool]
-
-  tags = local.tags
 }
 
 #######################################
 # EKS Node Groups
 #######################################
+
+# Launch template to attach the eks_nodes security group to managed node groups.
+# EKS managed node groups don't expose a security_group_ids attribute directly;
+# a launch template is the only way to add additional SGs beyond the auto-created
+# cluster security group.
+resource "aws_launch_template" "eks_nodes" {
+  #checkov:skip=CKV_AWS_341: see docs/security-baseline.md
+  for_each = var.eks_node_groups
+
+  name = "${module.naming.id}-${each.key}"
+
+  vpc_security_group_ids = [
+    aws_security_group.eks_nodes.id,
+  ]
+
+  block_device_mappings {
+    device_name = "/dev/xvda"
+
+    ebs {
+      volume_size = each.value.disk_size
+      volume_type = "gp3"
+      encrypted   = true
+      kms_key_id  = local.infrastructure.kms_key_arn
+    }
+  }
+
+  metadata_options {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 2
+  }
+
+  tags = {
+    Name = "${module.naming.id}-${each.key}"
+  }
+}
 
 resource "aws_eks_node_group" "pool" {
   for_each = var.eks_node_groups
@@ -399,7 +423,11 @@ resource "aws_eks_node_group" "pool" {
 
   instance_types = each.value.instance_types
   capacity_type  = each.value.capacity_type
-  disk_size      = each.value.disk_size
+
+  launch_template {
+    id      = aws_launch_template.eks_nodes[each.key].id
+    version = aws_launch_template.eks_nodes[each.key].latest_version
+  }
 
   scaling_config {
     desired_size = each.value.desired_size
@@ -432,8 +460,8 @@ resource "aws_eks_node_group" "pool" {
     aws_iam_role_policy_attachment.eks_container_registry_policy
   ]
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-${each.key}"
-  })
+  }
 }
 

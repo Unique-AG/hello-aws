@@ -84,6 +84,8 @@ aws:
   nlb:
     targetGroupHttpArn: "<TARGET_GROUP_HTTP_ARN>"
     targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
+  redis:
+    url: "<REDIS_URL>"
   ecr:
     primary:
       accountId: "000000000000"
@@ -137,6 +139,7 @@ FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
+FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
 FROM_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$FROM")
 FROM_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$FROM")
 FROM_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$FROM")
@@ -180,6 +183,7 @@ TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
+TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -244,7 +248,11 @@ replace_all "$FROM_ECR_THIRDPARTY_FULL" "$TO_ECR_THIRDPARTY_FULL"
 echo "  ECR third-party bare registry ..."
 replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
 
-# 2. Target group ARNs (before region, since ARNs contain region)
+# 2. Redis URL (before region, since URL contains region)
+echo "  Redis URL ..."
+replace_all "$FROM_REDIS_URL" "$TO_REDIS_URL"
+
+# 3. Target group ARNs (before region, since ARNs contain region)
 echo "  NLB target group HTTP ARN ..."
 replace_all "$FROM_TG_HTTP_ARN" "$TO_TG_HTTP_ARN"
 

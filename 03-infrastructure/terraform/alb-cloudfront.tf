@@ -30,9 +30,9 @@ resource "aws_security_group" "alb_cloudfront" {
   description = "Security group for ALB used as CloudFront VPC Origin (forwards to Ingress NLB)"
   vpc_id      = aws_vpc.main.id
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-alb-cloudfront-sg"
-  })
+  }
 }
 
 # Security Group Rules (separate resources to avoid limits)
@@ -93,9 +93,9 @@ resource "aws_lb" "cloudfront" {
   enable_http2                     = true
   enable_cross_zone_load_balancing = true
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-cloudfront-alb"
-  })
+  }
 }
 
 # Target Group for Ingress NLB
@@ -130,9 +130,9 @@ resource "aws_lb_target_group" "ingress_nlb" {
   # Deregistration delay
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ingress-nlb-tg"
-  })
+  }
 }
 
 # Resolve Ingress NLB DNS to IP addresses and register as targets
@@ -168,9 +168,9 @@ resource "aws_acm_certificate" "internal_alb" {
   domain_name       = var.internal_alb_certificate_domain
   validation_method = "DNS"
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-internal-alb-cert"
-  })
+  }
 
   lifecycle {
     create_before_destroy = true
@@ -234,9 +234,9 @@ resource "aws_security_group" "alb_websocket" {
   description = "Security group for public WebSocket ALB (CloudFront IPs only)"
   vpc_id      = aws_vpc.main.id
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-alb-websocket-sg"
-  })
+  }
 }
 
 resource "aws_security_group_rule" "alb_websocket_https_ingress" {
@@ -280,9 +280,9 @@ resource "aws_lb" "websocket" {
   enable_http2                     = true
   enable_cross_zone_load_balancing = true
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-websocket-alb"
-  })
+  }
 }
 
 # Target Group for WebSocket ALB → Ingress NLB
@@ -308,9 +308,9 @@ resource "aws_lb_target_group" "websocket_ingress" {
 
   deregistration_delay = 30
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-ws-ingress-tg"
-  })
+  }
 }
 
 # Register Ingress NLB IPs as targets for WebSocket ALB

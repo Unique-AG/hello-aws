@@ -30,9 +30,9 @@ resource "aws_cloudfront_vpc_origin" "internal_alb" {
     }
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-vpc-origin"
-  })
+  }
 
   depends_on = [aws_lb.cloudfront]
 }
@@ -45,9 +45,9 @@ resource "aws_ram_resource_share" "vpc_origin" {
   name                      = "${module.naming.id}-cloudfront-vpc-origin-share"
   allow_external_principals = false
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-vpc-origin-share"
-  })
+  }
 
   depends_on = [aws_cloudfront_vpc_origin.internal_alb]
 }

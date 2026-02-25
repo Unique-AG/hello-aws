@@ -1,5 +1,5 @@
 resource "aws_security_group" "github_runners" {
-  #trivy:ignore:AVD-AWS-0104 Runners require HTTPS egress to GitHub API and package registries
+  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
   count = var.enable_github_runners ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"
@@ -24,9 +24,9 @@ resource "aws_security_group" "github_runners" {
     description = "HTTPS to VPC endpoints"
   }
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-github-runners-sg"
-  })
+  }
 }
 
 resource "aws_subnet" "github_runners" {
@@ -36,10 +36,10 @@ resource "aws_subnet" "github_runners" {
   cidr_block        = cidrsubnet(var.vpc_cidr, local.subnet_allocations.runners.newbits, local.subnet_allocations.runners.start + count.index) # /26 subnets, non-overlapping
   availability_zone = local.availability_zones[count.index]
 
-  tags = merge(local.tags, {
+  tags = {
     Name = "${module.naming.id}-github-runners-${local.availability_zones[count.index]}"
     Type = "github-runners"
-  })
+  }
 }
 
 resource "aws_route_table_association" "github_runners" {
@@ -67,7 +67,6 @@ resource "aws_iam_role" "github_runners" {
     ]
   })
 
-  tags = local.tags
 }
 
 resource "aws_iam_role_policy" "github_runners" {

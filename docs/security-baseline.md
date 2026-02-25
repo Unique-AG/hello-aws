@@ -66,6 +66,15 @@ This is a living document. Security posture is being hardened on an ongoing basi
 | CKV_AWS_290 | `speech`, `aws_lb_controller` | Same rationale as CKV_AWS_111 — write actions that either lack resource-level support (Transcribe) or require dynamic resource creation (LB controller) |
 | CKV_AWS_355 | `cert_manager_route53`, `speech`, `aws_lb_controller` | `cert_manager_route53`: `ListHostedZones` and `ListHostedZonesByName` do not support resource-level constraints (AWS API limitation). `speech` and `aws_lb_controller`: same rationale as CKV_AWS_111 |
 | CKV_AWS_356 | `cert_manager_route53`, `speech`, `aws_lb_controller` | Same resources as CKV_AWS_355 — checkov flags `*` for actions it considers restrictable, but these are either genuinely unscopable (Route53 List, Transcribe streaming) or dynamically managed (LB controller) |
+| CKV_AWS_341 | `aws_launch_template.eks_nodes` | IMDS hop limit set to 2 — required for EKS. Pods access the instance metadata service through the node's network namespace, adding one network hop. AWS recommends `http_put_response_hop_limit = 2` for containerized workloads. IMDSv2 (`http_tokens = required`) is enforced. |
+
+### 06-applications
+
+#### Helm Values
+
+| Setting | Chart | Rationale |
+|---|---|---|
+| `global.security.allowInsecureImages: true` | `rabbitmq-operator` | Bitnami legacy images (`bitnamilegacy/rabbitmq-cluster-operator`, `bitnamilegacy/rmq-messaging-topology-operator`) are not signed. Cosign signature verification fails for these images. **Remediation: migrate to signed Bitnami images or a private registry with enforced signing before production.** |
 
 ## Sandbox Environment Relaxations
 

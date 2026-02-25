@@ -43,8 +43,8 @@ eks_node_groups = {
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
-  "example.azurecr.io",  # Your Azure Container Registry URL
-  "example",             # ACR short alias (extracted from URL)
+  "example.azurecr.io", # Your Azure Container Registry URL
+  "example",            # ACR short alias (extracted from URL)
   "quay.io",
 ]
 
