@@ -201,7 +201,7 @@ resource "aws_lb_listener" "cloudfront_https" {
 # CloudFront handles TLS termination, so HTTP is sufficient for VPC Origin
 resource "aws_lb_listener" "cloudfront_http" {
   #checkov:skip=CKV_AWS_2: see docs/security-baseline.md
-  #trivy:ignore:AVD-AWS-0054 CloudFront handles TLS termination; HTTP is sufficient for VPC Origin
+  #trivy:ignore:AVD-AWS-0054 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   load_balancer_arn = aws_lb.cloudfront[0].arn
@@ -266,7 +266,7 @@ resource "aws_security_group_rule" "alb_websocket_http_egress" {
 # Public ALB for WebSocket traffic
 resource "aws_lb" "websocket" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
-  #trivy:ignore:AVD-AWS-0053 Public-facing by design for WebSocket traffic from clients
+  #trivy:ignore:AVD-AWS-0053 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name               = "${module.naming.id_short}-ws-alb"

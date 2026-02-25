@@ -76,8 +76,8 @@ resource "aws_iam_role" "connectivity_account" {
 }
 
 resource "aws_iam_role_policy" "connectivity_transit_gateway" {
-  #checkov:skip=CKV_AWS_290: EC2 Describe and transit gateway actions require Resource *
-  #checkov:skip=CKV_AWS_355: EC2 Describe and transit gateway actions require Resource *
+  #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
   count = var.enable_connectivity_account_role && var.connectivity_account_id != null ? 1 : 0
 
   name = "${module.naming.id}-connectivity-transit-gateway-policy"
