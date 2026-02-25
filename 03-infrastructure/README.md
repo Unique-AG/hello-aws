@@ -150,7 +150,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### Ingress NLB
 
-- **Security Group**: Inbound HTTP/HTTPS from VPC (ALBs), outbound to EKS pods (VPC CIDR)
+- **Security Group**: Inbound HTTP/HTTPS from CloudFront ALB and WebSocket ALB (SG-scoped rules), outbound to EKS pods (primary + secondary CIDR when enabled)
 - **Network Load Balancer**: Internal, cross-zone enabled, private subnets
 - **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
 - **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group

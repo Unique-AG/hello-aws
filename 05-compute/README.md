@@ -21,7 +21,7 @@ The EKS cluster is configured for **private-only API access** with IAM-based aut
 - **KMS Encryption**: Cluster secrets encrypted with the customer-managed general KMS key from infrastructure layer
 - **Control Plane Logging**: All 5 log types (`api`, `audit`, `authenticator`, `controllerManager`, `scheduler`) to CloudWatch
 - **Private Endpoints**: API server accessible only from within the VPC; public access disabled
-- **Security Groups**: Cluster SG allows 443 from VPC endpoints SG, nodes SG, and management server SG; egress restricted to VPC CIDR. If ingress NLB exists, the EKS managed cluster SG also allows inbound from NLB SG for health checks.
+- **Security Groups**: Cluster SG allows 443 from VPC endpoints SG, nodes SG, and management server SG; egress restricted to VPC CIDR. Nodes SG uses standalone `aws_vpc_security_group_*_rule` resources (self, VPC CIDR ingress; HTTPS egress to VPC), attached to nodes via launch template. If ingress NLB exists, the EKS managed cluster SG also allows inbound from NLB SG for health checks.
 
 ### Node Groups
 
@@ -103,7 +103,8 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 - **Cluster**: Private endpoint, KMS-encrypted secrets, API-only auth mode, 5 control plane log types
 - **Access Entries**: Management server (cluster admin) + SandboxAdministrator (sbx-only, cluster admin)
-- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server; NLB if present) + Nodes SG (all TCP from VPC CIDR, self, cluster)
+- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server; NLB if present) + Nodes SG (standalone rules: self, VPC CIDR, cluster; attached via launch template)
+- **Launch Template**: Per node group — attaches nodes SG, encrypted gp3 EBS (KMS), IMDSv2 enforced (hop limit 2)
 - **CloudWatch Log Group**: `/aws/eks/eks-{naming-id}/cluster`, KMS-encrypted, configurable retention
 
 ### EKS Node Groups
@@ -141,7 +142,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Network Isolation
 
 - **EKS**: Private endpoint only, no public API access
-- **Nodes**: Private subnets, security group restricted to VPC CIDR
+- **Nodes**: Private subnets, standalone SG rules (self, VPC CIDR, cluster), attached via launch template
 - **VPC Endpoint**: Private access to EKS API without internet
 
 ### Access Control
