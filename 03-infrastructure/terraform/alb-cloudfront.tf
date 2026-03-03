@@ -143,10 +143,10 @@ data "dns_a_record_set" "ingress_nlb" {
 }
 
 resource "aws_lb_target_group_attachment" "ingress_nlb" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? var.availability_zone_count : 0
 
   target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
-  target_id        = each.value
+  target_id        = data.dns_a_record_set.ingress_nlb[0].addrs[count.index]
   port             = 80
 }
 
@@ -315,10 +315,10 @@ resource "aws_lb_target_group" "websocket_ingress" {
 
 # Register Ingress NLB IPs as targets for WebSocket ALB
 resource "aws_lb_target_group_attachment" "websocket_ingress" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? var.availability_zone_count : 0
 
   target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
-  target_id        = each.value
+  target_id        = data.dns_a_record_set.ingress_nlb[0].addrs[count.index]
   port             = 80
 }
 

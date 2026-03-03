@@ -182,6 +182,15 @@ resource "aws_vpc_security_group_egress_rule" "eks_cluster_to_vpc" {
   cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
+resource "aws_vpc_security_group_egress_rule" "eks_cluster_to_nodes" {
+  security_group_id            = aws_security_group.eks_cluster.id
+  description                  = "Allow outbound to nodes for kubelet and webhooks"
+  from_port                    = 1025
+  to_port                      = 65535
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
 # Allow inbound from management server to cluster (if management server exists)
 resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_management_server" {
   count = try(data.terraform_remote_state.infrastructure.outputs.management_server_security_group_id, null) != null ? 1 : 0
@@ -226,13 +235,81 @@ resource "aws_vpc_security_group_ingress_rule" "eks_nodes_from_vpc" {
   cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
-resource "aws_vpc_security_group_egress_rule" "eks_nodes_https_to_vpc" {
+# Node egress — primary VPC CIDR (all TCP for pod/service/DNS/kubelet traffic)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_vpc" {
   security_group_id = aws_security_group.eks_nodes.id
-  description       = "Allow HTTPS outbound to VPC"
+  description       = "Allow all TCP outbound to VPC primary CIDR"
+  from_port         = 0
+  to_port           = 65535
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# Node egress — secondary CIDR for pod networking (VPC CNI assigns pod IPs here)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_secondary_cidr" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow all TCP outbound to VPC secondary CIDR (pod networking)"
+  from_port         = 0
+  to_port           = 65535
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.secondary_cidr
+}
+
+# Node egress — HTTPS to EKS control plane (via SG reference, covers private endpoint)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_cluster" {
+  security_group_id            = aws_security_group.eks_nodes.id
+  description                  = "Allow HTTPS outbound to EKS cluster control plane"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_cluster.id
+}
+
+# Node egress — IMDS (instance metadata service for IAM credentials)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_imds" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow outbound to EC2 instance metadata service"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "169.254.169.254/32"
+}
+
+# Node ingress — DNS (UDP) from VPC (cross-node CoreDNS traffic)
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_dns_udp" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow DNS (UDP) inbound from VPC"
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "udp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# Node egress — DNS (UDP) to VPC DNS resolver
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_dns_udp" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow DNS (UDP) outbound to VPC"
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "udp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# Node egress — S3 via gateway endpoint (ECR image layers are stored in S3)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_s3" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow HTTPS outbound to S3 (ECR image layers)"
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.s3.id
+}
+
+data "aws_ec2_managed_prefix_list" "s3" {
+  filter {
+    name   = "prefix-list-name"
+    values = ["com.amazonaws.${var.aws_region}.s3"]
+  }
 }
 
 # Security Group Rule: Allow inbound from Ingress NLB to EKS managed cluster SG

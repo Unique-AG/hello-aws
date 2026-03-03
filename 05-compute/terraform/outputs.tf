@@ -167,9 +167,4 @@ output "pod_identity_aws_lb_controller_role_arn" {
   value       = aws_iam_role.aws_lb_controller.arn
 }
 
-# VPC Endpoints
-output "eks_endpoint_id" {
-  description = "ID of the EKS Interface Endpoint"
-  value       = var.enable_eks_endpoint ? aws_vpc_endpoint.eks[0].id : null
-}
 

@@ -155,6 +155,18 @@ variable "enable_sts_endpoint" {
   default     = true
 }
 
+variable "enable_eks_endpoint" {
+  description = "Enable EKS Interface Endpoint (required for internal-only EKS deployments)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_eks_auth_endpoint" {
+  description = "Enable EKS Auth Interface Endpoint (required for EKS Pod Identity token exchange)"
+  type        = bool
+  default     = true
+}
+
 variable "enable_ec2_endpoint" {
   description = "Enable EC2 Interface Endpoint (required for EC2 API access from management server)"
   type        = bool

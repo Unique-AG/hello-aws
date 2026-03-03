@@ -309,12 +309,6 @@ output "transit_gateway_attachment_arn" {
   value       = try(aws_ec2_transit_gateway_vpc_attachment.main[0].arn, null)
 }
 
-# Cross-Account IAM Outputs
-output "connectivity_account_read_only_role_arn" {
-  description = "ARN of the IAM role that allows the connectivity account to discover resources"
-  value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
-}
-
 #######################################
 # Ingress NLB Outputs
 #######################################

@@ -31,6 +31,9 @@ locals {
     ingress_nlb_security_group_id            = try(data.terraform_remote_state.infrastructure.outputs.ingress_nlb_security_group_id, null)
   }
 
+  # Secondary CIDR for EKS pod networking (must match infrastructure layer)
+  secondary_cidr = "100.64.0.0/20"
+
   # ACR alias extracted from registry URL (e.g., "uniqueapp" from "uniqueapp.azurecr.io")
   acr_alias = var.acr_registry_url != "" ? split(".azurecr.io", var.acr_registry_url)[0] : ""
 

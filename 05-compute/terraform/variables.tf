@@ -208,13 +208,6 @@ variable "ecr_pull_through_cache_upstream_urls" {
   # Note: ACR URLs are dynamically added via locals based on acr_registry_url variable
 }
 
-# VPC Endpoints Configuration
-variable "enable_eks_endpoint" {
-  description = "Enable EKS Interface Endpoint (required for internal-only EKS deployments)"
-  type        = bool
-  default     = true
-}
-
 # Route 53 DNS Configuration
 # Route 53 configuration is managed in infrastructure layer
 # EKS cluster endpoint DNS resolution is handled automatically by EKS-managed private hosted zone
