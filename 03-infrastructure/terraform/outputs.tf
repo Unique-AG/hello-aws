@@ -392,3 +392,8 @@ output "cloudfront_vpc_origin_arn" {
   value       = try(aws_cloudfront_vpc_origin.internal_alb[0].arn, null)
 }
 
+output "github_runners_codebuild_project_name" {
+  description = "Name of the CodeBuild project for GitHub runners"
+  value       = var.enable_github_runners ? aws_codebuild_project.github_runners[0].name : null
+}
+

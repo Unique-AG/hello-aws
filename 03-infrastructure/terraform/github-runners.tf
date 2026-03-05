@@ -138,3 +138,27 @@ resource "aws_iam_role_policy" "github_runners" {
     ]
   })
 }
+
+resource "aws_codebuild_project" "github_runners" {
+  count        = var.enable_github_runners ? 1 : 0
+  name         = "${module.naming.id}-github-runners"
+  service_role = aws_iam_role.github_runners[0].arn
+
+  artifacts { type = "NO_ARTIFACTS" }
+  environment {
+    compute_type    = "BUILD_GENERAL1_SMALL"
+    image           = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
+    type            = "LINUX_CONTAINER"
+    privileged_mode = false
+  }
+  source {
+    type      = "NO_SOURCE"
+    buildspec = "version: 0.2\nphases:\n  build:\n    commands:\n      - echo managed-by-github-actions"
+  }
+  vpc_config {
+    vpc_id             = aws_vpc.main.id
+    subnets            = aws_subnet.github_runners[*].id
+    security_group_ids = [aws_security_group.github_runners[0].id]
+  }
+  tags = { Name = "${module.naming.id}-github-runners" }
+}
