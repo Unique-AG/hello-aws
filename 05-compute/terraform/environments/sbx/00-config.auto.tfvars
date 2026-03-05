@@ -48,5 +48,3 @@ ecr_pull_through_cache_upstream_registries = [
   "quay.io",
 ]
 
-# VPC Endpoints
-enable_eks_endpoint = true
