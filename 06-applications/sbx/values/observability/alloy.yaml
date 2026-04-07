@@ -1,0 +1,35 @@
+serviceMonitor:
+  enabled: true
+
+controller:
+  priorityClassName: system-node-critical
+  tolerations:
+    - key: scalability
+      operator: Exists
+      effect: NoSchedule
+    - key: lifecycle
+      operator: Exists
+      effect: NoSchedule
+
+alloy:
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+  mounts:
+    varlog: true
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+  extraEnv:
+    - name: LOKI_ENDPOINT
+      value: "http://loki.unique.svc.cluster.local:3100/loki/api/v1/push"
+  configMap:
+    create: false
+    name: alloy-config

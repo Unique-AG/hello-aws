@@ -8,14 +8,24 @@ env:
   BENCHMARKS_PER_MINUTE_PER_PROCESS: "1"
   CACHE_REDIS_DB: "3"
   DATABASE_CONNECTION_POOL_LIMIT: "30"
+  ENABLE_ANALYTICS_CHAT_DETAILED_INTERACTIONS_PRISMA_CURSOR: "true"
   ENABLE_CLIENT_INSIGHT_SHIPPER: "true"
+  ENABLE_DOWNLOAD_UPLOAD_FILES_AS_STREAM: "true"
+  ENABLE_UPLOAD_CHAT_INTERACTIONS_AS_STREAM: "true"
   EXPORT_PROMPTS_ACCESS_CONTROL: "true"
+  APP_REPOSITORY_URL: http://backend-service-app-repository.unique.svc
+  ASSISTANT_CORE_API_URL: http://assistants-core.unique.svc:8081/core
   INGESTION_API_URL: http://backend-service-ingestion.unique.svc
   LITELLM_ENDPOINT: http://litellm.unique.svc:4000
+  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-4-6,litellm:anthropic-claude-sonnet-4-6,litellm:qwen-3-235B-A22B"
   LOG_LEVEL: info
   MAX_HEAP_MB: "3700"
   MIN_NO_OF_MESSAGES_BY_USER_BEFORE_NPS_TRIGGER: "30"
+  PUBSUB_BACKEND: redis
   PUBSUB_REDIS_DB: "2"
+  FEATURE_FLAG_ENABLE_MCP_UN_11963: "true"
+  FEATURE_FLAG_ENABLE_MCP_ADMIN_UN_14099: "true"
+  MCP_POLICY_MODE: "UNRESTRICTED"
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
   INTERNAL_MODULES_CONFIG: >-
     [
@@ -37,7 +47,10 @@ env:
     {"name": "EarningCallsBeta", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/earning_calls"},
     {"name": "HallucinationLevelEvaluation", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/evaluations/hallucination-level"},
     {"name": "DueDiligence", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/magic_table_dd"},
-    {"name": "RfpAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/rfp_agent"}
+    {"name": "RfpAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/rfp_agent"},
+    {"name": "UniqueAi", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/unique_ai"},
+    {"name": "UniqueAIV2", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/unique_ai_v2"},
+    {"name": "KycReviewAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/kyc_review_agent"}
     ]
 
 image:

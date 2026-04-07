@@ -1,0 +1,14 @@
+spec:
+  name: alloy
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: deploy/sbx
+      ref: values
+    - chart: alloy
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: 0.12.0
+      helm:
+        releaseName: alloy
+        valueFiles:
+          - $values/06-applications/sbx/values/observability/alloy.yaml

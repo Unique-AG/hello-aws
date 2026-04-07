@@ -176,6 +176,17 @@ output "bedrock_available_models" {
   value       = data.aws_bedrock_foundation_models.available.model_summaries[*].model_id
 }
 
+output "s3_bucket_observability_id" {
+  description = "ID of the observability S3 bucket"
+  value       = aws_s3_bucket.observability.id
+}
+
+output "s3_bucket_observability_arn" {
+  description = "ARN of the observability S3 bucket"
+  value       = aws_s3_bucket.observability.arn
+}
+
+# Bedrock
 output "bedrock_inference_profile_arns" {
   description = "Map of application inference profile names to their ARNs"
   value       = { for k, v in aws_bedrock_inference_profile.model : k => v.arn }

@@ -1,0 +1,59 @@
+name: '[tf] Validate'
+on:
+  pull_request:
+    paths:
+      - '0[1-5]-*/**/*.tf'
+      - 'modules/**/*.tf'
+      - 'scripts/**'
+      - '.github/workflows/tf.validate.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - layer: bootstrap
+            dir: 01-bootstrap
+          - layer: governance
+            dir: 02-governance
+          - layer: infrastructure
+            dir: 03-infrastructure
+          - layer: data-and-ai
+            dir: 04-data-and-ai
+          - layer: compute
+            dir: 05-compute
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.14.0'
+      - name: fmt
+        run: terraform -chdir=${{ matrix.dir }}/terraform fmt -check -recursive
+      - name: init
+        run: terraform -chdir=${{ matrix.dir }}/terraform init -backend=false
+      - name: validate
+        run: terraform -chdir=${{ matrix.dir }}/terraform validate -no-color
+      - name: tflint
+        uses: terraform-linters/setup-tflint@v4
+      - run: |
+          tflint --init
+          tflint --chdir=${{ matrix.dir }}/terraform
+      - name: trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: ${{ matrix.dir }}/terraform
+          scanners: misconfig
+          severity: HIGH,CRITICAL
+          trivyignores: .trivyignore
+      - name: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: ${{ matrix.dir }}/terraform
+          framework: terraform
+          quiet: true

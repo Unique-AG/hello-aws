@@ -44,6 +44,9 @@ securityContext:
 serviceAccount:
   enabled: true
 
+prometheus:
+  enabled: false
+
 nodeSelector:
   scalability: steady
   lifecycle: persistent

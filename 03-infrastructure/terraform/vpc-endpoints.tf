@@ -93,10 +93,25 @@ resource "aws_vpc_endpoint" "s3" {
           "s3:DeleteObjectVersion"
         ]
         Resource = [
-          "arn:aws:s3:::s3-${module.naming.id}-application-data",
-          "arn:aws:s3:::s3-${module.naming.id}-application-data/*",
-          "arn:aws:s3:::s3-${module.naming.id}-ai-data",
-          "arn:aws:s3:::s3-${module.naming.id}-ai-data/*"
+          "arn:aws:s3:::s3-${module.naming.id}-application-data*",
+          "arn:aws:s3:::s3-${module.naming.id}-application-data*/*",
+          "arn:aws:s3:::s3-${module.naming.id}-ai-data*",
+          "arn:aws:s3:::s3-${module.naming.id}-ai-data*/*"
+        ]
+      },
+      {
+        Sid       = "AllowObservabilityData"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::s3-${module.naming.id}-observability*",
+          "arn:aws:s3:::s3-${module.naming.id}-observability*/*"
         ]
       },
       {

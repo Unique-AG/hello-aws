@@ -2,33 +2,28 @@
 # Admin account enabled for initial access (OIDC added in follow-up)
 nameOverride: argo
 global:
-  domain: <DOMAIN_ARGOCD>
+  domain: <DOMAIN_BASE>
 repoServer:
   extraArgs:
     - --repo-cache-expiration=15m
 server:
   ingress:
-    enabled: true
-    ingressClassName: kong
-    annotations:
-      cert-manager.io/cluster-issuer: letsencrypt-route53-dns
-    hosts:
-      - <DOMAIN_ARGOCD>
-    tls:
-      - secretName: argo-le-tls
-        hosts:
-          - <DOMAIN_ARGOCD>
+    enabled: false
 configs:
+  params:
+    server.basehref: /argo
+    server.rootpath: /argo
+    server.insecure: true
   cm:
     create: true
-    url: https://<DOMAIN_ARGOCD>
+    url: https://<DOMAIN_BASE>/argo
     admin.enabled: true
     timeout.reconciliation: 30s
   rbac:
-      create: true
-      policy.default: role:admin
-      scopes: '[roles]'
-      policy.csv: |
+    create: true
+    policy.default: role:admin
+    scopes: '[roles]'
+    policy.csv: |
         #################################################
         # Policy rules are in the form:
         #   p, subject, resource, action, object, effect

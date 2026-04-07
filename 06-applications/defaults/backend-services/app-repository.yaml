@@ -1,6 +1,7 @@
 env:
   LOG_LEVEL: info
   MAX_HEAP_MB: 400
+  SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
 hooks:
   migration:
     command: |

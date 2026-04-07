@@ -10,9 +10,9 @@ resources:
       algorithm: RS256
       allowed_iss:
         - https://<DOMAIN_IDENTITY>
-      # jwks_extra_headers: # This can be uncommented if you want to avoid hairpinning (going outisde of the cluster to reach Zitadel which is deployed in the same cluster)
-      #   forwarded: host=<DOMAIN_IDENTITY>
-      # jwks_uri: http://zitadel.unique.svc.cluster.local:8080/oauth/v2/keys
+      jwks_extra_headers:
+        forwarded: host=<DOMAIN_IDENTITY>
+      jwks_uri: http://zitadel.unique.svc.cluster.local:8080/oauth/v2/keys
       uri_param_names:
         - token
       zitadel_project_id: '<ZITADEL_PROJECT_ID>'
@@ -35,6 +35,7 @@ resources:
         global: "true"
     plugin: cors
     config:
+      credentials: true
       origins:
         - https://<DOMAIN_BASE>
         - https://<DOMAIN_IDENTITY>

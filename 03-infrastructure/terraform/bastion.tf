@@ -42,7 +42,7 @@ resource "aws_iam_role_policy" "ssm_instance_eks_access" {
           "eks:ListClusters"
         ]
         Resource = [
-          "arn:aws:eks:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster/${module.naming.id}-*"
+          "arn:aws:eks:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:cluster/${module.naming.id}-*"
         ]
       }
     ]
@@ -162,9 +162,9 @@ resource "aws_instance" "management_server" {
   # Associate public IP only if public access is enabled
   associate_public_ip_address = var.management_server_public_access
 
-  tags = {
+  tags = merge(module.naming.tags, {
     Name = "${module.naming.id}-management-server"
-  }
+  })
 }
 
 # Elastic IP for Management Server (if public access enabled)

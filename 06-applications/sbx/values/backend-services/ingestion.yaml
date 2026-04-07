@@ -7,13 +7,23 @@ image:
 
 env:
   AWS_REGION: <AWS_REGION>
+  # AZURE_OPENAI_API_ENDPOINT kept for LiteLLM compatibility (points to LiteLLM proxy)
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
-  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "false"
-  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "false"
+  FEATURE_FLAG_ENABLE_CAN_MANAGE_ACCESS_UN_11608: "false"
+  ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
+  ELASTICSEARCH_URL: https://elasticsearch-ingestion-es-http.unique.svc:9200
+  ELASTICSEARCH_USERNAME: elastic
+  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "true"
+  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "true"
   STORAGE_PROVIDER: s3
-  TRUSTED_DOMAINS: '["<TRUSTED_STORAGE_DOMAIN>"]'
+  TRUSTED_DOMAINS: '[]'
 
 envVars:
+  - name: ELASTICSEARCH_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: elasticsearch-ingestion-es-elastic-user
+        key: elastic
   - name: RABBITMQ_USERNAME
     valueFrom:
       secretKeyRef:
@@ -66,5 +76,12 @@ hooks:
     command: cd /home/node/app/services/node-ingestion; npx prisma migrate deploy;
     enabled: true
 
-volumeMounts: []
-volumes: []
+volumeMounts:
+  - name: elastic-certs
+    mountPath: /etc/ssl/elastic/ca.crt
+    readOnly: true
+    subPath: ca.crt
+volumes:
+  - name: elastic-certs
+    secret:
+      secretName: elasticsearch-ingestion-es-http-certs-public

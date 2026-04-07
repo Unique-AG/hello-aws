@@ -1,0 +1,107 @@
+name: '[tf] [sbx] Deploy'
+on:
+  push:
+    branches: [deploy/sbx]
+    paths: ['0[1-5]-*/**', 'modules/**', 'common.auto.tfvars']
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+env:
+  AWS_REGION: eu-central-2
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: ./.github/actions/terraform
+        with:
+          working_directory: 01-bootstrap/terraform
+          backend_config: environments/sbx/backend-config.hcl
+          var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
+          plan_name: sbx-bootstrap
+          apply_branch: deploy/sbx
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  governance:
+    needs: bootstrap
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: ./.github/actions/terraform
+        with:
+          working_directory: 02-governance/terraform
+          backend_config: environments/sbx/backend-config.hcl
+          var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
+          plan_name: sbx-governance
+          apply_branch: deploy/sbx
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  infrastructure:
+    needs: governance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: ./.github/actions/terraform
+        with:
+          working_directory: 03-infrastructure/terraform
+          backend_config: environments/sbx/backend-config.hcl
+          var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
+          plan_name: sbx-infrastructure
+          apply_branch: deploy/sbx
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  data-and-ai:
+    needs: infrastructure
+    runs-on: codebuild-${{ vars.CODEBUILD_PROJECT }}-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: ./.github/actions/terraform
+        with:
+          working_directory: 04-data-and-ai/terraform
+          backend_config: environments/sbx/backend-config.hcl
+          var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
+          plan_name: sbx-data-and-ai
+          apply_branch: deploy/sbx
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  compute:
+    needs: infrastructure
+    runs-on: codebuild-${{ vars.CODEBUILD_PROJECT }}-${{ github.run_id }}-${{ github.run_attempt }}
+    env:
+      TF_VAR_acr_username: ${{ secrets.TF_VAR_ACR_USERNAME }}
+      TF_VAR_acr_password: ${{ secrets.TF_VAR_ACR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - uses: ./.github/actions/terraform
+        with:
+          working_directory: 05-compute/terraform
+          backend_config: environments/sbx/backend-config.hcl
+          var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
+          plan_name: sbx-compute
+          apply_branch: deploy/sbx
+          github_token: ${{ secrets.GITHUB_TOKEN }}

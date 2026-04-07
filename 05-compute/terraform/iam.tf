@@ -621,3 +621,251 @@ resource "aws_eks_pod_identity_association" "aws_lb_controller" {
   service_account = "aws-load-balancer-controller"
   role_arn        = aws_iam_role.aws_lb_controller.arn
 }
+
+#######################################
+# Prometheus Role
+#######################################
+# Used by kube-prometheus-stack Prometheus for remote-write to AMP
+
+resource "aws_iam_role" "prometheus" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  name               = "${module.naming.id}-prometheus"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-prometheus"
+  }
+}
+
+data "aws_iam_policy_document" "prometheus" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "aps:RemoteWrite",
+      "aps:GetLabels",
+      "aps:GetSeries",
+      "aps:GetMetricMetadata",
+    ]
+    resources = [local.data_and_ai.prometheus_workspace_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "prometheus" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  name   = "aps-remote-write"
+  role   = aws_iam_role.prometheus[0].id
+  policy = data.aws_iam_policy_document.prometheus[0].json
+}
+
+resource "aws_eks_pod_identity_association" "prometheus" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "unique"
+  service_account = "kube-prometheus-stack-prometheus"
+  role_arn        = aws_iam_role.prometheus[0].arn
+}
+
+#######################################
+# Grafana Pod Role
+#######################################
+# Used by self-hosted Grafana for querying AMP and CloudWatch
+
+resource "aws_iam_role" "grafana_pod" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  name               = "${module.naming.id}-grafana-pod"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-grafana-pod"
+  }
+}
+
+data "aws_iam_policy_document" "grafana_pod" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "aps:QueryMetrics",
+      "aps:GetLabels",
+      "aps:GetSeries",
+      "aps:GetMetricMetadata",
+    ]
+    resources = [local.data_and_ai.prometheus_workspace_arn]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "cloudwatch:DescribeAlarmsForMetric",
+      "cloudwatch:ListMetrics",
+      "cloudwatch:GetMetricStatistics",
+      "cloudwatch:GetMetricData",
+    ]
+    resources = ["arn:aws:cloudwatch:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "logs:DescribeLogGroups",
+      "logs:GetLogGroupFields",
+      "logs:StartQuery",
+      "logs:StopQuery",
+      "logs:GetQueryResults",
+      "logs:GetLogEvents",
+    ]
+    resources = ["arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:*"]
+  }
+}
+
+resource "aws_iam_role_policy" "grafana_pod" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  name   = "aps-cloudwatch-read"
+  role   = aws_iam_role.grafana_pod[0].id
+  policy = data.aws_iam_policy_document.grafana_pod[0].json
+}
+
+resource "aws_eks_pod_identity_association" "grafana_pod" {
+  count = local.data_and_ai.prometheus_workspace_arn != null ? 1 : 0
+
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "unique"
+  service_account = "kube-prometheus-stack-grafana"
+  role_arn        = aws_iam_role.grafana_pod[0].arn
+}
+
+#######################################
+# Loki Role
+#######################################
+# Used by Loki for S3 log storage backend
+
+resource "aws_iam_role" "loki" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  name               = "${module.naming.id}-loki"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-loki"
+  }
+}
+
+data "aws_iam_policy_document" "loki" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = [local.data_and_ai.s3_bucket_observability_arn]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = ["${local.data_and_ai.s3_bucket_observability_arn}/*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "loki" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  name   = "s3-loki-storage"
+  role   = aws_iam_role.loki[0].id
+  policy = data.aws_iam_policy_document.loki[0].json
+}
+
+resource "aws_eks_pod_identity_association" "loki" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "unique"
+  service_account = "loki"
+  role_arn        = aws_iam_role.loki[0].arn
+}
+
+#######################################
+# Tempo Role
+#######################################
+# Used by Tempo for S3 trace storage backend
+
+resource "aws_iam_role" "tempo" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  name               = "${module.naming.id}-tempo"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-tempo"
+  }
+}
+
+data "aws_iam_policy_document" "tempo" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = [local.data_and_ai.s3_bucket_observability_arn]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+    ]
+    resources = ["${local.data_and_ai.s3_bucket_observability_arn}/tempo/*"]
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "tempo" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  name   = "s3-tempo-storage"
+  role   = aws_iam_role.tempo[0].id
+  policy = data.aws_iam_policy_document.tempo[0].json
+}
+
+resource "aws_eks_pod_identity_association" "tempo" {
+  count = local.data_and_ai.s3_bucket_observability_arn != null ? 1 : 0
+
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "unique"
+  service_account = "tempo"
+  role_arn        = aws_iam_role.tempo[0].arn
+}

@@ -9,10 +9,10 @@ resource "aws_s3_bucket" "application_data" {
   bucket        = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
-  tags = {
+  tags = merge(module.naming.tags, {
     Name    = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
     Purpose = "application-data"
-  }
+  })
 }
 
 resource "aws_s3_bucket_versioning" "application_data" {
@@ -137,10 +137,10 @@ resource "aws_s3_bucket" "ai_data" {
   bucket        = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
-  tags = {
+  tags = merge(module.naming.tags, {
     Name    = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
     Purpose = "ai-data"
-  }
+  })
 }
 
 resource "aws_s3_bucket_versioning" "ai_data" {

@@ -289,6 +289,20 @@ variable "rds_ca_bundle_secret_name" {
   default     = "rds-ca-bundle"
 }
 
+variable "aurora_master_password" {
+  description = "Aurora master password (ephemeral — never stored in state or plan output)"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "set_aurora_master_password" {
+  description = "Set to true when providing aurora_master_password to update the password"
+  type        = bool
+  default     = false
+}
+
 variable "aurora_instance_class" {
   description = "Instance class for Aurora cluster instances"
   type        = string

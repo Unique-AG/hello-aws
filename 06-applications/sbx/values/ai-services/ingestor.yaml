@@ -10,6 +10,9 @@ env:
 
 secretProvider: null
 
+podSecurityContext:
+  fsGroup: 1000
+
 routes:
   skipCrdCheck: true
 

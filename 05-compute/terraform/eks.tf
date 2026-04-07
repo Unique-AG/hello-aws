@@ -64,6 +64,8 @@ resource "aws_eks_cluster" "main" {
     authentication_mode = "API"
   }
 
+  tags = module.naming.tags
+
   # CloudWatch log group for EKS cluster logs
   depends_on = [
     aws_cloudwatch_log_group.eks_cluster,
@@ -485,6 +487,21 @@ resource "aws_launch_template" "eks_nodes" {
     http_endpoint               = "enabled"
     http_tokens                 = "required"
     http_put_response_hop_limit = 2
+  }
+
+  # Propagate tags to instances and volumes to satisfy SCP cost-tag requirements
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(local.tags, {
+      Name = "${module.naming.id}-${each.key}"
+    })
+  }
+
+  tag_specifications {
+    resource_type = "volume"
+    tags = merge(local.tags, {
+      Name = "${module.naming.id}-${each.key}"
+    })
   }
 
   tags = {

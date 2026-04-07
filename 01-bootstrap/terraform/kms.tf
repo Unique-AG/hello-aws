@@ -31,7 +31,7 @@ data "aws_iam_policy_document" "kms_terraform_state" {
     condition {
       test     = "StringEquals"
       variable = "kms:ViaService"
-      values   = ["s3.${data.aws_region.current.name}.amazonaws.com"]
+      values   = ["s3.${data.aws_region.current.id}.amazonaws.com"]
     }
   }
 
@@ -49,13 +49,13 @@ data "aws_iam_policy_document" "kms_terraform_state" {
 
     principals {
       type        = "Service"
-      identifiers = ["logs.${data.aws_region.current.name}.amazonaws.com"]
+      identifiers = ["logs.${data.aws_region.current.id}.amazonaws.com"]
     }
 
     condition {
       test     = "ArnEquals"
       variable = "kms:EncryptionContext:aws:logs:arn"
-      values   = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+      values   = ["arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
     }
   }
 

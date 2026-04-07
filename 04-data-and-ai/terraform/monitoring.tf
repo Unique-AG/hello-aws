@@ -117,7 +117,7 @@ data "aws_iam_policy_document" "grafana_vpc" {
     condition {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
-      values   = [data.aws_region.current.name]
+      values   = [data.aws_region.current.id]
     }
   }
 }
@@ -173,7 +173,7 @@ data "aws_iam_policy_document" "grafana_cloudwatch" {
       "cloudwatch:GetMetricData",
       "cloudwatch:GetInsightRuleReport",
     ]
-    resources = ["arn:aws:cloudwatch:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+    resources = ["arn:aws:cloudwatch:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
   }
 
   statement {
@@ -186,7 +186,7 @@ data "aws_iam_policy_document" "grafana_cloudwatch" {
       "logs:GetQueryResults",
       "logs:GetLogEvents",
     ]
-    resources = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+    resources = ["arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
   }
 }
 

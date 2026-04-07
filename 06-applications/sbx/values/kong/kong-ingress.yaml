@@ -81,3 +81,47 @@ resources:
         - hosts:
             - <DOMAIN_IDENTITY>
           secretName: kong-zitadel-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-grafana
+      annotations:
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "false"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_BASE>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kube-prometheus-stack-grafana
+                    port:
+                      number: 80
+                path: /grafana
+                pathType: Prefix
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-argocd
+      annotations:
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "false"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_BASE>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: argo-server
+                    port:
+                      number: 80
+                path: /argo
+                pathType: Prefix
