@@ -82,6 +82,10 @@ aws:
     clusterName: "<EKS_CLUSTER_NAME>"
   vpc:
     id: "<VPC_ID>"
+  route53:
+    privateZoneId: "<ROUTE53_PRIVATE_ZONE_ID>"
+  connectivity:
+    accountId: "<CONNECTIVITY_ACCOUNT_ID>"
   nlb:
     targetGroupHttpArn: "<TARGET_GROUP_HTTP_ARN>"
     targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
@@ -141,6 +145,8 @@ FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
+FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
+FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
@@ -187,6 +193,8 @@ TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
 TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
+TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
+TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
@@ -200,6 +208,10 @@ TO_ECR_PRIMARY="${TO_ECR_PRIMARY_ACCOUNT}.dkr.ecr.${TO_AWS_REGION}.amazonaws.com
 TO_ECR_THIRDPARTY="${TO_ECR_THIRDPARTY_ACCOUNT}.dkr.ecr.${TO_AWS_REGION}.amazonaws.com"
 TO_ECR_PRIMARY_FULL="${TO_ECR_PRIMARY}/${TO_ECR_PRIMARY_PREFIX}"
 TO_ECR_THIRDPARTY_FULL="${TO_ECR_THIRDPARTY}/${TO_ECR_THIRDPARTY_PREFIX}"
+
+# ACR (Azure Container Registry) derived values — for tfvars ECR pull-through cache entries
+TO_ACR_URL="${TO_ECR_PRIMARY_PREFIX}.azurecr.io"
+TO_ACR_ALIAS="$TO_ECR_PRIMARY_PREFIX"
 
 # ------------------------------------------------------------------
 # Helper: sed replacement (portable macOS + Linux)
@@ -237,6 +249,28 @@ replace_all() {
     -not -name 'instance-config.yaml' \
     -not -name '.instance-applied.yaml' \
     -print0)
+}
+
+# Replace a string in all tfvars files under the project's terraform layer
+# environment directories (e.g., 03-infrastructure/terraform/environments/sbx/)
+PROJECT_ROOT="$(cd "$BASE_DIR/.." && pwd)"
+replace_all_tfvars() {
+  local old="$1"
+  local new="$2"
+
+  if [[ "$old" == "$new" ]]; then
+    return 0
+  fi
+
+  local old_escaped new_escaped
+  old_escaped=$(printf '%s\n' "$old" | sed 's/[&/\]/\\&/g')
+  new_escaped=$(printf '%s\n' "$new" | sed 's/[&/\]/\\&/g')
+
+  while IFS= read -r -d '' file; do
+    if grep -qF "$old" "$file"; then
+      do_sed "s|${old_escaped}|${new_escaped}|g" "$file"
+    fi
+  done < <(find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0)
 }
 
 # ------------------------------------------------------------------
@@ -337,6 +371,47 @@ replace_all "$FROM_ZITADEL_CLIENT_ID" "$TO_ZITADEL_CLIENT_ID"
 
 echo "  Zitadel org ID ..."
 replace_all "$FROM_ZITADEL_ORG_ID" "$TO_ZITADEL_ORG_ID"
+
+# ------------------------------------------------------------------
+# Terraform layer config replacements (00-config.auto.tfvars)
+# ------------------------------------------------------------------
+echo ""
+echo "Configuring Terraform layer configs ..."
+
+# Tfvars files use concrete dummy values on main (not angle-bracket tokens).
+# Determine the correct "from" values based on whether state exists.
+if [[ -f "$STATE" ]]; then
+  # State exists: tfvars were previously configured with real values
+  TFVARS_FROM_DOMAIN_BASE="$FROM_DOMAIN_BASE"
+  TFVARS_FROM_ROUTE53_ZONE_ID="$FROM_ROUTE53_PRIVATE_ZONE_ID"
+  TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="$FROM_CONNECTIVITY_ACCOUNT_ID"
+  TFVARS_FROM_ACR_URL="${FROM_ECR_PRIMARY_PREFIX}.azurecr.io"
+  TFVARS_FROM_ACR_ALIAS="$FROM_ECR_PRIMARY_PREFIX"
+else
+  # Fresh clone: tfvars contain these example/dummy values
+  TFVARS_FROM_DOMAIN_BASE="sbx.example.com"
+  TFVARS_FROM_ROUTE53_ZONE_ID="Z0000000000000000000"
+  TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="000000000000"
+  TFVARS_FROM_ACR_URL="example.azurecr.io"
+  TFVARS_FROM_ACR_ALIAS="example"
+fi
+
+# Order matters: replace domain first (sbx.example.com contains "example"),
+# then ACR URL (example.azurecr.io contains "example"), then ACR alias last.
+echo "  Base domain (tfvars) ..."
+replace_all_tfvars "$TFVARS_FROM_DOMAIN_BASE" "$TO_DOMAIN_BASE"
+
+echo "  Route 53 private zone ID ..."
+replace_all_tfvars "$TFVARS_FROM_ROUTE53_ZONE_ID" "$TO_ROUTE53_PRIVATE_ZONE_ID"
+
+echo "  Connectivity account ID ..."
+replace_all_tfvars "$TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID" "$TO_CONNECTIVITY_ACCOUNT_ID"
+
+echo "  ACR registry URL ..."
+replace_all_tfvars "$TFVARS_FROM_ACR_URL" "$TO_ACR_URL"
+
+echo "  ACR alias ..."
+replace_all_tfvars "$TFVARS_FROM_ACR_ALIAS" "$TO_ACR_ALIAS"
 
 # ------------------------------------------------------------------
 # Save applied state
