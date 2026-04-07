@@ -26,6 +26,10 @@ aws:
     clusterName: <EKS_CLUSTER_NAME>    # terraform output -raw eks_cluster_name (compute layer)
   vpc:
     id: <VPC_ID>                       # terraform output -raw vpc_id (infrastructure layer)
+  route53:
+    privateZoneId: <ROUTE53_PRIVATE_ZONE_ID>       # terraform output -raw route53_private_zone_id (infrastructure layer)
+  connectivity:
+    accountId: "<CONNECTIVITY_ACCOUNT_ID>"         # Connectivity/networking account ID for RAM sharing
   nlb:
     targetGroupHttpArn: <TARGET_GROUP_HTTP_ARN>    # terraform output -raw ingress_nlb_target_group_http_arn
     targetGroupHttpsArn: <TARGET_GROUP_HTTPS_ARN>  # terraform output -raw ingress_nlb_target_group_https_arn

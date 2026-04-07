@@ -2,8 +2,8 @@ spec:
   name: aws-lb-controller
   autoSync: true
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
+    - repoURL: 'https://github.com/unique-ag/hello-aws'
+      targetRevision: deploy/rc-06-applications
       ref: values
     - chart: aws-load-balancer-controller
       repoURL: https://aws.github.io/eks-charts

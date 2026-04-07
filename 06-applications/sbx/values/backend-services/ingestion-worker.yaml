@@ -2,19 +2,19 @@
 # Uses AWS Bedrock for AI and S3 for storage
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion-worker
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion-worker
   tag: "2026.06.1"
 
 env:
   LLM_PROVIDER: bedrock
-  AWS_REGION: <AWS_REGION>
+  AWS_REGION: eu-central-2
   AZURE_OPENAI_API_DEPLOYMENT_NAME: text-embedding-ada-002
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   AZURE_OPENAI_API_VERSION: "2023-05-15"
   EMBEDDING_DIMENSION: "1536"
   QDRANT_URL: http://qdrant-headless.unique.svc.cluster.local:6333
   STORAGE_PROVIDER: s3
-  TRUSTED_DOMAINS: '["<TRUSTED_STORAGE_DOMAIN>"]'
+  TRUSTED_DOMAINS: '["*.amazonaws.com"]'
 
 serviceAccount:
   enabled: true

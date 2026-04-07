@@ -2,7 +2,7 @@ spec:
   name: kube-prometheus-stack
   autoSync: false
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
+    - repoURL: 'https://github.com/unique-ag/hello-aws'
       targetRevision: deploy/sbx
       ref: values
     - chart: kube-prometheus-stack

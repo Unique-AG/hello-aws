@@ -2,12 +2,11 @@
 # Uses S3 for storage and LiteLLM for embeddings
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion
   tag: "2026.06.1"
 
 env:
-  AWS_REGION: <AWS_REGION>
-  # AZURE_OPENAI_API_ENDPOINT kept for LiteLLM compatibility (points to LiteLLM proxy)
+  AWS_REGION: eu-central-2
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   FEATURE_FLAG_ENABLE_CAN_MANAGE_ACCESS_UN_11608: "false"
   ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
@@ -16,7 +15,7 @@ env:
   FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "true"
   FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "true"
   STORAGE_PROVIDER: s3
-  TRUSTED_DOMAINS: '[]'
+  TRUSTED_DOMAINS: '["*.amazonaws.com"]'
 
 envVars:
   - name: ELASTICSEARCH_PASSWORD

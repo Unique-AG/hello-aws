@@ -2,7 +2,7 @@
 # Admin account enabled for initial access (OIDC added in follow-up)
 nameOverride: argo
 global:
-  domain: <DOMAIN_BASE>
+  domain: sbx.rbcn.ai
 repoServer:
   extraArgs:
     - --repo-cache-expiration=15m
@@ -16,7 +16,7 @@ configs:
     server.insecure: true
   cm:
     create: true
-    url: https://<DOMAIN_BASE>/argo
+    url: https://sbx.rbcn.ai/argo
     admin.enabled: true
     timeout.reconciliation: 30s
   rbac:

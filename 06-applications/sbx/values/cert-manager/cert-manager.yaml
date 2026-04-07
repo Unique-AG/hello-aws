@@ -10,7 +10,7 @@ image:
 #   scalability: steady
 #   lifecycle: persistent
 # Use external recursive nameservers for DNS-01 challenge verification
-# Required because the private hosted zone <DOMAIN_BASE> shadows the public
+# Required because the private hosted zone sbx.rbcn.ai shadows the public
 # zone's NS records when resolving from inside the cluster
 extraArgs:
   - --dns01-recursive-nameservers=8.8.8.8:53,1.1.1.1:53

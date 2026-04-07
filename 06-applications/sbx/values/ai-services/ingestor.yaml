@@ -1,14 +1,14 @@
 # AWS-specific configuration for Docling ingestor service
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/ingestors
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/ingestors
   tag: "2026.06.1"
 
 env:
   REDIS_PORT: "6380"
   REDIS_USE_TLS: "true"
 
-secretProvider: null
+secretProvider: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
 
 podSecurityContext:
   fsGroup: 1000
@@ -19,7 +19,7 @@ routes:
 serviceAccount:
   create: true
 
-nodeSelector: null
+nodeSelector: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
 
 podAnnotations:
   reloader.stakater.com/auto: "true"

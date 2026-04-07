@@ -63,11 +63,11 @@ gateway:
     proxy:
       enabled: true
       clusterIssuer: letsencrypt-route53-dns
-      commonName: <DOMAIN_BASE>
+      commonName: sbx.rbcn.ai
       dnsNames:
-        - <DOMAIN_BASE>
-        - <DOMAIN_API>
-        - <DOMAIN_IDENTITY>
+        - sbx.rbcn.ai
+        - api.sbx.rbcn.ai
+        - id.sbx.rbcn.ai
     admin:
       enabled: false
     cluster:
@@ -83,7 +83,7 @@ gateway:
         serviceRef:
           name: kong-gateway-proxy
           port: 80
-        targetGroupARN: <TARGET_GROUP_HTTP_ARN>
+        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-http/44fbaddde80cbf60
         targetType: ip
     - apiVersion: elbv2.k8s.aws/v1beta1
       kind: TargetGroupBinding
@@ -93,5 +93,5 @@ gateway:
         serviceRef:
           name: kong-gateway-proxy
           port: 443
-        targetGroupARN: <TARGET_GROUP_HTTPS_ARN>
+        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-https/1105243f0c8419a2
         targetType: ip
