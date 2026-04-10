@@ -11,6 +11,8 @@ env:
   REDIS_JOB_TTL_SECONDS: 3600
   REDIS_QUEUE_BLOCK_TIMEOUT: 1
 
+prometheus:
+  enabled: false
 probes:
   enabled: true
   liveness:
@@ -36,16 +38,13 @@ resources:
     memory: 6Gi
   limits:
     cpu: 4
-    memory: 6Gi
+    memory: 12Gi
 
 securityContext:
   readOnlyRootFilesystem: false
 
 serviceAccount:
   enabled: true
-
-prometheus:
-  enabled: false
 
 nodeSelector:
   scalability: steady

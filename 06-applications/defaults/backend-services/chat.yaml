@@ -89,7 +89,7 @@ envVars:
 hooks:
   migration:
     command: |
-      cd /home/node/app/services/node-chat; npx prisma migrate deploy; cd dist; RUNNING_MODE=DATA_MIGRATION node main.js;
+      cd /home/node/app/services/node-chat/prisma; pnpm exec prisma migrate deploy --config ../prisma.config.ts; cd ../dist; RUNNING_MODE=DATA_MIGRATION node main.js;
     enabled: true
 nodeSelector:
   scalability: steady
