@@ -20,7 +20,7 @@ spec:
           keda:
             enabled: true
             minReplicaCount: 0
-            maxReplicaCount: 5
+            maxReplicaCount: 10
             triggers:
               # cron:
               #   type: cron
