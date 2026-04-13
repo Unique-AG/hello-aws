@@ -35,11 +35,13 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if .spec.autoSync }}
+        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
         syncPolicy:
+          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
+          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}
@@ -83,11 +85,13 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if .spec.autoSync }}
+        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
         syncPolicy:
+          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
+          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}
