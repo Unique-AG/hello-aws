@@ -25,7 +25,7 @@ spec:
                     storage: 30Gi
     - chart: backend-service
       repoURL: ghcr.io/unique-ag/helm-charts
-      targetRevision: 7.1.0
+      targetRevision: 10.3.0
       helm:
         releaseName: ingestor
         valueFiles:
