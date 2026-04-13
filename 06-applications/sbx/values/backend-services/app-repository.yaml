@@ -5,7 +5,7 @@ image:
   tag: "2026.14.1"
 
 routes:
-  hostname: api.sbx.rbcn.ai
+  hostname: api.hello.aws.unique.dev
 
 serviceAccount:
   enabled: true

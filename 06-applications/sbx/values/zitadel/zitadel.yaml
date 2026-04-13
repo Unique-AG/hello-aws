@@ -72,7 +72,7 @@ zitadel:
           Username: root@cluster-iam.localhost
           Password: "RootPassword1!"
   configmapConfig:
-    ExternalDomain: id.sbx.rbcn.ai
+    ExternalDomain: id.hello.aws.unique.dev
     ExternalPort: 443
     ExternalSecure: true
     LogStore:

@@ -7,7 +7,7 @@ image:
 routes:
   gateway:
     namespace: unique
-  hostname: api.sbx.rbcn.ai
+  hostname: api.hello.aws.unique.dev
   pathPrefix: /event-socket
   paths:
     versioned:

@@ -1,16 +1,16 @@
 # Base configuration for all backend services (AWS sbx)
 #
-# Domain: sbx.rbcn.ai
+# Domain: hello.aws.unique.dev
 # Secrets: AWS Secrets Manager via ExternalSecrets
 # Images: ECR pull-through cache
 
 env:
-  ADMIN_FRONTEND_URL: https://sbx.rbcn.ai/admin
-  CHAT_FRONTEND_URL: https://sbx.rbcn.ai/chat
-  CORS_ALLOWED_ORIGINS: https://sbx.rbcn.ai
-  INGESTION_UPLOAD_API_URL: https://api.sbx.rbcn.ai/scoped/ingestion/upload
-  UNIQUE_INSTALLATION_ID: sbx.rbcn.ai
-  ZITADEL_HOST: https://id.sbx.rbcn.ai
+  ADMIN_FRONTEND_URL: https://hello.aws.unique.dev/admin
+  CHAT_FRONTEND_URL: https://hello.aws.unique.dev/chat
+  CORS_ALLOWED_ORIGINS: https://hello.aws.unique.dev
+  INGESTION_UPLOAD_API_URL: https://api.hello.aws.unique.dev/scoped/ingestion/upload
+  UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
+  ZITADEL_HOST: https://id.hello.aws.unique.dev
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
   ZITADEL_PROJECT_ID: "360558571718444181"
   ZITADEL_ROOT_ORG_ID: "360558399231886485"
@@ -41,7 +41,7 @@ env:
   FEATURE_FLAG_AGENTIC_TABLE_ENABLE_NEW_SHARING_UI_UN_16758: "false"
 
 routes:
-  hostname: api.sbx.rbcn.ai
+  hostname: api.hello.aws.unique.dev
   skipCrdCheck: true
 
 # Disable Azure secretProvider (use ExternalSecrets for AWS instead)

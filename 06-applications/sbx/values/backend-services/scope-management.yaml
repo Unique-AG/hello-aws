@@ -19,7 +19,7 @@ extraRoutes:
         group: gateway.networking.k8s.io
         kind: Gateway
     hostnames:
-      - api.sbx.rbcn.ai
+      - api.hello.aws.unique.dev
     matches:
       - path:
           type: PathPrefix
@@ -34,7 +34,7 @@ extraRoutes:
         group: gateway.networking.k8s.io
         kind: Gateway
     hostnames:
-      - api.sbx.rbcn.ai
+      - api.hello.aws.unique.dev
     matches:
       - path:
           type: PathPrefix

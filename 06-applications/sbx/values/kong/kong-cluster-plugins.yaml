@@ -9,9 +9,9 @@ resources:
     config:
       algorithm: RS256
       allowed_iss:
-        - https://id.sbx.rbcn.ai
+        - https://id.hello.aws.unique.dev
       jwks_extra_headers:
-        forwarded: host=id.sbx.rbcn.ai
+        forwarded: host=id.hello.aws.unique.dev
       jwks_uri: http://zitadel.unique.svc.cluster.local:8080/oauth/v2/keys
       uri_param_names:
         - token
@@ -37,9 +37,9 @@ resources:
     config:
       credentials: true
       origins:
-        - https://sbx.rbcn.ai
-        - https://id.sbx.rbcn.ai
-        - https://api.sbx.rbcn.ai
+        - https://hello.aws.unique.dev
+        - https://id.hello.aws.unique.dev
+        - https://api.hello.aws.unique.dev
   - apiVersion: configuration.konghq.com/v1
     kind: KongClusterPlugin
     metadata:

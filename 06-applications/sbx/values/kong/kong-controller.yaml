@@ -63,11 +63,11 @@ gateway:
     proxy:
       enabled: true
       clusterIssuer: letsencrypt-route53-dns
-      commonName: sbx.rbcn.ai
+      commonName: hello.aws.unique.dev
       dnsNames:
-        - sbx.rbcn.ai
-        - api.sbx.rbcn.ai
-        - id.sbx.rbcn.ai
+        - hello.aws.unique.dev
+        - api.hello.aws.unique.dev
+        - id.hello.aws.unique.dev
     admin:
       enabled: false
     cluster:

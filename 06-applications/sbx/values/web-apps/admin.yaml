@@ -1,7 +1,7 @@
 # Admin web app configuration (AWS sbx)
 
 env:
-  SELF_URL: https://sbx.rbcn.ai/admin
+  SELF_URL: https://hello.aws.unique.dev/admin
 
 image:
   repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-admin
