@@ -7,9 +7,9 @@
 
 environment = "sbx"
 
-# GitHub OIDC Configuration (disabled for now)
-use_oidc          = false
-github_repository = ""
+# GitHub OIDC Configuration
+use_oidc          = true
+github_repository = "Unique-AG/hello-aws"
 
 # Retention Configuration (overridden for fast teardown in sandbox)
 # Defaults are 30 days - override with 0 days for immediate deletion, 7 days for logs
