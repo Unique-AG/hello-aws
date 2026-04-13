@@ -53,7 +53,7 @@ route53_private_zone_id     = "Z05798252TZLW3XWZUQE0"
 # Ingress NLB + ALB + CloudFront VPC Origin
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
 alb_deletion_protection         = false
-enable_cloudfront_vpc_origin    = false # Temporarily disabled — old VPC origin still associated with connectivity CloudFront
-internal_alb_certificate_domain = "*.sbx.aws.unique.dev"
+enable_cloudfront_vpc_origin    = true
+internal_alb_certificate_domain = "*.hello.aws.unique.dev"
 connectivity_account_id         = "198666613175"
 
