@@ -33,6 +33,11 @@ aws:
     url: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
   bedrock:
     cohereEmbedV4ProfileId: "rzhpiygtmfxm"
+  prometheus:
+    workspaceId: "ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4"
+    remoteWriteUrl: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4/api/v1/remote_write"
+  observability:
+    s3BucketName: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
   ecr:
     primary:
       accountId: "217381566492"

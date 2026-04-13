@@ -101,7 +101,7 @@ grafana:
   additionalDataSources:
     - name: Amazon Managed Prometheus
       type: prometheus
-      url: "<AMP_QUERY_URL>"
+      url: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4"
       access: proxy
       isDefault: false
       jsonData:
@@ -172,14 +172,14 @@ prometheus:
     enableAdminAPI: true
     replicaExternalLabelName: replica
     externalLabels:
-      cluster: eks-<NAMING_ID>
+      cluster: eks-uq-dogfood-sbx-euc2
     podMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     scrapeConfigSelectorNilUsesHelmValues: false
     remoteWrite:
-      - url: "<AMP_REMOTE_WRITE_URL>"
+      - url: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4/api/v1/remote_write"
         sigv4:
           region: eu-central-2
         queueConfig:

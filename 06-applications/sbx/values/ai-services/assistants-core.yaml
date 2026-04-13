@@ -23,7 +23,7 @@ resources:
     cpu: 250m
     memory: 1Gi
 
-secretProvider: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
+secretProvider: null
 
 serviceAccount:
   enabled: true
@@ -33,7 +33,7 @@ serviceAccount:
 podAnnotations:
   reloader.stakater.com/auto: "true"
 
-nodeSelector: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
+nodeSelector: null
 
 extraEnvSecrets:
   - assistants-core-secrets

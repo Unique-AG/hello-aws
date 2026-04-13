@@ -8,7 +8,7 @@ tempo:
     trace:
       backend: s3
       s3:
-        bucket: "s3-<NAMING_ID>-observability-<SUFFIX>"
+        bucket: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
         endpoint: s3.eu-central-2.amazonaws.com
         region: eu-central-2
         forcepathstyle: true

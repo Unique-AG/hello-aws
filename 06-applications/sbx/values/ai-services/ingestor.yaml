@@ -8,7 +8,7 @@ env:
   REDIS_PORT: "6380"
   REDIS_USE_TLS: "true"
 
-secretProvider: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
+secretProvider: null
 
 podSecurityContext:
   fsGroup: 1000
@@ -19,7 +19,7 @@ routes:
 serviceAccount:
   create: true
 
-nodeSelector: rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0
+nodeSelector: null
 
 podAnnotations:
   reloader.stakater.com/auto: "true"
