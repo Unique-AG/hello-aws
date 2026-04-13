@@ -40,7 +40,7 @@ resource "aws_s3_bucket_public_access_block" "observability" {
 
 # VPC-only access — same pattern as application_data bucket
 data "aws_iam_policy_document" "observability_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   statement {
     sid    = "DenyDataAccessExceptVpcEndpoint"
@@ -74,7 +74,7 @@ data "aws_iam_policy_document" "observability_vpc_only" {
 }
 
 resource "aws_s3_bucket_policy" "observability_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   bucket = aws_s3_bucket.observability.id
   policy = data.aws_iam_policy_document.observability_vpc_only[0].json
