@@ -59,10 +59,10 @@ gateway:
       enabled: true
   certificates:
     enabled: true
-    clusterIssuer: letsencrypt-route53-dns
+    clusterIssuer: internal-ca-issuer
     proxy:
       enabled: true
-      clusterIssuer: letsencrypt-route53-dns
+      clusterIssuer: internal-ca-issuer
       commonName: hello.aws.unique.dev
       dnsNames:
         - hello.aws.unique.dev
