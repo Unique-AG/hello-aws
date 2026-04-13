@@ -4,6 +4,7 @@ applicationsets:
       argocd.argoproj.io/sync-wave: "0"
     namespace: unique
     goTemplate: true
+    preserveResourcesOnDeletion: true
     generators:
       - git:
           repoURL: https://github.com/unique-ag/hello-aws
@@ -35,13 +36,11 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
+        {{- if .spec.autoSync }}
         syncPolicy:
-          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
-          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}
@@ -54,6 +53,7 @@ applicationsets:
       argocd.argoproj.io/sync-wave: "1"
     namespace: unique
     goTemplate: true
+    preserveResourcesOnDeletion: true
     generators:
       - git:
           repoURL: https://github.com/unique-ag/hello-aws
@@ -85,13 +85,11 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
+        {{- if .spec.autoSync }}
         syncPolicy:
-          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
-          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}
