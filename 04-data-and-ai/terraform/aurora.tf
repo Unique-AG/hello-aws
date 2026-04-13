@@ -56,8 +56,8 @@ resource "aws_rds_cluster" "postgres" {
   engine_version               = var.aurora_engine_version
   database_name                = var.aurora_database_name
   master_username              = "dbadmin"
-  master_password_wo           = var.aurora_master_password
-  master_password_wo_version   = 1 # Bump when rotating the password
+  master_password_wo           = var.set_aurora_master_password ? var.aurora_master_password : null
+  master_password_wo_version   = var.set_aurora_master_password ? 1 : null # Bump when rotating
   backup_retention_period       = var.aurora_backup_retention_period
   preferred_backup_window       = var.aurora_preferred_backup_window
   preferred_maintenance_window  = var.aurora_preferred_maintenance_window
