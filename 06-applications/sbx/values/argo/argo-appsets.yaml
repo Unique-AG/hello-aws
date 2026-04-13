@@ -7,7 +7,7 @@ applicationsets:
     generators:
       - git:
           repoURL: https://github.com/unique-ag/hello-aws
-          revision: deploy/rc-06-applications
+          revision: deploy/sbx
           files:
             - path: "06-applications/sbx/apps/system/*.yaml"
     template:
@@ -55,7 +55,7 @@ applicationsets:
     generators:
       - git:
           repoURL: https://github.com/unique-ag/hello-aws
-          revision: deploy/rc-06-applications
+          revision: deploy/sbx
           files:
             - path: "06-applications/sbx/apps/chat/*.yaml"
     template:

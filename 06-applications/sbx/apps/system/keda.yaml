@@ -5,7 +5,7 @@ spec:
     - ServerSideApply=true
   sources:
     - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/rc-06-applications
+      targetRevision: deploy/sbx
       ref: values
     - chart: keda
       repoURL: https://kedacore.github.io/charts

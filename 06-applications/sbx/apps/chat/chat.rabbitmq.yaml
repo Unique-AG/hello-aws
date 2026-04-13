@@ -3,7 +3,7 @@ spec:
   autoSync: false
   source:
     repoURL: https://github.com/unique-ag/hello-aws
-    targetRevision: deploy/rc-06-applications
+    targetRevision: deploy/sbx
     path: 06-applications/sbx/values/rabbitmq
     directory:
       recurse: true

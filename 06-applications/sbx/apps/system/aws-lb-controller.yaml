@@ -3,7 +3,7 @@ spec:
   autoSync: true
   sources:
     - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/rc-06-applications
+      targetRevision: deploy/sbx
       ref: values
     - chart: aws-load-balancer-controller
       repoURL: https://aws.github.io/eks-charts

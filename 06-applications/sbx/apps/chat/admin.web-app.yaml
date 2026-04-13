@@ -3,7 +3,7 @@ spec:
   autoSync: false
   sources:
     - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/rc-06-applications
+      targetRevision: deploy/sbx
       ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: web-app
