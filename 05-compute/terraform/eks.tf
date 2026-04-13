@@ -307,6 +307,16 @@ resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_s3" {
   prefix_list_id    = data.aws_ec2_managed_prefix_list.s3.id
 }
 
+# Node egress — HTTPS to internet via NAT gateway (for external container registries)
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_internet" {
+  security_group_id = aws_security_group.eks_nodes.id
+  description       = "Allow HTTPS outbound to internet via NAT (external registries)"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
 data "aws_ec2_managed_prefix_list" "s3" {
   filter {
     name   = "prefix-list-name"

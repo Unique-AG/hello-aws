@@ -219,19 +219,3 @@ variable "acr_registry_url" {
   type        = string
   default     = ""
 }
-
-variable "acr_username" {
-  description = "Azure Container Registry username (access key username)"
-  type        = string
-  default     = ""
-  ephemeral   = true
-}
-
-variable "acr_password" {
-  description = "Azure Container Registry password (access key)"
-  type        = string
-  default     = ""
-  ephemeral   = true
-}
-
-

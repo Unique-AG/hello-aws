@@ -77,9 +77,9 @@ output "aurora_cluster_database_name" {
   value       = aws_rds_cluster.postgres.database_name
 }
 
-output "aurora_master_user_secret_arn" {
-  description = "ARN of the AWS-managed secret containing the Aurora master user password"
-  value       = try(aws_rds_cluster.postgres.master_user_secret[0].secret_arn, null)
+output "aurora_master_password_secret_arn" {
+  description = "ARN of the manually managed Aurora master password secret"
+  value       = aws_secretsmanager_secret.psql_password.arn
 }
 
 # ElastiCache Redis
@@ -150,6 +150,8 @@ output "secret_arns" {
     s3_endpoint                       = aws_secretsmanager_secret.s3_endpoint.arn
     s3_region                         = aws_secretsmanager_secret.s3_region.arn
     rds_ca_bundle                     = aws_secretsmanager_secret.rds_ca_bundle.arn
+    argocd_github_app                 = aws_secretsmanager_secret.argocd_github_app.arn
+    google_search_api_key             = aws_secretsmanager_secret.google_search_api_key.arn
   }
 }
 

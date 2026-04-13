@@ -167,26 +167,26 @@ output "pod_identity_aws_lb_controller_role_arn" {
   value       = aws_iam_role.aws_lb_controller.arn
 }
 
-# Pod Identity Role: Prometheus (AMP remote-write)
+# Pod Identity Role: Prometheus
 output "pod_identity_prometheus_role_arn" {
   description = "IAM role ARN for Prometheus remote-write to AMP"
-  value       = local.data_and_ai.prometheus_workspace_arn != null ? aws_iam_role.prometheus[0].arn : null
+  value       = try(aws_iam_role.prometheus[0].arn, null)
 }
 
-# Pod Identity Role: Grafana (AMP + CloudWatch read)
+# Pod Identity Role: Grafana Pod
 output "pod_identity_grafana_pod_role_arn" {
-  description = "IAM role ARN for self-hosted Grafana querying AMP and CloudWatch"
-  value       = local.data_and_ai.prometheus_workspace_arn != null ? aws_iam_role.grafana_pod[0].arn : null
+  description = "IAM role ARN for self-hosted Grafana"
+  value       = try(aws_iam_role.grafana_pod[0].arn, null)
 }
 
-# Pod Identity Role: Loki (S3 log storage)
+# Pod Identity Role: Loki
 output "pod_identity_loki_role_arn" {
-  description = "IAM role ARN for Loki S3 log storage"
-  value       = local.data_and_ai.s3_bucket_observability_arn != null ? aws_iam_role.loki[0].arn : null
+  description = "IAM role ARN for Loki S3 storage"
+  value       = try(aws_iam_role.loki[0].arn, null)
 }
 
-# Pod Identity Role: Tempo (S3 trace storage)
+# Pod Identity Role: Tempo
 output "pod_identity_tempo_role_arn" {
-  description = "IAM role ARN for Tempo S3 trace storage"
-  value       = local.data_and_ai.s3_bucket_observability_arn != null ? aws_iam_role.tempo[0].arn : null
+  description = "IAM role ARN for Tempo S3 storage"
+  value       = try(aws_iam_role.tempo[0].arn, null)
 }
