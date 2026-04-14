@@ -5,7 +5,7 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 # Extra cron jobs
-extraCronJobs:
+cronJobs:
   expired-content-deletion:
     concurrencyPolicy: Forbid
     env:
@@ -37,9 +37,9 @@ env:
   USE_SCOPE_MANAGEMENT: "true"
   MAX_REQUEST_BODY_SIZE: "30mb"
   PDF_READ_MODE: "CUSTOM_SINGLE_PAGE_API"
-# ES indexing cron job (merged into extraCronJobs above in environment-specific values)
-# Note: es-indexing job should be added to extraCronJobs in environment values:
-#   extraCronJobs:
+# ES indexing cron job (merged into cronJobs above in environment-specific values)
+# Note: es-indexing job should be added to cronJobs in environment values:
+#   cronJobs:
 #     es-indexing:
 #       schedule: "* * 31 2 *"
 #       restartPolicy: OnFailure

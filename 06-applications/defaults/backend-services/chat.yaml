@@ -5,7 +5,7 @@ autoscaling:
   targetCPUUtilizationPercentage: 80
   targetMemoryUtilizationPercentage: 80
 # Extra cron jobs
-extraCronJobs:
+cronJobs:
   data-redaction-task:
     concurrencyPolicy: Forbid
     env:

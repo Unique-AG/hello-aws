@@ -1,5 +1,5 @@
 # Extra cron jobs
-extraCronJobs:
+cronJobs:
   user-sync:
     concurrencyPolicy: Forbid
     env:
