@@ -32,11 +32,6 @@ probes:
 
 replicaCount: 1
 
-# Recreate strategy — avoids resource doubling during updates
-# (each Docling pod uses 12Gi memory with ML models resident)
-strategy:
-  type: Recreate
-
 resources:
   requests:
     cpu: 3
