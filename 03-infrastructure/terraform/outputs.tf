@@ -397,3 +397,14 @@ output "github_runners_codebuild_project_name" {
   value       = var.enable_github_runners ? aws_codebuild_project.github_runners[0].name : null
 }
 
+# EFS Outputs
+output "efs_docling_models_id" {
+  description = "ID of the EFS file system for Docling models"
+  value       = aws_efs_file_system.docling_models.id
+}
+
+output "efs_docling_models_access_point_id" {
+  description = "ID of the EFS access point for Docling models"
+  value       = aws_efs_access_point.docling_models.id
+}
+

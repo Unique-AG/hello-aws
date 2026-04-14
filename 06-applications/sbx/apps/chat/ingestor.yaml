@@ -18,8 +18,9 @@ spec:
                 name: docling-models-pvc
                 namespace: unique
               spec:
-                accessModes: ["ReadWriteOnce"]
-                storageClassName: gp3
+                accessModes: ["ReadWriteMany"]
+                storageClassName: efs-sc
+                volumeName: docling-models-pv
                 resources:
                   requests:
                     storage: 30Gi

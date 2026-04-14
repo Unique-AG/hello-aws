@@ -1,12 +1,12 @@
 env:
-  GUNICORN_WORKERS: 2
+  GUNICORN_WORKERS: 1
   GUNICORN_THREADS: 4
   GUNICORN_TIMEOUT: 300
   PORT: 8080
   LOG_LEVEL: INFO
   DOCLING_ARTIFACTS_PATH: /artifacts/docling-models
   DOWNLOAD_MODELS: "true"
-  MAX_CONCURRENT_JOBS_PER_REPLICA: 4
+  MAX_CONCURRENT_JOBS_PER_REPLICA: 2
   REDIS_DB: 5
   REDIS_JOB_TTL_SECONDS: 3600
   REDIS_QUEUE_BLOCK_TIMEOUT: 1
@@ -32,10 +32,15 @@ probes:
 
 replicaCount: 1
 
+# Recreate strategy — avoids resource doubling during updates
+# (each Docling pod uses 12Gi memory with ML models resident)
+strategy:
+  type: Recreate
+
 resources:
   requests:
     cpu: 3
-    memory: 6Gi
+    memory: 12Gi
   limits:
     cpu: 4
     memory: 12Gi
@@ -46,9 +51,41 @@ securityContext:
 serviceAccount:
   enabled: true
 
+keda:
+  enabled: true
+  minReplicaCount: 1
+  maxReplicaCount: 3
+  cooldownPeriod: 600
+  triggers:
+    rabbitmq:
+      type: rabbitmq
+      metadata:
+        mode: QueueLength
+        protocol: http
+        queueName: unique.node.ingestion.queue
+        value: "5"
+      authenticationRef:
+        kind: TriggerAuthentication
+        name: rabbitmqcluster-chat-unique-user
+  extraAnnotations:
+    argocd.argoproj.io/sync-wave: "10"
+
 nodeSelector:
   scalability: steady
   lifecycle: persistent
+
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - ingestor
+          topologyKey: kubernetes.io/hostname
 
 volumes:
   - name: tmp-volume

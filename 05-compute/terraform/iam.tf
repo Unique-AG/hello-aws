@@ -85,6 +85,32 @@ resource "aws_eks_pod_identity_association" "ebs_csi" {
 }
 
 #######################################
+# EFS CSI Driver Role
+#######################################
+# Required for the EFS CSI driver addon to mount EFS volumes
+
+resource "aws_iam_role" "efs_csi" {
+  name               = "${module.naming.id}-efs-csi-driver"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-efs-csi-driver"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "efs_csi" {
+  role       = aws_iam_role.efs_csi.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEFSCSIDriverPolicy"
+}
+
+resource "aws_eks_pod_identity_association" "efs_csi" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "efs-csi-controller-sa"
+  role_arn        = aws_iam_role.efs_csi.arn
+}
+
+#######################################
 # Cluster Secrets Role
 #######################################
 # Used by ClusterSecretStore service account in unique namespace

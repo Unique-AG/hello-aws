@@ -437,6 +437,23 @@ resource "aws_eks_addon" "ebs_csi" {
   }
 }
 
+# EFS CSI Driver Addon
+resource "aws_eks_addon" "efs_csi" {
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = "aws-efs-csi-driver"
+  resolve_conflicts_on_update = "OVERWRITE"
+
+  depends_on = [aws_eks_node_group.pool]
+
+  lifecycle {
+    ignore_changes = [service_account_role_arn]
+  }
+
+  tags = {
+    Name = "${module.naming.id}-efs-csi-addon"
+  }
+}
+
 # CoreDNS Addon
 resource "aws_eks_addon" "coredns" {
   cluster_name                = aws_eks_cluster.main.name
