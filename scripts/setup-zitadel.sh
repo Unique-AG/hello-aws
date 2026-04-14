@@ -59,8 +59,9 @@ info()  { echo -e "${BLUE}[i]${NC} $1"; }
 ENV="${1:-}"
 PAT="${2:-}"
 ORG_NAME="${3:-Unique}"
+ADMIN_EMAIL="${4:-}"
 if [ -z "$ENV" ] || [ -z "$PAT" ]; then
-  error "Usage: $0 <env> <pat> [org-name]"
+  error "Usage: $0 <env> <pat> [org-name] [admin-email]"
 fi
 
 # Check prerequisites
@@ -463,7 +464,65 @@ info "Scope Mgmt User: ${SM_USER_ID}"
 info "PAT Secret:      ${AWS_SM_SECRET}"
 echo ""
 #######################################
-# 10. Patch instance-config.yaml
+# 10. Create admin user (optional)
+#######################################
+if [ -n "$ADMIN_EMAIL" ]; then
+  # Extract name parts from email (first.last@domain → First Last)
+  LOCAL_PART="${ADMIN_EMAIL%%@*}"
+  FIRST_NAME=$(echo "$LOCAL_PART" | cut -d. -f1 | sed 's/./\U&/')
+  LAST_NAME=$(echo "$LOCAL_PART" | cut -d. -f2- | sed 's/./\U&/')
+  [ -z "$LAST_NAME" ] && LAST_NAME="Admin"
+  ADMIN_PASSWORD="$(openssl rand -base64 16 | tr -d '/+=' | head -c 16)!"
+
+  info "Creating admin user ${ADMIN_EMAIL} in org ${ORG_NAME}..."
+
+  # Create human user in customer org
+  ADMIN_RESP=$(curl -s -X POST "${ZITADEL_HOST}/management/v1/users/human/_import" \
+    -H "Authorization: Bearer ${PAT}" \
+    -H "x-zitadel-orgid: ${ORG_ID}" \
+    -H "Content-Type: application/json" \
+    -d "{\"userName\":\"${ADMIN_EMAIL}\",\"profile\":{\"firstName\":\"${FIRST_NAME}\",\"lastName\":\"${LAST_NAME}\",\"displayName\":\"${FIRST_NAME} ${LAST_NAME}\",\"preferredLanguage\":\"en\"},\"email\":{\"email\":\"${ADMIN_EMAIL}\",\"isEmailVerified\":true},\"password\":\"${ADMIN_PASSWORD}\",\"passwordChangeRequired\":false}")
+
+  ADMIN_USER_ID=$(echo "$ADMIN_RESP" | jq -r '.userId // empty')
+  if [ -z "$ADMIN_USER_ID" ]; then
+    warn "Could not create admin user: $(echo "$ADMIN_RESP" | jq -r '.message // empty')"
+  else
+    log "Created admin user: ${ADMIN_USER_ID}"
+
+    # Grant all project roles from root org
+    ALL_ROLES='["chat.chat.basic","chat.knowledge.read","chat.knowledge.write","chat.data.admin","chat.feedback.read","chat.admin.all","chat.debug.read","admin.user-management.write","admin.space.write","admin.app-repository.write","connector.admin.read","connector.admin.write"]'
+    curl -s -X POST "${ZITADEL_HOST}/management/v1/users/${ADMIN_USER_ID}/grants" \
+      -H "Authorization: Bearer ${PAT}" \
+      -H "x-zitadel-orgid: ${ROOT_ORG_ID}" \
+      -H "Content-Type: application/json" \
+      -d "{\"projectId\":\"${PROJECT_ID}\",\"roleKeys\":${ALL_ROLES}}" >/dev/null
+    log "Granted all project roles"
+
+    # Add IAM_OWNER instance role
+    curl -s -X POST "${ZITADEL_HOST}/admin/v1/members" \
+      -H "Authorization: Bearer ${PAT}" \
+      -H "Content-Type: application/json" \
+      -d "{\"userId\":\"${ADMIN_USER_ID}\",\"roles\":[\"IAM_OWNER\"]}" >/dev/null
+    log "Granted IAM_OWNER"
+
+    # Add ORG_OWNER on customer org
+    curl -s -X POST "${ZITADEL_HOST}/management/v1/orgs/me/members" \
+      -H "Authorization: Bearer ${PAT}" \
+      -H "x-zitadel-orgid: ${ORG_ID}" \
+      -H "Content-Type: application/json" \
+      -d "{\"userId\":\"${ADMIN_USER_ID}\",\"roles\":[\"ORG_OWNER\"]}" >/dev/null
+    log "Granted ORG_OWNER"
+
+    echo ""
+    log "Admin user created:"
+    info "  Email:    ${ADMIN_EMAIL}"
+    info "  Password: ${ADMIN_PASSWORD}"
+    info "  User ID:  ${ADMIN_USER_ID}"
+  fi
+fi
+
+#######################################
+# 11. Patch instance-config.yaml
 #######################################
 INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 if [ -f "$INSTANCE_CONFIG" ] && command -v yq &>/dev/null; then
