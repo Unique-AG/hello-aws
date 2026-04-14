@@ -49,7 +49,7 @@ serviceAccount:
 keda:
   enabled: true
   minReplicaCount: 1
-  maxReplicaCount: 3
+  maxReplicaCount: 6
   cooldownPeriod: 600
   triggers:
     rabbitmq:
