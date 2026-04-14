@@ -435,6 +435,42 @@ echo "  ACR alias ..."
 replace_all_tfvars "$TFVARS_FROM_ACR_ALIAS" "$TO_ACR_ALIAS"
 
 # ------------------------------------------------------------------
+# Enable Bedrock marketplace model agreements
+# ------------------------------------------------------------------
+# Third-party models (e.g., Cohere) require a marketplace agreement before use.
+# This is idempotent — already-accepted agreements are silently skipped.
+echo ""
+echo "Enabling Bedrock marketplace model agreements ..."
+BEDROCK_MODELS_REQUIRING_AGREEMENT=(
+  "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  "anthropic.claude-3-haiku-20240307-v1:0"
+  "anthropic.claude-sonnet-4-5-20250929-v1:0"
+  "anthropic.claude-opus-4-5-20251101-v1:0"
+  "anthropic.claude-haiku-4-5-20251001-v1:0"
+  "cohere.embed-v4:0"
+)
+for model_id in "${BEDROCK_MODELS_REQUIRING_AGREEMENT[@]}"; do
+  # Check if agreement exists
+  AVAILABILITY=$(aws bedrock get-foundation-model-availability --model-id "$model_id" --region "$TO_AWS_REGION" \
+    --query "agreementAvailability.status" --output text 2>/dev/null || echo "UNKNOWN")
+  if [ "$AVAILABILITY" = "AVAILABLE" ]; then
+    echo "  $model_id: already enabled"
+  elif [ "$AVAILABILITY" = "NOT_AVAILABLE" ]; then
+    echo "  $model_id: accepting marketplace agreement ..."
+    OFFER_TOKEN=$(aws bedrock list-foundation-model-agreement-offers --model-id "$model_id" --region "$TO_AWS_REGION" \
+      --query "offers[0].offerToken" --output text 2>/dev/null)
+    if [ -n "$OFFER_TOKEN" ] && [ "$OFFER_TOKEN" != "None" ]; then
+      aws bedrock create-foundation-model-agreement --model-id "$model_id" --offer-token "$OFFER_TOKEN" \
+        --region "$TO_AWS_REGION" >/dev/null 2>&1 && echo "  $model_id: ✓ agreement accepted" || echo "  $model_id: ✗ failed to accept"
+    else
+      echo "  $model_id: ✗ no offer token available"
+    fi
+  else
+    echo "  $model_id: status=$AVAILABILITY (skipping)"
+  fi
+done
+
+# ------------------------------------------------------------------
 # Save applied state
 # ------------------------------------------------------------------
 cp "$CONFIG" "$STATE"
