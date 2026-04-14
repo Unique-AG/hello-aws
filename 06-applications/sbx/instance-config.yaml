@@ -47,6 +47,6 @@ aws:
       prefix: uniquecr
 
 zitadel:
-  projectId: "360558571718444181"
-  clientId: "360559140080255667"
-  orgId: "360558399231886485"
+  projectId: "368533034342811339"
+  clientId: "368533034594535115"
+  orgId: "368533034040821451"

@@ -12,8 +12,8 @@ env:
   UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
   ZITADEL_HOST: https://id.hello.aws.unique.dev
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
-  ZITADEL_PROJECT_ID: "360558571718444181"
-  ZITADEL_ROOT_ORG_ID: "360558399231886485"
+  ZITADEL_PROJECT_ID: "368533034342811339"
+  ZITADEL_ROOT_ORG_ID: "368533034040821451"
   # Feature flags (aligned with monorepo stable)
   FEATURE_FLAG_ABOUT_SPACE_SECTION_UN_10270: "false"
   FEATURE_FLAG_AGENTIC_TABLE_CONTEXT_UN_14904: "false"

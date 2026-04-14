@@ -40,6 +40,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -459,9 +462,22 @@ info "Grant ID:        ${GRANT_ID:-N/A}"
 info "Scope Mgmt User: ${SM_USER_ID}"
 info "PAT Secret:      ${AWS_SM_SECRET}"
 echo ""
-info "Update your application config with these values:"
-info "  ZITADEL_CLIENT_ID:    ${CLIENT_ID}"
-info "  ZITADEL_ORG_ID:       ${ORG_ID}"
-info "  ZITADEL_PROJECT_ID:   ${PROJECT_ID}"
-info "  ZITADEL_ROOT_ORG_ID:  ${ROOT_ORG_ID}"
+#######################################
+# 10. Patch instance-config.yaml
+#######################################
+INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
+if [ -f "$INSTANCE_CONFIG" ] && command -v yq &>/dev/null; then
+  info "Patching ${INSTANCE_CONFIG} with new Zitadel IDs..."
+  yq -i ".zitadel.projectId = \"${PROJECT_ID}\"" "$INSTANCE_CONFIG"
+  yq -i ".zitadel.clientId = \"${CLIENT_ID}\"" "$INSTANCE_CONFIG"
+  yq -i ".zitadel.orgId = \"${ORG_ID}\"" "$INSTANCE_CONFIG"
+  log "instance-config.yaml updated"
+  info "Run: cd 06-applications && ./scripts/configure-instance.sh ${ENV}"
+else
+  warn "Could not patch instance-config.yaml (file not found or yq missing)"
+  info "Update manually:"
+  info "  ZITADEL_CLIENT_ID:    ${CLIENT_ID}"
+  info "  ZITADEL_ORG_ID:       ${ORG_ID}"
+  info "  ZITADEL_PROJECT_ID:   ${PROJECT_ID}"
+fi
 echo ""
