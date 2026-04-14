@@ -20,7 +20,6 @@ spec:
               spec:
                 accessModes: ["ReadWriteMany"]
                 storageClassName: efs-sc
-                volumeName: docling-models-pv
                 resources:
                   requests:
                     storage: 30Gi

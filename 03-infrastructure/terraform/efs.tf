@@ -68,28 +68,5 @@ resource "aws_efs_mount_target" "docling_models" {
   security_groups = [aws_security_group.efs.id]
 }
 
-#######################################
-# Access Point — POSIX enforcement for ingestor pods
-#######################################
-
-resource "aws_efs_access_point" "docling_models" {
-  file_system_id = aws_efs_file_system.docling_models.id
-
-  posix_user {
-    uid = 1000
-    gid = 1000
-  }
-
-  root_directory {
-    path = "/docling-models"
-    creation_info {
-      owner_uid   = 1000
-      owner_gid   = 1000
-      permissions = "0755"
-    }
-  }
-
-  tags = merge(module.naming.tags, {
-    Name = "efs-ap-${module.naming.id}-docling-models"
-  })
-}
+# Access points are created dynamically by the EFS CSI driver
+# via the efs-sc StorageClass (provisioningMode: efs-ap)

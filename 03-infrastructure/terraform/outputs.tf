@@ -403,8 +403,3 @@ output "efs_docling_models_id" {
   value       = aws_efs_file_system.docling_models.id
 }
 
-output "efs_docling_models_access_point_id" {
-  description = "ID of the EFS access point for Docling models"
-  value       = aws_efs_access_point.docling_models.id
-}
-
