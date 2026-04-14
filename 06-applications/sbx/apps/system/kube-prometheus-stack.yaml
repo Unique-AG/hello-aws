@@ -5,6 +5,13 @@ spec:
     - repoURL: 'https://github.com/unique-ag/hello-aws'
       targetRevision: deploy/sbx
       ref: values
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: observability-external-secrets
+        valueFiles:
+          - $values/06-applications/sbx/values/observability/external-secrets.yaml
     - chart: kube-prometheus-stack
       repoURL: https://prometheus-community.github.io/helm-charts
       targetRevision: 72.3.0
