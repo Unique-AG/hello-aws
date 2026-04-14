@@ -35,10 +35,10 @@ replicaCount: 1
 resources:
   requests:
     cpu: 3
-    memory: 12Gi
+    memory: 8Gi
   limits:
     cpu: 4
-    memory: 12Gi
+    memory: 8Gi
 
 securityContext:
   readOnlyRootFilesystem: false
