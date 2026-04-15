@@ -22,11 +22,12 @@ The layer implements three storage tiers:
   - Port 6380 (triggers auto-TLS in Node.js chat service, see `pubSub.base.ts:42`)
   - Slow-log delivery to CloudWatch Logs
 
-- **S3 Buckets**: Object storage for application and AI data
+- **S3 Buckets**: Object storage for application, AI, and observability data
   - `application-data`: Lifecycle transitions to Standard-IA (30d) and Glacier (90d)
   - `ai-data`: Raw AI/ML data
-  - Both enforce VPC-only data access via `aws:SourceVpce` Deny policy (management operations exempt for Terraform access)
-  - KMS-SSE with bucket keys enabled
+  - `observability`: Backing store for Loki chunks and Tempo traces (consumed by the applications-layer observability stack). Lifecycle transitions old data to IA/Glacier.
+  - Application/AI buckets enforce VPC-only data access via `aws:SourceVpce` Deny policy (management operations exempt for Terraform access); the observability bucket stays accessible from in-cluster workloads via IAM + Pod Identity.
+  - KMS-SSE with bucket keys enabled on all three
 
 ### S3 IAM User
 
@@ -165,7 +166,8 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 
 - **Application Data**: Versioned, KMS-SSE, public access blocked, lifecycle (IA 30d, Glacier 90d)
 - **AI Data**: Versioned, KMS-SSE, public access blocked
-- **Bucket Policies**: `Deny` all data operations unless `aws:SourceVpce` matches S3 Gateway Endpoint
+- **Observability**: Versioned, KMS-SSE, public access blocked; IAM access for Loki/Tempo Pod Identity roles (from 05-compute)
+- **Bucket Policies**: Application/AI buckets `Deny` data operations unless `aws:SourceVpce` matches S3 Gateway Endpoint; observability bucket is reachable from EKS workloads via IAM/Pod Identity
 
 ### Bedrock
 
@@ -311,6 +313,7 @@ secrets_recovery_window_days = 30  # sbx: 0
 ### S3 Buckets
 - `s3_bucket_application_data_id`, `s3_bucket_application_data_arn`
 - `s3_bucket_ai_data_id`, `s3_bucket_ai_data_arn`
+- `s3_bucket_observability_id`, `s3_bucket_observability_arn`
 
 ### Aurora PostgreSQL
 - `aurora_cluster_id`, `aurora_cluster_arn`
