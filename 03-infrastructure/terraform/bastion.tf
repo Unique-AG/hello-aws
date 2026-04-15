@@ -42,7 +42,7 @@ resource "aws_iam_role_policy" "ssm_instance_eks_access" {
           "eks:ListClusters"
         ]
         Resource = [
-          "arn:aws:eks:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:cluster/${module.naming.id}-*"
+          "arn:aws:eks:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:cluster/${module.naming.id}-*"
         ]
       }
     ]

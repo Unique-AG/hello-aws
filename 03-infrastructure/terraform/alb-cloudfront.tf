@@ -135,18 +135,35 @@ resource "aws_lb_target_group" "ingress_nlb" {
   }
 }
 
-# Resolve Ingress NLB DNS to IP addresses and register as targets
-# NLB DNS resolves to one IP per AZ - these are stable for NLBs
-data "dns_a_record_set" "ingress_nlb" {
+# Look up Ingress NLB network interfaces to get private IPs
+# NLBs create one ENI per subnet/AZ — filter by deterministic NLB name
+# Uses naming module output (known at plan time) instead of resource attribute
+# On first apply (NLB not yet created): returns empty → no target registrations
+# On second apply (NLB exists): finds ENIs → registers targets
+data "aws_network_interfaces" "ingress_nlb" {
   count = var.enable_ingress_nlb ? 1 : 0
-  host  = aws_lb.ingress_nlb[0].dns_name
+
+  filter {
+    name   = "description"
+    values = ["ELB net/${module.naming.id_short}-ingress-nlb/*"]
+  }
+
+  filter {
+    name   = "vpc-id"
+    values = [aws_vpc.main.id]
+  }
+}
+
+data "aws_network_interface" "ingress_nlb" {
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
+  id    = data.aws_network_interfaces.ingress_nlb[0].ids[count.index]
 }
 
 resource "aws_lb_target_group_attachment" "ingress_nlb" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
 
   target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
-  target_id        = each.value
+  target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
   port             = 80
 }
 
@@ -315,10 +332,10 @@ resource "aws_lb_target_group" "websocket_ingress" {
 
 # Register Ingress NLB IPs as targets for WebSocket ALB
 resource "aws_lb_target_group_attachment" "websocket_ingress" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
 
   target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
-  target_id        = each.value
+  target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
   port             = 80
 }
 

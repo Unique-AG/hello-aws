@@ -309,12 +309,6 @@ output "transit_gateway_attachment_arn" {
   value       = try(aws_ec2_transit_gateway_vpc_attachment.main[0].arn, null)
 }
 
-# Cross-Account IAM Outputs
-output "connectivity_account_read_only_role_arn" {
-  description = "ARN of the IAM role that allows the connectivity account to discover resources"
-  value       = try(aws_iam_role.connectivity_account_read_only[0].arn, null)
-}
-
 #######################################
 # Ingress NLB Outputs
 #######################################
@@ -396,5 +390,16 @@ output "cloudfront_vpc_origin_id" {
 output "cloudfront_vpc_origin_arn" {
   description = "ARN of the CloudFront VPC Origin"
   value       = try(aws_cloudfront_vpc_origin.internal_alb[0].arn, null)
+}
+
+output "github_runners_codebuild_project_name" {
+  description = "Name of the CodeBuild project for GitHub runners"
+  value       = var.enable_github_runners ? aws_codebuild_project.github_runners[0].name : null
+}
+
+# EFS Outputs
+output "efs_docling_models_id" {
+  description = "ID of the EFS file system for Docling models"
+  value       = aws_efs_file_system.docling_models.id
 }
 
