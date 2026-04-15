@@ -47,6 +47,3 @@ ecr_pull_through_cache_upstream_registries = [
   "example",            # ACR short alias (extracted from URL)
   "quay.io",
 ]
-
-# VPC Endpoints
-enable_eks_endpoint = true
