@@ -3,6 +3,6 @@
 # ECR Registry Configuration
 # Base ECR registry URL for pull-through cache
 ecr:
-  registry: "<ECR_REGISTRY_THIRDPARTY_BARE>"
+  registry: "<ECR_REGISTRY_PRIMARY>"
   pullThroughCache:
     prefix: "uniquecr"

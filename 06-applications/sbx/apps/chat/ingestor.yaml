@@ -18,14 +18,14 @@ spec:
                 name: docling-models-pvc
                 namespace: unique
               spec:
-                accessModes: ["ReadWriteOnce"]
-                storageClassName: gp3
+                accessModes: ["ReadWriteMany"]
+                storageClassName: efs-sc
                 resources:
                   requests:
                     storage: 30Gi
     - chart: backend-service
       repoURL: ghcr.io/unique-ag/helm-charts
-      targetRevision: 7.1.0
+      targetRevision: 10.3.0
       helm:
         releaseName: ingestor
         valueFiles:

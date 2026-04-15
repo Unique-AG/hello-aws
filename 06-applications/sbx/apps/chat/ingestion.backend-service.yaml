@@ -7,7 +7,7 @@ spec:
       ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: backend-service
-      targetRevision: 7.1.0
+      targetRevision: 10.3.0
       helm:
         releaseName: backend-service-ingestion
         valueFiles:

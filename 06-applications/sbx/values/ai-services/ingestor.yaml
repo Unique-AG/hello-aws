@@ -1,14 +1,17 @@
 # AWS-specific configuration for Docling ingestor service
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/ingestors
-  tag: "2026.06.1"
+  repository: <ECR_REGISTRY_THIRDPARTY>/ingestors
+  tag: "2026.14.1"
 
 env:
   REDIS_PORT: "6380"
   REDIS_USE_TLS: "true"
 
 secretProvider: null
+
+podSecurityContext:
+  fsGroup: 1000
 
 routes:
   skipCrdCheck: true

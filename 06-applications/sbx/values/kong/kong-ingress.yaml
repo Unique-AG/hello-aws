@@ -1,12 +1,12 @@
 # Kong Ingress Resources for AWS EKS
-# Updated for AWS environment with <DNS_ZONE> domain
+# Updated for AWS environment with aws.unique.dev domain
 resources:
   - apiVersion: networking.k8s.io/v1
     kind: Ingress
     metadata:
       name: kong-web-apps
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        cert-manager.io/cluster-issuer: internal-ca-issuer
         konghq.com/protocols: http,https
         konghq.com/strip-path: "true"
       namespace: unique
@@ -33,7 +33,7 @@ resources:
     metadata:
       name: kong-backend-services
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        cert-manager.io/cluster-issuer: internal-ca-issuer
         konghq.com/protocols: http,https
         konghq.com/strip-path: "true"
       namespace: unique
@@ -60,7 +60,7 @@ resources:
     metadata:
       name: kong-zitadel
       annotations:
-        cert-manager.io/cluster-issuer: letsencrypt-route53-dns
+        cert-manager.io/cluster-issuer: internal-ca-issuer
         konghq.com/protocols: http,https
         konghq.com/strip-path: "false"  # Don't strip path for Zitadel
       namespace: unique
@@ -81,3 +81,47 @@ resources:
         - hosts:
             - <DOMAIN_IDENTITY>
           secretName: kong-zitadel-tls
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-grafana
+      annotations:
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "false"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_BASE>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: kube-prometheus-stack-grafana
+                    port:
+                      number: 80
+                path: /grafana
+                pathType: Prefix
+
+  - apiVersion: networking.k8s.io/v1
+    kind: Ingress
+    metadata:
+      name: kong-argocd
+      annotations:
+        konghq.com/protocols: http,https
+        konghq.com/strip-path: "false"
+      namespace: unique
+    spec:
+      ingressClassName: kong
+      rules:
+        - host: <DOMAIN_BASE>
+          http:
+            paths:
+              - backend:
+                  service:
+                    name: argo-server
+                    port:
+                      number: 80
+                path: /argo
+                pathType: Prefix

@@ -1,0 +1,40 @@
+# ArgoCD GitHub App repository credentials
+# Synced from AWS Secrets Manager -> K8s secret with ArgoCD labels
+# ArgoCD auto-discovers secrets with the repo-creds label
+
+resources:
+  - apiVersion: external-secrets.io/v1beta1
+    kind: ExternalSecret
+    metadata:
+      name: argocd-repo-creds-github
+      namespace: unique
+    spec:
+      refreshInterval: 1h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: aws-secrets-manager
+      target:
+        name: argocd-repo-creds-github
+        template:
+          metadata:
+            labels:
+              argocd.argoproj.io/secret-type: repo-creds
+          data:
+            type: git
+            url: https://github.com/unique-ag
+            githubAppID: "{{ .githubAppID }}"
+            githubAppInstallationID: "{{ .githubAppInstallationID }}"
+            githubAppPrivateKey: "{{ .githubAppPrivateKey | b64dec }}"
+      data:
+        - secretKey: githubAppID
+          remoteRef:
+            key: argocd-github-app
+            property: githubAppID
+        - secretKey: githubAppInstallationID
+          remoteRef:
+            key: argocd-github-app
+            property: githubAppInstallationID
+        - secretKey: githubAppPrivateKey
+          remoteRef:
+            key: argocd-github-app
+            property: githubAppPrivateKey

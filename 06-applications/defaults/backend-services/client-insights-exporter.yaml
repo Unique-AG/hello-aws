@@ -1,5 +1,5 @@
 # Extra cron jobs
-extraCronJobs:
+cronJobs:
   client-insights-exporter:
     concurrencyPolicy: Forbid
     failedJobsHistoryLimit: 1

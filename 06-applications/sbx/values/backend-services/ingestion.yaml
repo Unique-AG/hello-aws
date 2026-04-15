@@ -2,18 +2,27 @@
 # Uses S3 for storage and LiteLLM for embeddings
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
-  tag: "2026.06.1"
+  repository: <ECR_REGISTRY_THIRDPARTY>/backend-service-ingestion
+  tag: "2026.14.1"
 
 env:
   AWS_REGION: <AWS_REGION>
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
-  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "false"
-  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "false"
+  FEATURE_FLAG_ENABLE_CAN_MANAGE_ACCESS_UN_11608: "false"
+  ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
+  ELASTICSEARCH_URL: https://elasticsearch-ingestion-es-http.unique.svc:9200
+  ELASTICSEARCH_USERNAME: elastic
+  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "true"
+  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "true"
   STORAGE_PROVIDER: s3
-  TRUSTED_DOMAINS: '["<TRUSTED_STORAGE_DOMAIN>"]'
+  TRUSTED_DOMAINS: '["*.amazonaws.com"]'
 
 envVars:
+  - name: ELASTICSEARCH_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: elasticsearch-ingestion-es-elastic-user
+        key: elastic
   - name: RABBITMQ_USERNAME
     valueFrom:
       secretKeyRef:
@@ -63,8 +72,16 @@ extraEnvSecrets:
 
 hooks:
   migration:
-    command: cd /home/node/app/services/node-ingestion; npx prisma migrate deploy;
+    command: |
+      cd /home/node/app/services/node-ingestion/prisma; pnpm exec prisma migrate deploy --config ../prisma.config.ts;
     enabled: true
 
-volumeMounts: []
-volumes: []
+volumeMounts:
+  - name: elastic-certs
+    mountPath: /etc/ssl/elastic/ca.crt
+    readOnly: true
+    subPath: ca.crt
+volumes:
+  - name: elastic-certs
+    secret:
+      secretName: elasticsearch-ingestion-es-http-certs-public

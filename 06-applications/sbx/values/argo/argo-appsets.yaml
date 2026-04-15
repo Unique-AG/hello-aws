@@ -4,6 +4,7 @@ applicationsets:
       argocd.argoproj.io/sync-wave: "0"
     namespace: unique
     goTemplate: true
+    preserveResourcesOnDeletion: true
     generators:
       - git:
           repoURL: <GITHUB_REPO_URL>
@@ -35,11 +36,13 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if .spec.autoSync }}
+        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
         syncPolicy:
+          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
+          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}
@@ -52,6 +55,7 @@ applicationsets:
       argocd.argoproj.io/sync-wave: "1"
     namespace: unique
     goTemplate: true
+    preserveResourcesOnDeletion: true
     generators:
       - git:
           repoURL: <GITHUB_REPO_URL>
@@ -83,11 +87,13 @@ applicationsets:
         ignoreDifferences:
           {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
         {{- end }}
-        {{- if .spec.autoSync }}
+        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
         syncPolicy:
+          {{- if .spec.autoSync }}
           automated:
             prune: true
             selfHeal: true
+          {{- end }}
           syncOptions:
             - CreateNamespace=true
             {{- if hasKey .spec "syncOptions" }}

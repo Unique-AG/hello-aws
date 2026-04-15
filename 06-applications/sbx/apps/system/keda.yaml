@@ -4,8 +4,8 @@ spec:
   syncOptions:
     - ServerSideApply=true
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/rc-06-applications
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
       ref: values
     - chart: keda
       repoURL: https://kedacore.github.io/charts

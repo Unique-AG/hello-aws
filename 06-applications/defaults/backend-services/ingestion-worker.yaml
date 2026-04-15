@@ -44,7 +44,7 @@ envVars:
 keda:
   enabled: true
   minReplicaCount: 0
-  maxReplicaCount: 5
+  maxReplicaCount: 12
   triggers: {}  # Triggers will be defined in ArgoCD application valuesObject
   extraAnnotations:
     argocd.argoproj.io/sync-wave: "10"
