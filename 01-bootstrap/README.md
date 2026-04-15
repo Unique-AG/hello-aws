@@ -8,7 +8,9 @@ The bootstrap layer creates the S3 bucket, KMS key, CloudWatch log group, and op
 - **S3 access logs bucket**: Versioning, KMS encryption, public access blocked, lifecycle policy (90-day expiration, 30-day noncurrent version expiration)
 - **KMS key**: Customer-managed, automatic rotation, policy grants for S3, CloudWatch Logs, and GitHub Actions (if OIDC configured)
 - **CloudWatch log group**: KMS encrypted, minimum 365-day retention for non-sandbox environments
-- **GitHub Actions OIDC provider + IAM role** (optional): Federated authentication scoped to a specific GitHub repository
+- **GitHub Actions OIDC provider + IAM role** (optional): Federated authentication scoped to a specific GitHub repository. The role is attached to two inline policies:
+  - `terraform-state-access`: S3 + KMS access limited to the Terraform state bucket
+  - `deploy`: broad AWS permissions needed to apply the remaining layers (EC2, EKS, ECR, RDS, Secrets Manager, Route 53, ACM, CloudFront, Bedrock, Prometheus, Grafana, CodeBuild, etc.). The OIDC trust policy restricts this role to workflows from the configured `github_repository`; intended for use by `.github/actions/terraform/action.yaml` via the `sts.amazonaws.com` audience.
 
 ## Bootstrap Script
 
