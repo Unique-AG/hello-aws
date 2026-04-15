@@ -432,8 +432,8 @@ releases:
               name: docling-models-pvc
               namespace: unique
             spec:
-              accessModes: ["ReadWriteOnce"]
-              storageClassName: gp3
+              accessModes: ["ReadWriteMany"]
+              storageClassName: efs-sc
               resources:
                 requests:
                   storage: 30Gi
