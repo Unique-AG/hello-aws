@@ -74,21 +74,9 @@ domain:
   dnsZone: "<DNS_ZONE>"
 aws:
   region: "<AWS_REGION>"
-  accountId: "<AWS_ACCOUNT_ID>"
   hostedZoneID: "<AWS_HOSTED_ZONE_ID>"
   kms:
     keyArn: "<KMS_KEY_ARN>"
-  eks:
-    clusterName: "<EKS_CLUSTER_NAME>"
-  vpc:
-    id: "<VPC_ID>"
-  nlb:
-    targetGroupHttpArn: "<TARGET_GROUP_HTTP_ARN>"
-    targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
-  redis:
-    url: "<REDIS_URL>"
-  bedrock:
-    cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
   ecr:
     primary:
       accountId: "000000000000"
@@ -132,19 +120,12 @@ FROM_DOMAIN_IDENTITY=$(yq '.domain.identity' "$FROM")
 FROM_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$FROM")
 FROM_DNS_ZONE=$(yq '.domain.dnsZone' "$FROM")
 FROM_AWS_REGION=$(yq '.aws.region' "$FROM")
-FROM_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$FROM")
 FROM_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$FROM")
 FROM_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$FROM")
 FROM_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$FROM")
 FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
-FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
-FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
-FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
-FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
-FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
-FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
 FROM_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$FROM")
 FROM_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$FROM")
 FROM_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$FROM")
@@ -178,19 +159,12 @@ TO_DOMAIN_IDENTITY=$(yq '.domain.identity' "$CONFIG")
 TO_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$CONFIG")
 TO_DNS_ZONE=$(yq '.domain.dnsZone' "$CONFIG")
 TO_AWS_REGION=$(yq '.aws.region' "$CONFIG")
-TO_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$CONFIG")
 TO_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$CONFIG")
 TO_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$CONFIG")
 TO_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$CONFIG")
 TO_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$CONFIG")
 TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
-TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
-TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
-TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
-TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
-TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
-TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -255,28 +229,9 @@ replace_all "$FROM_ECR_THIRDPARTY_FULL" "$TO_ECR_THIRDPARTY_FULL"
 echo "  ECR third-party bare registry ..."
 replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
 
-# 2. Redis URL (before region, since URL contains region)
-echo "  Redis URL ..."
-replace_all "$FROM_REDIS_URL" "$TO_REDIS_URL"
-
-# 3. Target group ARNs (before region, since ARNs contain region)
-echo "  NLB target group HTTP ARN ..."
-replace_all "$FROM_TG_HTTP_ARN" "$TO_TG_HTTP_ARN"
-
-echo "  NLB target group HTTPS ARN ..."
-replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
-
-# 3. KMS key ARN (before region, since ARN contains region)
+# 2. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
-
-# 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
-echo "  Bedrock Cohere Embed v4 profile ID ..."
-replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
-
-# 3c. AWS account ID (before region, since ARNs contain both)
-echo "  AWS account ID ..."
-replace_all "$FROM_AWS_ACCOUNT_ID" "$TO_AWS_ACCOUNT_ID"
 
 # 3. Repository URL (before domain, since URL contains github.com not our domain)
 echo "  Repository URL ..."
@@ -320,15 +275,7 @@ replace_all "$FROM_AWS_REGION" "$TO_AWS_REGION"
 echo "  Hosted zone ID ..."
 replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 
-# 8. EKS cluster name
-echo "  EKS cluster name ..."
-replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
-
-# 9. VPC ID
-echo "  VPC ID ..."
-replace_all "$FROM_VPC_ID" "$TO_VPC_ID"
-
-# 10. Zitadel IDs
+# 8. Zitadel IDs
 echo "  Zitadel project ID ..."
 replace_all "$FROM_ZITADEL_PROJECT_ID" "$TO_ZITADEL_PROJECT_ID"
 
