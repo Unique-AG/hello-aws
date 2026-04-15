@@ -2,9 +2,10 @@ name: '[tf] Validate'
 on:
   pull_request:
     paths:
-      - '0[1-5]-*/**/*.tf'
-      - 'modules/**/*.tf'
+      - '0[1-5]-*/**'
+      - 'modules/**'
       - 'scripts/**'
+      - 'common.auto.tfvars.template'
       - '.github/workflows/tf.validate.yaml'
 
 permissions:
@@ -16,58 +17,33 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - layer: bootstrap
-            dir: 01-bootstrap
-          - layer: governance
-            dir: 02-governance
-          - layer: infrastructure
-            dir: 03-infrastructure
-          - layer: data-and-ai
-            dir: 04-data-and-ai
-          - layer: compute
-            dir: 05-compute
+        layer: [bootstrap, governance, infrastructure, data-and-ai, compute]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: '1.14.0'
-      - name: fmt
-        # Runs before rendering tfvars so it only checks committed files.
-        run: terraform -chdir=${{ matrix.dir }}/terraform fmt -check -recursive
-      - name: Render tfvars for scanners
-        # main stays generic (rendered tfvars are gitignored). CI renders the
-        # template and merges it with the env-specific tfvars into a single
-        # file that is passed to trivy/checkov. Without resolved variables,
-        # trivy crashes on `default_tags { tags = local.tags }`.
-        run: |
-          cp common.auto.tfvars.template common.auto.tfvars
-          cat common.auto.tfvars \
-              ${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars \
-              > "${RUNNER_TEMP}/ci.tfvars"
-          echo "CI_TFVARS=${RUNNER_TEMP}/ci.tfvars" >> "$GITHUB_ENV"
-      - name: init
-        run: terraform -chdir=${{ matrix.dir }}/terraform init -backend=false
-      - name: validate
-        run: terraform -chdir=${{ matrix.dir }}/terraform validate -no-color
-      - name: tflint
+
+      - name: Install tflint
         uses: terraform-linters/setup-tflint@6e87008f9dd1fe3e34e66aca6c97b4a69f72a7f4 # v4
-      - run: |
-          tflint --init
-          tflint --chdir=${{ matrix.dir }}/terraform
-      - name: trivy
-        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
-        with:
-          scan-type: fs
-          scan-ref: ${{ matrix.dir }}/terraform
-          scanners: misconfig
-          severity: HIGH,CRITICAL
-          trivyignores: .trivyignore
-          tf-vars: ${{ env.CI_TFVARS }}
-      - name: checkov
-        uses: bridgecrewio/checkov-action@de2bfaecd21d58ef232e0d2a3391c33c32c460d7 # v12.3096.0
-        with:
-          directory: ${{ matrix.dir }}/terraform
-          framework: terraform
-          var_file: ${{ env.CI_TFVARS }}
-          quiet: true
+
+      - name: Install trivy
+        # Matches the version used in scripts/validate.sh locally.
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.69.1
+
+      - name: Install checkov
+        # Pinned to match local scripts/validate.sh output. Bumping this can
+        # introduce new checks — update docs/security-baseline.md + inline skips
+        # before upgrading.
+        run: pipx install checkov==3.2.500
+
+      - name: Render common.auto.tfvars
+        # main keeps only the .template (rendered file is gitignored). The script
+        # needs the rendered file for variable resolution.
+        run: cp common.auto.tfvars.template common.auto.tfvars
+
+      - name: Validate (lint-only, no backend)
+        run: ./scripts/validate.sh ${{ matrix.layer }} sbx true
