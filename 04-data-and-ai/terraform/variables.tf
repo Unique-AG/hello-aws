@@ -306,7 +306,7 @@ variable "aurora_master_password" {
 variable "set_aurora_master_password" {
   description = "Set to true when providing aurora_master_password to update the password"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "aurora_instance_class" {
