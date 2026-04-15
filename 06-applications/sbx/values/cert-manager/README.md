@@ -6,6 +6,16 @@ This directory contains cert-manager ClusterIssuer configurations for DNS-01 cha
 
 ## ClusterIssuers
 
+### Internal CA (`cluster-issuer-internal-ca.yaml`)
+
+A self-signed root CA used to issue short-lived TLS certificates for in-cluster service-to-service traffic (e.g., Kong's internal ALB listener, where CloudFront VPC Origin terminates external TLS). Chain:
+
+1. `selfsigned-issuer` (`ClusterIssuer`, self-signed) — issues the CA certificate
+2. `internal-ca` (`Certificate` in namespace `unique`, `isCA: true`, ECDSA P-256) — the CA itself
+3. `internal-ca-issuer` (`ClusterIssuer`, backed by `internal-ca-secret`) — issues leaf certs for workloads
+
+Workloads reference `internal-ca-issuer` via `issuerRef` on their `Certificate` resources.
+
 ### Route 53 DNS-01 (`cluster-issuer-route53.yaml`)
 
 Uses Route 53 for DNS-01 challenge validation with Let's Encrypt.
