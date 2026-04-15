@@ -8,7 +8,7 @@ The compute layer provides containerized compute infrastructure: Amazon EKS with
 - **CloudFront**: Public internet access via CloudFront edge network — NLB, ALBs, and VPC Origin are managed in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`)
 - **Dual**: Both corporate network and public internet access (Transit Gateway configured in infrastructure layer)
 
-ACR credentials use Terraform's `secret_string_wo` write-only attribute and `ephemeral` variables so they never appear in state or plan files.
+Terraform provisions the ACR credentials *secret container* (Secrets Manager entry + resource policy granting the ECR service-linked role access), but the credential *value* itself is seeded out-of-band by `.scripts/seed-secrets.sh` (reads from 1Password or an equivalent vault). No ACR credentials flow through Terraform variables, state, or plan files.
 
 ## Design Rationale
 
@@ -33,25 +33,27 @@ Node groups are defined via the `eks_node_groups` variable (a map of pool config
 
 ### EKS Addons
 
-Five managed addons, all deployed after the node group is ready:
+Six managed addons, all deployed after the node group is ready:
 
 | Addon | Purpose |
 |---|---|
 | `eks-pod-identity-agent` | Required for Pod Identity associations |
 | `aws-ebs-csi-driver` | PersistentVolumeClaim provisioning (gp3); Pod Identity via standalone association |
+| `aws-efs-csi-driver` | Shared EFS file system provisioning (e.g., docling models from 03-infrastructure); Pod Identity via standalone association |
 | `coredns` | Cluster DNS |
 | `kube-proxy` | Network proxy |
 | `vpc-cni` | VPC-native pod networking |
 
-> **Note**: The EBS CSI addon uses `lifecycle { ignore_changes = [service_account_role_arn] }` because cross-account assumed roles cannot call `UpdateAddon` with role changes (PassRole restriction). The Pod Identity association is managed separately.
+> **Note**: The EBS/EFS CSI addons use `lifecycle { ignore_changes = [service_account_role_arn] }` because cross-account assumed roles cannot call `UpdateAddon` with role changes (PassRole restriction). The Pod Identity associations are managed separately.
 
 ### Pod Identity Roles
 
-Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+Pod Identity roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
 | EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) + KMS encrypt/decrypt for EBS encryption |
+| EFS CSI Driver | `kube-system` | `efs-csi-controller-sa` | `AmazonEFSCSIDriverPolicy` (managed) |
 | Cluster Secrets | `unique` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` |
@@ -60,6 +62,7 @@ Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assu
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
+| Prometheus | `observability` | `prometheus-kube-prometheus-prometheus` | `aps:RemoteWrite` + metadata read on the AMP workspace (only created when the data-and-ai layer exposes `prometheus_workspace_arn`) |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
 
@@ -76,7 +79,7 @@ ECR provides **secure container image storage** with automated vulnerability sca
 Pull-through cache reduces external registry dependencies and egress costs. For authenticated registries (Docker Hub, GHCR), creating pull-through cache rules with credentials is the recommended approach — it avoids rate limits and provides reliable, cached access to upstream images.
 
 - **Supported Upstream Registries**: Docker Hub, ECR Public, Quay.io, GCR, GHCR, Azure Container Registry (ACR). Enabled registries are configured via `ecr_pull_through_cache_upstream_registries`.
-- **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret.
+- **ACR Credentials**: Terraform provisions the Secrets Manager container + resource policy (granting the ECR service-linked role `secretsmanager:GetSecretValue`). The credential value is populated by `.scripts/seed-secrets.sh` (typically reading from 1Password). No ACR credentials pass through Terraform variables, state, or plan files.
 - **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
 
@@ -93,9 +96,9 @@ Architecture: `CloudFront -> ALB -> Ingress NLB -> Ingress Controller pods (via 
 
 This compute layer provides only the **AWS Load Balancer Controller IAM role** (Pod Identity), since it requires the EKS cluster name. See the infrastructure layer README for NLB/ALB/VPC Origin configuration.
 
-### VPC Endpoint
+### VPC Endpoints
 
-- **EKS Interface Endpoint**: `com.amazonaws.{region}.eks` — enables `kubectl` and EKS API calls from private subnets without internet access. Uses the shared VPC endpoints security group from infrastructure layer.
+The EKS Interface Endpoint (`com.amazonaws.{region}.eks`) and EKS Auth endpoint (`com.amazonaws.{region}.eks-auth`, used by the Pod Identity agent for token exchange) are provisioned in the infrastructure layer alongside the other shared interface endpoints — no VPC endpoints are created here.
 
 ## Resources
 
@@ -126,7 +129,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### ECR Pull-Through Cache
 
 - **Cache Rules**: Configurable via `ecr_pull_through_cache_upstream_registries`; ACR rules are conditional on `acr_registry_url`
-- **ACR Secret**: Secrets Manager with `secret_string_wo`, KMS-encrypted, resource policy for ECR service-linked role
+- **ACR Secret**: Secrets Manager container, KMS-encrypted, resource policy for ECR service-linked role (value seeded out-of-band by `seed-secrets.sh`)
 
 ### VPC Endpoint
 
@@ -149,12 +152,12 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 - **EKS Auth**: API-only mode, access entries (no `aws-auth` ConfigMap)
 - **Pod Identity**: 9 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
-- **ACR Credentials**: Write-only (`secret_string_wo`) + ephemeral variables — never in Terraform state or plan files
+- **ACR Credentials**: Secret container managed by Terraform; value seeded out-of-band via `seed-secrets.sh` — never flows through Terraform variables, state, or plan files
 
 ### Audit and Compliance
 
 - **Terraform Version**: Pinned to `>= 1.10.0` (native S3 locking)
-- **AWS Provider**: Pinned to `~> 5.100`
+- **AWS Provider**: Pinned to `~> 6.0`
 - **Control Plane Logging**: All 5 EKS log types enabled
 - **CloudWatch Retention**: Configurable per environment (default 7 days)
 
@@ -197,27 +200,26 @@ eks_node_groups = {
 # ECR
 ecr_enhanced_scanning_enabled = true
 
-# ACR (pull-through cache — "" to disable)
+# ACR (pull-through cache — "" to disable). Typically set in common.auto.tfvars.
 acr_registry_url = "example.azurecr.io"
-
-# VPC Endpoint
-enable_eks_endpoint           = true
 ```
+
+> **Note**: The EKS VPC Interface Endpoint is provisioned in the infrastructure layer alongside the other shared VPC endpoints. This layer no longer exposes an `enable_eks_endpoint` toggle.
 
 > **Note**: Ingress NLB, ALBs, and CloudFront VPC Origin are configured in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`).
 
 ### Deployment Steps
 
-**With ACR credentials** (retrieves credentials from 1Password):
-
-```bash
-.scripts/deploy-with-acr.sh compute <environment> [1password-item] [deploy-args...]
-```
-
-**Without ACR** (standard deploy):
+Standard deploy (Terraform only — creates the ACR secret container but not its value):
 
 ```bash
 ./scripts/deploy.sh compute <environment>
+```
+
+To also seed the ACR credential value from 1Password in the same run:
+
+```bash
+./scripts/deploy-with-acr.sh compute <environment> [1password-item] [deploy-args...]
 ```
 
 **Environments**: `dev`, `test`, `prod`, `sbx`
@@ -263,6 +265,7 @@ enable_eks_endpoint           = true
 
 ### Pod Identity Roles
 - `pod_identity_ebs_csi_role_arn`
+- `pod_identity_efs_csi_role_arn`
 - `pod_identity_cluster_secrets_role_arn`
 - `pod_identity_assistants_core_role_arn`
 - `pod_identity_cert_manager_route53_role_arn`
@@ -271,9 +274,7 @@ enable_eks_endpoint           = true
 - `pod_identity_ingestion_worker_role_arn`
 - `pod_identity_speech_role_arn`
 - `pod_identity_aws_lb_controller_role_arn`
-
-### VPC Endpoint
-- `eks_endpoint_id`
+- `pod_identity_prometheus_role_arn` (conditional on AMP workspace from 04-data-and-ai)
 
 ### General
 - `aws_region`, `aws_account_id`
