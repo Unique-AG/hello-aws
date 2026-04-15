@@ -59,7 +59,7 @@ cd 01-bootstrap/scripts
 ./bootstrap.sh <environment>
 ```
 
-**Environments**: `prod`, `stag`, `dev`, `sbx`
+**Environments**: `dev`, `test`, `prod`, `sbx`
 
 **Options**:
 - `--auto-approve`: Skip interactive confirmation
