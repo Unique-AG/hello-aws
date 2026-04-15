@@ -80,7 +80,8 @@ All parameters in `<env>/instance-config.yaml`:
 
 ```
 06-applications/
-├── argo-bootstrap.yaml              # Helmfile: bootstraps ArgoCD + ApplicationSets
+├── argo-bootstrap.yaml.gotmpl       # Helmfile: bootstraps ArgoCD + ApplicationSets (GitOps path)
+├── helmfile-direct.yaml.gotmpl      # Helmfile: installs the full app stack directly (useful for initial/disaster-recovery installs where ArgoCD isn't yet available)
 ├── instance-config.yaml.template    # Configuration template (copy into env dir)
 ├── scripts/
 │   ├── configure-instance.sh        # Replace placeholders (env-scoped)
@@ -115,7 +116,8 @@ All parameters in `<env>/instance-config.yaml`:
         ├── zitadel/                  # Zitadel identity provider
         ├── ai-services/              # AI service values
         ├── backend-services/         # Backend service values
-        └── web-apps/                 # Web app values
+        ├── web-apps/                 # Web app values
+        └── observability/            # kube-prometheus-stack, Loki, Tempo, Alloy values
 ```
 
 ## ArgoCD Bootstrap
@@ -137,12 +139,13 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 
 ## Application Categories
 
-### System Applications (12)
+### System Applications (17)
 
 | App | autoSync | Description |
 |-----|----------|-------------|
 | storage-class-gp3 | true | gp3 StorageClass for EBS CSI Driver |
-| cert-manager | true | TLS certificate management with Route 53 DNS-01 validation |
+| storage-class-efs | true | EFS StorageClass for the EFS CSI Driver (shared `docling-models` file system) |
+| cert-manager | true | TLS certificate management with Route 53 DNS-01 validation + internal CA ClusterIssuer |
 | external-secrets | false | AWS Secrets Manager integration (ClusterSecretStore + app secrets) |
 | reloader | true | Automatic pod restart on ConfigMap/Secret changes |
 | kong | false | API gateway — controller, gateway, CRDs, plugins, ingress |
@@ -153,6 +156,10 @@ ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initia
 | argocd | false | ArgoCD self-management |
 | aws-lb-controller | true | AWS Load Balancer Controller (NLB/ALB provisioning) |
 | keda | true | Event-driven autoscaling (ServerSideApply for CRDs) |
+| kube-prometheus-stack | false | Prometheus + Grafana + Alertmanager; remote-writes metrics to Amazon Managed Prometheus via Pod Identity (SigV4) |
+| loki | false | Log aggregation; chunks/ruler/admin stored in the observability S3 bucket (04-data-and-ai) |
+| tempo | false | Distributed tracing; traces stored in the observability S3 bucket |
+| alloy | false | Grafana Alloy — log/metric/trace collection agent feeding Loki, Prometheus, and Tempo |
 
 ### Chat Applications (21)
 
@@ -210,6 +217,8 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 | `cert-manager` | unique | Route 53 | DNS-01 certificate validation |
 | `external-secrets` | unique | Secrets Manager + KMS | Secret retrieval |
 | `ebs-csi-controller-sa` | kube-system | EBS | Volume provisioning (EKS addon, not ArgoCD-managed) |
+| `efs-csi-controller-sa` | kube-system | EFS | Shared file system provisioning (EKS addon, not ArgoCD-managed) |
+| `prometheus-kube-prometheus-prometheus` | observability | AMP `aps:RemoteWrite` | Sends metrics to Amazon Managed Prometheus (SigV4) |
 
 ### Chat
 
