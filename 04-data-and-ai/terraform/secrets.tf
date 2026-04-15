@@ -58,11 +58,19 @@ resource "aws_secretsmanager_secret_version" "psql_username" {
 
 resource "aws_secretsmanager_secret" "psql_password" {
   name                    = var.psql_password_secret_name
-  description             = "PostgreSQL master password"
+  description             = "PostgreSQL master password (write-only — never in Terraform state)"
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = { Name = var.psql_password_secret_name, Purpose = "database-credentials" }
+}
+
+resource "aws_secretsmanager_secret_version" "psql_password" {
+  count     = var.set_aurora_master_password ? 1 : 0
+  secret_id = aws_secretsmanager_secret.psql_password.id
+
+  secret_string_wo         = var.aurora_master_password
+  secret_string_wo_version = 1 # Bump when rotating the password
 }
 
 # ---------------------------------------------------------------------------
@@ -304,4 +312,52 @@ resource "aws_secretsmanager_secret" "rds_ca_bundle" {
 resource "aws_secretsmanager_secret_version" "rds_ca_bundle" {
   secret_id     = aws_secretsmanager_secret.rds_ca_bundle.id
   secret_string = data.http.rds_ca_bundle.response_body
+}
+
+# ---------------------------------------------------------------------------
+# Observability — generated credentials (seed script only, containers here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "slack_webhook_url" {
+  name                    = "alertmanager-slack-webhook-url"
+  description             = "Slack webhook URL for AlertManager notifications"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "alertmanager-slack-webhook-url", Purpose = "observability" }
+}
+
+resource "aws_secretsmanager_secret" "grafana_admin_password" {
+  name                    = "grafana-admin-password"
+  description             = "Grafana admin password for self-hosted instance"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "grafana-admin-password", Purpose = "observability" }
+}
+
+# ---------------------------------------------------------------------------
+# ArgoCD — GitHub App credentials (seed script only, container here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "argocd_github_app" {
+  name                    = "argocd-github-app"
+  description             = "ArgoCD GitHub App credentials (app ID, installation ID, private key)"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "argocd-github-app", Purpose = "argocd" }
+}
+
+# ---------------------------------------------------------------------------
+# Google Search — API token (seed script only, container here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "google_search_api_key" {
+  name                    = "google-search-api-key"
+  description             = "Google Search API key"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "google-search-api-key", Purpose = "search" }
 }

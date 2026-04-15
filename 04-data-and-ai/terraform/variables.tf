@@ -217,6 +217,12 @@ variable "s3_force_destroy" {
   default     = false
 }
 
+variable "enable_s3_vpc_only_policy" {
+  description = "Attach VPC-only bucket policies to S3 buckets. Disable temporarily when deploying from outside the VPC."
+  type        = bool
+  default     = true
+}
+
 variable "s3_application_data_bucket_secret_name" {
   description = "Secret name for S3 application data bucket name"
   type        = string
@@ -287,6 +293,20 @@ variable "rds_ca_bundle_secret_name" {
   description = "Secret name for RDS CA certificate bundle"
   type        = string
   default     = "rds-ca-bundle"
+}
+
+variable "aurora_master_password" {
+  description = "Aurora master password (ephemeral — never stored in state or plan output)"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "set_aurora_master_password" {
+  description = "Set to true when providing aurora_master_password to update the password"
+  type        = bool
+  default     = false
 }
 
 variable "aurora_instance_class" {
