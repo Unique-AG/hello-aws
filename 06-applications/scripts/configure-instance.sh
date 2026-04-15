@@ -74,9 +74,30 @@ domain:
   dnsZone: "<DNS_ZONE>"
 aws:
   region: "<AWS_REGION>"
+  accountId: "<AWS_ACCOUNT_ID>"
   hostedZoneID: "<AWS_HOSTED_ZONE_ID>"
   kms:
     keyArn: "<KMS_KEY_ARN>"
+  eks:
+    clusterName: "<EKS_CLUSTER_NAME>"
+  vpc:
+    id: "<VPC_ID>"
+  route53:
+    privateZoneId: "<ROUTE53_PRIVATE_ZONE_ID>"
+  connectivity:
+    accountId: "<CONNECTIVITY_ACCOUNT_ID>"
+  nlb:
+    targetGroupHttpArn: "<TARGET_GROUP_HTTP_ARN>"
+    targetGroupHttpsArn: "<TARGET_GROUP_HTTPS_ARN>"
+  redis:
+    url: "<REDIS_URL>"
+  bedrock:
+    cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
+  prometheus:
+    workspaceId: "<AMP_WORKSPACE_ID>"
+    remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"
+  observability:
+    s3BucketName: "<OBSERVABILITY_S3_BUCKET_NAME>"
   ecr:
     primary:
       accountId: "000000000000"
@@ -120,12 +141,24 @@ FROM_DOMAIN_IDENTITY=$(yq '.domain.identity' "$FROM")
 FROM_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$FROM")
 FROM_DNS_ZONE=$(yq '.domain.dnsZone' "$FROM")
 FROM_AWS_REGION=$(yq '.aws.region' "$FROM")
+FROM_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$FROM")
 FROM_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$FROM")
 FROM_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$FROM")
 FROM_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$FROM")
 FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
+FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
+FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
+FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
+FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
+FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
+FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
+FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
+FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
+FROM_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$FROM")
+FROM_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$FROM")
+FROM_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$FROM")
 FROM_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$FROM")
 FROM_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$FROM")
 FROM_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$FROM")
@@ -159,12 +192,24 @@ TO_DOMAIN_IDENTITY=$(yq '.domain.identity' "$CONFIG")
 TO_DOMAIN_ARGOCD=$(yq '.domain.argocd' "$CONFIG")
 TO_DNS_ZONE=$(yq '.domain.dnsZone' "$CONFIG")
 TO_AWS_REGION=$(yq '.aws.region' "$CONFIG")
+TO_AWS_ACCOUNT_ID=$(yq '.aws.accountId' "$CONFIG")
 TO_HOSTED_ZONE_ID=$(yq '.aws.hostedZoneID' "$CONFIG")
 TO_ECR_PRIMARY_ACCOUNT=$(yq '.aws.ecr.primary.accountId' "$CONFIG")
 TO_ECR_PRIMARY_PREFIX=$(yq '.aws.ecr.primary.prefix' "$CONFIG")
 TO_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$CONFIG")
 TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
+TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
+TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
+TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
+TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
+TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
+TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
+TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
+TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
+TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId' "$CONFIG")
+TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl' "$CONFIG")
+TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -174,6 +219,10 @@ TO_ECR_PRIMARY="${TO_ECR_PRIMARY_ACCOUNT}.dkr.ecr.${TO_AWS_REGION}.amazonaws.com
 TO_ECR_THIRDPARTY="${TO_ECR_THIRDPARTY_ACCOUNT}.dkr.ecr.${TO_AWS_REGION}.amazonaws.com"
 TO_ECR_PRIMARY_FULL="${TO_ECR_PRIMARY}/${TO_ECR_PRIMARY_PREFIX}"
 TO_ECR_THIRDPARTY_FULL="${TO_ECR_THIRDPARTY}/${TO_ECR_THIRDPARTY_PREFIX}"
+
+# ACR (Azure Container Registry) derived values — for tfvars ECR pull-through cache entries
+TO_ACR_URL="${TO_ECR_PRIMARY_PREFIX}.azurecr.io"
+TO_ACR_ALIAS="$TO_ECR_PRIMARY_PREFIX"
 
 # ------------------------------------------------------------------
 # Helper: sed replacement (portable macOS + Linux)
@@ -213,6 +262,28 @@ replace_all() {
     -print0)
 }
 
+# Replace a string in all tfvars files under the project's terraform layer
+# environment directories (e.g., 03-infrastructure/terraform/environments/sbx/)
+PROJECT_ROOT="$(cd "$BASE_DIR/.." && pwd)"
+replace_all_tfvars() {
+  local old="$1"
+  local new="$2"
+
+  if [[ "$old" == "$new" ]]; then
+    return 0
+  fi
+
+  local old_escaped new_escaped
+  old_escaped=$(printf '%s\n' "$old" | sed 's/[&/\]/\\&/g')
+  new_escaped=$(printf '%s\n' "$new" | sed 's/[&/\]/\\&/g')
+
+  while IFS= read -r -d '' file; do
+    if grep -qF "$old" "$file"; then
+      do_sed "s|${old_escaped}|${new_escaped}|g" "$file"
+    fi
+  done < <(find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0)
+}
+
 # ------------------------------------------------------------------
 # Apply replacements (order matters — longest/most-specific first)
 # ------------------------------------------------------------------
@@ -229,9 +300,38 @@ replace_all "$FROM_ECR_THIRDPARTY_FULL" "$TO_ECR_THIRDPARTY_FULL"
 echo "  ECR third-party bare registry ..."
 replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
 
-# 2. KMS key ARN (before region, since ARN contains region)
+# 2. Redis URL (before region, since URL contains region)
+echo "  Redis URL ..."
+replace_all "$FROM_REDIS_URL" "$TO_REDIS_URL"
+
+# 3. Target group ARNs (before region, since ARNs contain region)
+echo "  NLB target group HTTP ARN ..."
+replace_all "$FROM_TG_HTTP_ARN" "$TO_TG_HTTP_ARN"
+
+echo "  NLB target group HTTPS ARN ..."
+replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
+
+# 3. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
+
+# 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
+echo "  Bedrock Cohere Embed v4 profile ID ..."
+replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
+
+# 3c. Prometheus / Observability (before region and account, since URLs contain both)
+echo "  AMP remote write URL ..."
+replace_all "$FROM_AMP_REMOTE_WRITE_URL" "$TO_AMP_REMOTE_WRITE_URL"
+
+echo "  AMP workspace ID ..."
+replace_all "$FROM_AMP_WORKSPACE_ID" "$TO_AMP_WORKSPACE_ID"
+
+echo "  Observability S3 bucket ..."
+replace_all "$FROM_OBSERVABILITY_S3_BUCKET" "$TO_OBSERVABILITY_S3_BUCKET"
+
+# 3d. AWS account ID (before region, since ARNs contain both)
+echo "  AWS account ID ..."
+replace_all "$FROM_AWS_ACCOUNT_ID" "$TO_AWS_ACCOUNT_ID"
 
 # 3. Repository URL (before domain, since URL contains github.com not our domain)
 echo "  Repository URL ..."
@@ -275,7 +375,15 @@ replace_all "$FROM_AWS_REGION" "$TO_AWS_REGION"
 echo "  Hosted zone ID ..."
 replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 
-# 8. Zitadel IDs
+# 8. EKS cluster name
+echo "  EKS cluster name ..."
+replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
+
+# 9. VPC ID
+echo "  VPC ID ..."
+replace_all "$FROM_VPC_ID" "$TO_VPC_ID"
+
+# 10. Zitadel IDs
 echo "  Zitadel project ID ..."
 replace_all "$FROM_ZITADEL_PROJECT_ID" "$TO_ZITADEL_PROJECT_ID"
 
@@ -284,6 +392,83 @@ replace_all "$FROM_ZITADEL_CLIENT_ID" "$TO_ZITADEL_CLIENT_ID"
 
 echo "  Zitadel org ID ..."
 replace_all "$FROM_ZITADEL_ORG_ID" "$TO_ZITADEL_ORG_ID"
+
+# ------------------------------------------------------------------
+# Terraform layer config replacements (00-config.auto.tfvars)
+# ------------------------------------------------------------------
+echo ""
+echo "Configuring Terraform layer configs ..."
+
+# Tfvars files use concrete dummy values on main (not angle-bracket tokens).
+# Determine the correct "from" values based on whether state exists.
+if [[ -f "$STATE" ]]; then
+  # State exists: tfvars were previously configured with real values
+  TFVARS_FROM_DOMAIN_BASE="$FROM_DOMAIN_BASE"
+  TFVARS_FROM_ROUTE53_ZONE_ID="$FROM_ROUTE53_PRIVATE_ZONE_ID"
+  TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="$FROM_CONNECTIVITY_ACCOUNT_ID"
+  TFVARS_FROM_ACR_URL="${FROM_ECR_PRIMARY_PREFIX}.azurecr.io"
+  TFVARS_FROM_ACR_ALIAS="$FROM_ECR_PRIMARY_PREFIX"
+else
+  # Fresh clone: tfvars contain these example/dummy values
+  TFVARS_FROM_DOMAIN_BASE="sbx.example.com"
+  TFVARS_FROM_ROUTE53_ZONE_ID="Z0000000000000000000"
+  TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="000000000000"
+  TFVARS_FROM_ACR_URL="example.azurecr.io"
+  TFVARS_FROM_ACR_ALIAS="example"
+fi
+
+# Order matters: replace domain first (sbx.example.com contains "example"),
+# then ACR URL (example.azurecr.io contains "example"), then ACR alias last.
+echo "  Base domain (tfvars) ..."
+replace_all_tfvars "$TFVARS_FROM_DOMAIN_BASE" "$TO_DOMAIN_BASE"
+
+echo "  Route 53 private zone ID ..."
+replace_all_tfvars "$TFVARS_FROM_ROUTE53_ZONE_ID" "$TO_ROUTE53_PRIVATE_ZONE_ID"
+
+echo "  Connectivity account ID ..."
+replace_all_tfvars "$TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID" "$TO_CONNECTIVITY_ACCOUNT_ID"
+
+echo "  ACR registry URL ..."
+replace_all_tfvars "$TFVARS_FROM_ACR_URL" "$TO_ACR_URL"
+
+echo "  ACR alias ..."
+replace_all_tfvars "$TFVARS_FROM_ACR_ALIAS" "$TO_ACR_ALIAS"
+
+# ------------------------------------------------------------------
+# Enable Bedrock marketplace model agreements
+# ------------------------------------------------------------------
+# Third-party models (e.g., Cohere) require a marketplace agreement before use.
+# This is idempotent — already-accepted agreements are silently skipped.
+echo ""
+echo "Enabling Bedrock marketplace model agreements ..."
+BEDROCK_MODELS_REQUIRING_AGREEMENT=(
+  "anthropic.claude-3-5-sonnet-20240620-v1:0"
+  "anthropic.claude-3-haiku-20240307-v1:0"
+  "anthropic.claude-sonnet-4-5-20250929-v1:0"
+  "anthropic.claude-opus-4-5-20251101-v1:0"
+  "anthropic.claude-haiku-4-5-20251001-v1:0"
+  "cohere.embed-v4:0"
+)
+for model_id in "${BEDROCK_MODELS_REQUIRING_AGREEMENT[@]}"; do
+  # Check if agreement exists
+  AVAILABILITY=$(aws bedrock get-foundation-model-availability --model-id "$model_id" --region "$TO_AWS_REGION" \
+    --query "agreementAvailability.status" --output text 2>/dev/null || echo "UNKNOWN")
+  if [ "$AVAILABILITY" = "AVAILABLE" ]; then
+    echo "  $model_id: already enabled"
+  elif [ "$AVAILABILITY" = "NOT_AVAILABLE" ]; then
+    echo "  $model_id: accepting marketplace agreement ..."
+    OFFER_TOKEN=$(aws bedrock list-foundation-model-agreement-offers --model-id "$model_id" --region "$TO_AWS_REGION" \
+      --query "offers[0].offerToken" --output text 2>/dev/null)
+    if [ -n "$OFFER_TOKEN" ] && [ "$OFFER_TOKEN" != "None" ]; then
+      aws bedrock create-foundation-model-agreement --model-id "$model_id" --offer-token "$OFFER_TOKEN" \
+        --region "$TO_AWS_REGION" >/dev/null 2>&1 && echo "  $model_id: ✓ agreement accepted" || echo "  $model_id: ✗ failed to accept"
+    else
+      echo "  $model_id: ✗ no offer token available"
+    fi
+  else
+    echo "  $model_id: status=$AVAILABILITY (skipping)"
+  fi
+done
 
 # ------------------------------------------------------------------
 # Save applied state

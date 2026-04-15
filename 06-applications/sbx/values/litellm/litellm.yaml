@@ -137,7 +137,7 @@ proxy_config:
     - model_name: text-embedding-ada-002
       litellm_params:
         model: bedrock/cohere.embed-v4:0
-        model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/rzhpiygtmfxm
+        model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>
         aws_region_name: <AWS_REGION>
 
   general_settings:

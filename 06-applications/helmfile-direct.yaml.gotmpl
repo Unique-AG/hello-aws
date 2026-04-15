@@ -1,0 +1,727 @@
+# Direct deploy helmfile — bypasses ArgoCD
+# Deploys all 06-applications charts directly via helm.
+#
+# Prerequisites:
+#   1. Run configure-instance.sh to replace placeholders
+#   2. Create the namespace:  kubectl create namespace unique
+#   3. Install CRDs that helm won't manage (Gateway API, etc.)
+#
+# Usage:
+#   cd 06-applications
+#   helmfile -e dev -f helmfile-direct.yaml.gotmpl sync           # deploy everything
+#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l tier=system sync  # system only
+#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l tier=chat sync    # chat only
+#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l name=cert-manager sync  # single app
+#
+# NOTE: rabbitmq-chat (directory-based app) is not managed by this helmfile.
+#   Apply it manually:  kubectl apply -f dev/values/rabbitmq/
+
+environments:
+  dev:
+    values:
+      - env: dev
+
+---
+
+repositories:
+  - name: bedag
+    url: https://bedag.github.io/helm-charts
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: external-secrets
+    url: https://charts.external-secrets.io
+  - name: stakater
+    url: https://stakater.github.io/stakater-charts
+  - name: elastic
+    url: https://helm.elastic.co
+  - name: konghq
+    url: https://charts.konghq.com
+  - name: bitnami
+    url: registry-1.docker.io/bitnamicharts
+    oci: true
+  - name: argo
+    url: https://argoproj.github.io/argo-helm
+  - name: zitadel
+    url: https://charts.zitadel.com
+  - name: qdrant
+    url: https://qdrant.github.io/qdrant-helm
+  - name: kedacore
+    url: https://kedacore.github.io/charts
+  - name: eks-charts
+    url: https://aws.github.io/eks-charts
+  - name: prometheus-community
+    url: https://prometheus-community.github.io/helm-charts
+  - name: grafana
+    url: https://grafana.github.io/helm-charts
+  - name: unique-ag
+    url: ghcr.io/unique-ag/helm-charts
+    oci: true
+
+# ─────────────────────────────────────────────
+# SYSTEM TIER — deploy first
+# ─────────────────────────────────────────────
+releases:
+
+  # ── storage-class ──────────────────────────
+  - name: storage-class-gp3
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/storage-class/gp3.yaml
+
+  # ── cert-manager ───────────────────────────
+  - name: cert-manager
+    namespace: unique
+    chart: jetstack/cert-manager
+    version: 1.17.2
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/cert-manager/cert-manager.yaml
+
+  - name: clusterissuer-route53-dns
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - cert-manager
+    labels:
+      tier: system
+      parent: cert-manager
+    values:
+      - {{ .Values.env }}/values/cert-manager/cluster-issuer-route53.yaml
+
+  # ── external-secrets ───────────────────────
+  - name: external-secrets
+    namespace: unique
+    chart: external-secrets/external-secrets
+    version: 0.16.1
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/external-secrets/external-secrets.yaml
+
+  - name: cluster-secret-store
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - external-secrets
+    labels:
+      tier: system
+      parent: external-secrets
+    values:
+      - {{ .Values.env }}/values/external-secrets/cluster-secret-store.yaml
+
+  - name: application-secrets
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - cluster-secret-store
+    labels:
+      tier: system
+      parent: external-secrets
+    values:
+      - {{ .Values.env }}/values/external-secrets/application-secrets.yaml
+
+  # ── reloader ───────────────────────────────
+  - name: reloader
+    namespace: unique
+    chart: stakater/reloader
+    version: 2.1.3
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/reloader/reloader.yaml
+
+  # ── aws-lb-controller ─────────────────────
+  - name: aws-load-balancer-controller
+    namespace: unique
+    chart: eks-charts/aws-load-balancer-controller
+    version: 1.11.0
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/aws-lb-controller/aws-lb-controller.yaml
+
+  # ── keda ───────────────────────────────────
+  - name: keda
+    namespace: unique
+    chart: kedacore/keda
+    version: 2.19.0
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/keda/keda.yaml
+
+  # ── eck-operator ───────────────────────────
+  - name: eck-operator
+    namespace: unique
+    chart: elastic/eck-operator
+    version: 3.0.0
+    labels:
+      tier: system
+    values:
+      - managedNamespaces: [unique]
+
+  # ── elasticsearch ──────────────────────────
+  - name: elasticsearch-ingestion
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - eck-operator
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/elasticsearch/elasticsearch.yaml
+
+  # ── rabbitmq-operator ──────────────────────
+  - name: rabbitmq-cluster-operator
+    namespace: unique
+    chart: bitnami/rabbitmq-cluster-operator
+    version: 4.3.21
+    labels:
+      tier: system
+
+  # ── kong ───────────────────────────────────
+  - name: gateway-api-crds
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/gateway-api-crds.yaml
+
+  - name: kong-plugins
+    namespace: unique
+    chart: unique-ag/kong-plugins
+    version: 1.2.1
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-plugins.yaml
+
+  - name: kong-gateway-environment
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-gateway-environment.yaml
+
+  - name: kong
+    namespace: unique
+    chart: konghq/ingress
+    version: 0.19.0
+    needs:
+      - gateway-api-crds
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-controller.yaml
+
+  - name: kong-cluster-plugins
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - kong
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-cluster-plugins.yaml
+
+  - name: kong-gateway
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - kong
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-gateway.yaml
+
+  - name: kong-ingress
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - kong-gateway
+    labels:
+      tier: system
+      parent: kong
+    values:
+      - {{ .Values.env }}/values/kong/kong-ingress.yaml
+
+  # ── kube-prometheus-stack ──────────────────
+  - name: kube-prometheus-stack
+    namespace: unique
+    chart: prometheus-community/kube-prometheus-stack
+    version: 72.3.0
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/kube-prometheus-stack.yaml
+
+  # ── loki ─────────────────────────────────
+  - name: loki
+    namespace: unique
+    chart: grafana/loki
+    version: 6.29.0
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/loki.yaml
+
+  # ── alloy ────────────────────────────────
+  - name: alloy-config
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/alloy-config-cm.yaml
+
+  - name: alloy
+    namespace: unique
+    chart: grafana/alloy
+    version: 0.12.0
+    needs:
+      - alloy-config
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/alloy.yaml
+
+  # ── tempo ────────────────────────────────
+  - name: tempo
+    namespace: unique
+    chart: grafana/tempo
+    version: 1.17.0
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/tempo.yaml
+
+  # ── observability-secrets ────────────────
+  - name: observability-secrets
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    needs:
+      - cluster-secret-store
+    labels:
+      tier: system
+      group: observability
+    values:
+      - {{ .Values.env }}/values/observability/external-secrets.yaml
+
+  # ── zitadel ────────────────────────────────
+  - name: zitadel
+    namespace: unique
+    chart: zitadel/zitadel
+    version: 8.13.1
+    needs:
+      - application-secrets
+    labels:
+      tier: system
+    values:
+      - {{ .Values.env }}/values/zitadel/zitadel.yaml
+      - {{ .Values.env }}/values/zitadel/zitadel-extra-manifests.yaml
+      - zitadel:
+          secretConfig:
+            FirstInstance:
+              Org:
+                Machine:
+                  Pat:
+                    ExpirationDate: "2029-01-01T00:00:00Z"
+
+# ─────────────────────────────────────────────
+# CHAT TIER — deploy after system
+# ─────────────────────────────────────────────
+
+  # ── data: qdrant ───────────────────────────
+  - name: qdrant
+    namespace: unique
+    chart: qdrant/qdrant
+    version: 1.13.1
+    labels:
+      tier: chat
+      group: data
+    values:
+      - replicaCount: 1
+        image:
+          repository: qdrant/qdrant
+          tag: v1.13.1
+          useUnprivilegedImage: true
+        updateVolumeFsOwnership: false
+        resources:
+          requests:
+            cpu: 100m
+            memory: 1.8Gi
+          limits:
+            memory: 2Gi
+        nodeSelector:
+          scalability: steady
+          lifecycle: persistent
+        persistence:
+          accessModes: ["ReadWriteOnce"]
+          size: 10Gi
+          storageClassName: gp3
+        startupProbe:
+          enabled: true
+          failureThreshold: 30
+          periodSeconds: 30
+
+  # ── data: litellm ─────────────────────────
+  - name: litellm-db-init
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: chat
+      group: data
+    values:
+      - {{ .Values.env }}/values/litellm/litellm-db-init.yaml
+
+  - name: litellm
+    namespace: unique
+    chart: unique-ag/litellm
+    version: 1.72.2
+    needs:
+      - litellm-db-init
+    labels:
+      tier: chat
+      group: data
+    values:
+      - {{ .Values.env }}/values/litellm/litellm.yaml
+
+  # ── data: docling-models-pvc ───────────────
+  - name: docling-models-pvc
+    namespace: unique
+    chart: bedag/raw
+    version: 2.0.0
+    labels:
+      tier: chat
+      group: data
+    values:
+      - resources:
+          - apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+              name: docling-models-pvc
+              namespace: unique
+            spec:
+              accessModes: ["ReadWriteOnce"]
+              storageClassName: gp3
+              resources:
+                requests:
+                  storage: 30Gi
+
+  # ── ai-services ────────────────────────────
+  - name: assistants-core
+    namespace: unique
+    chart: unique-ag/ai-service
+    version: 2.1.1
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: ai-services
+    values:
+      - defaults/ai-services/assistants-core.yaml
+      - {{ .Values.env }}/values/ai-services/assistants-core.yaml
+
+  - name: ingestor
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - docling-models-pvc
+      - application-secrets
+    labels:
+      tier: chat
+      group: ai-services
+    values:
+      - defaults/ai-services/ingestor.yaml
+      - {{ .Values.env }}/values/ai-services/ingestor.yaml
+
+  # ── backend-services ───────────────────────
+  - name: backend-service-scope-management
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/scope-management.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/scope-management.yaml
+
+  - name: backend-service-chat
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/chat.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/chat.yaml
+
+  - name: backend-service-ingestion
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/ingestion.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/ingestion.yaml
+
+  - name: backend-service-ingestion-worker
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/ingestion-worker.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/ingestion-worker.yaml
+      - env:
+          INGESTION_QUEUE: queue
+        keda:
+          enabled: true
+          minReplicaCount: 0
+          maxReplicaCount: 5
+          triggers:
+            rabbitmq:
+              type: rabbitmq
+              metadata:
+                mode: QueueLength
+                protocol: http
+                queueName: unique.node.ingestion.queue
+                value: "0.9"
+              authenticationRef:
+                kind: TriggerAuthentication
+                name: rabbitmqcluster-chat-unique-user
+
+  - name: backend-service-ingestion-worker-chat
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/ingestion-worker.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/ingestion-worker.yaml
+      - env:
+          INGESTION_QUEUE: chat_queue
+        keda:
+          enabled: true
+          minReplicaCount: 0
+          maxReplicaCount: 5
+          triggers:
+            rabbitmq:
+              type: rabbitmq
+              metadata:
+                mode: QueueLength
+                protocol: http
+                queueName: unique.node.ingestion.chat_queue
+                value: "0.9"
+              authenticationRef:
+                kind: TriggerAuthentication
+                name: rabbitmqcluster-chat-unique-user
+
+  - name: backend-service-configuration
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/configuration.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/configuration.yaml
+
+  - name: backend-service-app-repository
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/app-repository.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/app-repository.yaml
+
+  - name: backend-service-event-socket
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/event-socket.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/event-socket.yaml
+
+  - name: backend-service-speech
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/speech.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/speech.yaml
+
+  - name: backend-service-webhook-scheduler
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/webhook-scheduler.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/webhook-scheduler.yaml
+
+  - name: backend-service-webhook-worker
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/webhook-worker.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/webhook-worker.yaml
+
+  - name: client-insights-exporter
+    namespace: unique
+    chart: unique-ag/backend-service
+    version: 7.1.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: backend-services
+    values:
+      - defaults/backend-services/client-insights-exporter.yaml
+      - {{ .Values.env }}/values/backend-services/_all.yaml
+      - {{ .Values.env }}/values/backend-services/client-insights-exporter.yaml
+
+  # ── web-apps ───────────────────────────────
+  - name: web-app-chat
+    namespace: unique
+    chart: unique-ag/web-app
+    version: 5.0.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: web-apps
+    values:
+      - defaults/web-apps/chat.yaml
+      - {{ .Values.env }}/values/web-apps/_all.yaml
+      - {{ .Values.env }}/values/web-apps/chat.yaml
+
+  - name: web-app-admin
+    namespace: unique
+    chart: unique-ag/web-app
+    version: 5.0.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: web-apps
+    values:
+      - defaults/web-apps/admin.yaml
+      - {{ .Values.env }}/values/web-apps/_all.yaml
+      - {{ .Values.env }}/values/web-apps/admin.yaml
+
+  - name: web-app-knowledge-upload
+    namespace: unique
+    chart: unique-ag/web-app
+    version: 5.0.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: web-apps
+    values:
+      - defaults/web-apps/knowledge-upload.yaml
+      - {{ .Values.env }}/values/web-apps/_all.yaml
+      - {{ .Values.env }}/values/web-apps/knowledge-upload.yaml
+
+  - name: web-app-theme
+    namespace: unique
+    chart: unique-ag/web-app
+    version: 5.0.0
+    needs:
+      - application-secrets
+    labels:
+      tier: chat
+      group: web-apps
+    values:
+      - defaults/web-apps/theme.yaml
+      - {{ .Values.env }}/values/web-apps/_all.yaml
+      - {{ .Values.env }}/values/web-apps/theme.yaml
