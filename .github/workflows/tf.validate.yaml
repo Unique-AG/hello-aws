@@ -28,8 +28,8 @@ jobs:
           - layer: compute
             dir: 05-compute
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: '1.14.0'
       - name: fmt
@@ -39,12 +39,12 @@ jobs:
       - name: validate
         run: terraform -chdir=${{ matrix.dir }}/terraform validate -no-color
       - name: tflint
-        uses: terraform-linters/setup-tflint@v4
+        uses: terraform-linters/setup-tflint@6e87008f9dd1fe3e34e66aca6c97b4a69f72a7f4 # v4
       - run: |
           tflint --init
           tflint --chdir=${{ matrix.dir }}/terraform
       - name: trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@57a97c7e7821a5776cebc9bb87c984fa69cba8f1 # v0.35.0
         with:
           scan-type: fs
           scan-ref: ${{ matrix.dir }}/terraform
@@ -52,7 +52,7 @@ jobs:
           severity: HIGH,CRITICAL
           trivyignores: .trivyignore
       - name: checkov
-        uses: bridgecrewio/checkov-action@master
+        uses: bridgecrewio/checkov-action@de2bfaecd21d58ef232e0d2a3391c33c32c460d7 # v12.3096.0
         with:
           directory: ${{ matrix.dir }}/terraform
           framework: terraform
