@@ -1,6 +1,5 @@
 resource "aws_s3_bucket" "terraform_state" {
-  bucket        = local.s3_bucket_name
-  force_destroy = false
+  bucket = local.s3_bucket_name
 
   tags = merge(
     local.tags,
