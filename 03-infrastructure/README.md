@@ -2,7 +2,7 @@
 
 ## Overview
 
-The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
+The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints (including EKS + EKS Auth endpoints for private EKS API + Pod Identity token exchange), KMS keys, Secrets Manager, EFS (for shared workload state — e.g., docling models), monitoring alarms, an optional management server, CodeBuild-hosted GitHub Actions runners, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
 
 ## Design Rationale
 
@@ -83,7 +83,7 @@ The infrastructure layer manages the full ingress load balancing stack, keeping 
 - **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
 - **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
 - **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
-- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.rbcn.ai`), used for TLS termination on both ALBs.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.<DOMAIN_BASE>`), used for TLS termination on both ALBs.
 - **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
 
 Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
@@ -133,6 +133,13 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 - **KMS Key**: Dedicated encryption key for Secrets Manager (used by downstream layers)
 - **VPC Endpoint**: Private access to Secrets Manager from private subnets
+
+### EFS
+
+- **File System**: Encrypted, elastic throughput, general-purpose performance, `prevent_destroy = true` for `docling-models` store (shared cache used by the ingestion worker)
+- **Security Group**: NFS (2049) ingress from VPC CIDR, egress to VPC CIDR
+- **Mount Targets**: One per private subnet for multi-AZ access
+- Downstream (05-compute) deploys the EFS CSI driver addon with a dedicated Pod Identity role
 
 ### Management Server (Optional)
 
@@ -215,7 +222,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 - **CloudWatch Logs**: All infrastructure operations logged
 - **365-Day Retention**: Enforced for non-sandbox environments
 - **Terraform Version**: Pinned to `>= 1.10.0` (native S3 locking)
-- **AWS Provider**: Pinned to `~> 5.100`
+- **AWS Provider**: Pinned to `~> 6.0`
 
 ## Well-Architected Framework
 
@@ -304,8 +311,8 @@ enable_bedrock_endpoint         = true
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
 alb_deletion_protection         = false        # Disable for sbx teardown
 enable_cloudfront_vpc_origin    = true
-internal_alb_certificate_domain = "*.sbx.rbcn.ai"
-connectivity_account_id         = "198666613175"
+internal_alb_certificate_domain = "*.sbx.example.com"
+connectivity_account_id         = "000000000000"  # connectivity account ID
 ```
 
 > **Note**: The Route 53 private zone values (`route53_private_zone_domain` and `route53_private_zone_id`) are commented out by default. If your deployment uses a Route 53 Private Hosted Zone (e.g., from a connectivity account in a hub-and-spoke topology), uncomment and set these values in `environments/{env}/00-config.auto.tfvars` before deploying. Without them, the VPC association with the private hosted zone is skipped.
