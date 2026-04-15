@@ -37,14 +37,15 @@ jobs:
         run: terraform -chdir=${{ matrix.dir }}/terraform fmt -check -recursive
       - name: Render tfvars for scanners
         # main stays generic (rendered tfvars are gitignored). CI renders the
-        # template + copies it plus the env-specific tfvars into the layer's
-        # terraform dir so trivy/checkov auto-load them. Without this, trivy
-        # crashes on `default_tags { tags = local.tags }` with null variables.
+        # template and merges it with the env-specific tfvars into a single
+        # file that is passed to trivy/checkov. Without resolved variables,
+        # trivy crashes on `default_tags { tags = local.tags }`.
         run: |
           cp common.auto.tfvars.template common.auto.tfvars
-          cp common.auto.tfvars ${{ matrix.dir }}/terraform/common.auto.tfvars
-          cp ${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars \
-             ${{ matrix.dir }}/terraform/01-env.auto.tfvars
+          cat common.auto.tfvars \
+              ${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars \
+              > "${RUNNER_TEMP}/ci.tfvars"
+          echo "CI_TFVARS=${RUNNER_TEMP}/ci.tfvars" >> "$GITHUB_ENV"
       - name: init
         run: terraform -chdir=${{ matrix.dir }}/terraform init -backend=false
       - name: validate
@@ -62,9 +63,11 @@ jobs:
           scanners: misconfig
           severity: HIGH,CRITICAL
           trivyignores: .trivyignore
+          tf-vars: ${{ env.CI_TFVARS }}
       - name: checkov
         uses: bridgecrewio/checkov-action@de2bfaecd21d58ef232e0d2a3391c33c32c460d7 # v12.3096.0
         with:
           directory: ${{ matrix.dir }}/terraform
           framework: terraform
+          var_file: ${{ env.CI_TFVARS }}
           quiet: true
