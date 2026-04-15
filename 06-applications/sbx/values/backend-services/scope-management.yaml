@@ -1,9 +1,5 @@
 # Scope Management backend service configuration (AWS sbx)
 
-# TODO: Enable ZITADEL_WEBHOOK_ENDPOINT after configuring Zitadel Actions API
-# env:
-#   ZITADEL_WEBHOOK_ENDPOINT: http://backend-service-scope-management.unique.svc/webhook/zitadel-events
-
 image:
   repository: <ECR_REGISTRY_THIRDPARTY>/backend-service-scope-management
   tag: "2026.14.1"
