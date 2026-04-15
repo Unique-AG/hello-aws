@@ -1,5 +1,5 @@
 name: "Terraform"
-description: "Composite action for Terraform fmt, init, validate, plan, and apply. Also comments on the PR with the plan and outputs."
+description: "Composite action for Terraform fmt, init, validate, plan, and apply. Posts the plan to the PR and applies a saved plan on push to the target branch."
 
 inputs:
   working_directory:
@@ -10,7 +10,7 @@ inputs:
     required: false
     default: "1.14.0"
   plan_name:
-    description: "Name used to identify the plan in PR comments"
+    description: "Name used to identify the plan in PR comments. Must be unique per caller — used as a sentinel to locate the bot comment to update."
     required: true
   github_token:
     description: "GitHub token for posting PR comments"
@@ -53,7 +53,7 @@ runs:
   using: "composite"
   steps:
     - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v3
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
       with:
         terraform_version: ${{ inputs.terraform_version }}
 
@@ -61,17 +61,20 @@ runs:
       id: fmt
       shell: bash
       working-directory: ${{ inputs.working_directory }}
-      run: terraform fmt -check
+      continue-on-error: true
+      run: terraform fmt -check -recursive
 
     - name: Run Terraform init
       id: init
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        BACKEND_CONFIG: ${{ inputs.backend_config }}
       run: |
-        if [ -n "${{ inputs.backend_config }}" ]; then
-          terraform init -backend-config=${{ inputs.backend_config }}
+        if [ -n "$BACKEND_CONFIG" ]; then
+          terraform init -input=false -backend-config="$BACKEND_CONFIG"
         else
-          terraform init
+          terraform init -input=false
         fi
 
     - name: Run Terraform validate
@@ -83,30 +86,37 @@ runs:
     - name: Build var-file args
       id: varfiles
       shell: bash
+      env:
+        VAR_FILES: ${{ inputs.var_files }}
       run: |
         VAR_FILE_ARGS=""
-        if [ -n "${{ inputs.var_files }}" ]; then
-          for f in ${{ inputs.var_files }}; do
+        if [ -n "$VAR_FILES" ]; then
+          for f in $VAR_FILES; do
             VAR_FILE_ARGS="$VAR_FILE_ARGS -var-file=$f"
           done
         fi
         echo "args=$VAR_FILE_ARGS" >> "$GITHUB_OUTPUT"
 
     - name: Run Terraform plan
-      if: github.event_name == 'pull_request'
       id: plan
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        PLAN_PATH: ${{ runner.temp }}/tfplan
+        PLAN_TEXT_PATH: ${{ runner.temp }}/tfplan.txt
+        VAR_FILE_ARGS: ${{ steps.varfiles.outputs.args }}
       run: |
-        terraform plan -out=${{ runner.temp }}/tfplan -input=false ${{ steps.varfiles.outputs.args }}
-        terraform show ${{ runner.temp }}/tfplan -no-color | grep -v "::debug::" > ${{ runner.temp }}/nocolor.tfplan
-        echo "plan_file=${{ runner.temp }}/nocolor.tfplan" >> "$GITHUB_OUTPUT"
+        # shellcheck disable=SC2086  # intentional word-splitting of var-file args
+        terraform plan -out="$PLAN_PATH" -input=false -lock-timeout=10m $VAR_FILE_ARGS
+        terraform show -no-color "$PLAN_PATH" > "$PLAN_TEXT_PATH"
+        echo "plan_file=$PLAN_PATH" >> "$GITHUB_OUTPUT"
+        echo "plan_text_file=$PLAN_TEXT_PATH" >> "$GITHUB_OUTPUT"
 
     - name: Post Terraform plan to PR
-      if: github.event_name == 'pull_request'
+      if: always() && github.event_name == 'pull_request'
       uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
       env:
-        PLAN_FILE: ${{ steps.plan.outputs.plan_file }}
+        PLAN_TEXT_FILE: ${{ steps.plan.outputs.plan_text_file }}
         PLAN_NAME: ${{ inputs.plan_name }}
         FMT_OUTCOME: ${{ steps.fmt.outcome }}
         INIT_OUTCOME: ${{ steps.init.outcome }}
@@ -117,91 +127,125 @@ runs:
         github-token: ${{ inputs.github_token }}
         script: |
           const fs = require('fs');
-          const planPath = process.env.PLAN_FILE;
-          const plan = fs.readFileSync(planPath, 'utf8');
           const planName = process.env.PLAN_NAME;
+          const sentinel = `<!-- tf-plan:${planName} -->`;
 
-          // 1. Retrieve existing bot comments for the PR
+          // Read plan text — may be missing if the plan step failed
+          let plan = '';
+          let planReadError = null;
+          try {
+            const planPath = process.env.PLAN_TEXT_FILE;
+            if (planPath && fs.existsSync(planPath)) {
+              plan = fs.readFileSync(planPath, 'utf8');
+            } else {
+              planReadError = 'Plan file not produced — see job logs for the failing step.';
+            }
+          } catch (e) {
+            planReadError = `Failed to read plan: ${e.message}`;
+          }
+
+          // Locate an existing bot comment for this exact plan_name (via hidden sentinel,
+          // not substring matching, to avoid cross-matching across similar plan names).
           const { data: comments } = await github.rest.issues.listComments({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: context.issue.number,
           });
+          const botComment = comments.find(c => c.user.type === 'Bot' && c.body.includes(sentinel));
 
-          const botComment = comments.find(comment => {
-            return comment.user.type === 'Bot' && comment.body.includes(planName);
+          // Timestamp with dynamically-computed timezone abbreviation (avoids hardcoding CEST
+          // which would be wrong in winter when CET applies).
+          const tz = 'Europe/Zurich';
+          const now = new Date();
+          const timestamp = now.toLocaleString('en-CH', {
+            timeZone: tz,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false,
           });
+          const tzAbbr = new Intl.DateTimeFormat('en', {
+            timeZone: tz, timeZoneName: 'short',
+          }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? tz;
 
-          // 2. Prepare format of the comment
-          const timestamp = new Date().toLocaleString('de-CH', {
-            timeZone: 'Europe/Berlin',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-          }).replace('T', ' ');
+          const noChanges = plan.includes('No changes.') && plan.includes('found no differences');
+          const planSection = planReadError
+            ? `⚠️ ${planReadError}`
+            : plan.length > 60000
+              ? 'Plan is too large to display. Please check the actions output for the full plan.'
+              : `<details><summary>Show Plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>`;
 
-          const changes = plan.includes('No changes.') && plan.includes('found no differences');
-          const planSection = plan.length > 60000
-            ? 'Plan is too large to display. Please check the actions output for the full plan.'
-            : `<details><summary>Show Plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>`;
-
-          const applyDisabled = process.env.APPLY_ON_PUSH !== 'true';
+          const applyDisabled = process.env.APPLY_ON_PUSH === 'false';
           const applyWarning = applyDisabled
-            ? `> [!CAUTION]
-          > ## ⛔ AUTO-APPLY IS DISABLED ⛔
-          > This workflow will **NOT** automatically apply changes when merged.
-          > Manual intervention is required to apply this plan.
-
-          `
+            ? [
+                '> [!CAUTION]',
+                '> ## ⛔ AUTO-APPLY IS DISABLED ⛔',
+                '> This workflow will **NOT** automatically apply changes when merged.',
+                '> Manual intervention is required to apply this plan.',
+                '',
+              ].join('\n')
             : '';
 
-          const output = `### ${planName}
-          *Last updated: ${timestamp} CEST*
+          const statusIcon = planReadError
+            ? '❌ **Plan failed** — see job logs.'
+            : (noChanges ? '✅ **No changes** — infrastructure matches the configuration.' : '☢️ **Drift detected** — inspect plan!');
 
-          ${applyWarning}- 🖌 \`fmt\`: \`${process.env.FMT_OUTCOME}\`
-          - ⚙️ \`init\`: \`${process.env.INIT_OUTCOME}\`
-          - 🤖 \`validate\`: \`${process.env.VALIDATE_OUTCOME}\`
-          - 📖 \`plan\`: \`${process.env.PLAN_OUTCOME}\`
+          const body = [
+            sentinel,
+            `### ${planName}`,
+            `*Last updated: ${timestamp} ${tzAbbr}*`,
+            '',
+            applyWarning,
+            `- 🖌 \`fmt\`: \`${process.env.FMT_OUTCOME}\``,
+            `- ⚙️ \`init\`: \`${process.env.INIT_OUTCOME}\``,
+            `- 🤖 \`validate\`: \`${process.env.VALIDATE_OUTCOME}\``,
+            `- 📖 \`plan\`: \`${process.env.PLAN_OUTCOME}\``,
+            '',
+            statusIcon,
+            '',
+            planSection,
+            '',
+            `*Pusher: @${context.actor}, Action: \`${context.eventName}\`, Env: \`${planName}\`, Workflow: \`${context.workflow}\`*`,
+          ].join('\n');
 
-          ${changes ? '✅ **No changes** - Your infrastructure matches the configuration.\n\n' : '☢️ **Drift detected** - Inspect plan!\n\n'}${planSection}
-
-          *Pusher: @${context.actor}, Action: \`${context.eventName}\`, Env: \`${planName}\`, Workflow: \`${context.workflow}\`*`;
-
-          // 3. If we have a comment, update it, otherwise create a new one
           if (botComment) {
             await github.rest.issues.updateComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               comment_id: botComment.id,
-              body: output
+              body,
             });
           } else {
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: output
+              body,
             });
           }
 
     - name: Run Terraform apply
       id: apply
-      if: github.event.ref == format('refs/heads/{0}', inputs.apply_branch) && inputs.apply_on_push == 'true'
+      if: >-
+        success() &&
+        github.event_name == 'push' &&
+        github.ref == format('refs/heads/{0}', inputs.apply_branch) &&
+        inputs.apply_on_push != 'false'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
-      run: terraform apply -auto-approve -input=false ${{ steps.varfiles.outputs.args }}
+      env:
+        PLAN_PATH: ${{ steps.plan.outputs.plan_file }}
+      run: terraform apply -input=false -lock-timeout=10m "$PLAN_PATH"
 
     - name: Get Terraform outputs
       id: tf_outputs
       if: steps.apply.outcome == 'success'
       shell: bash
       working-directory: ${{ inputs.working_directory }}
+      env:
+        OUTPUTS_PATH: ${{ runner.temp }}/tf_outputs.json
       run: |
-        terraform output -json | grep -v "::debug::" | jq 'with_entries(select(.value.sensitive != true))' > ${{ runner.temp }}/tf_outputs.json
-        echo "outputs_file=${{ runner.temp }}/tf_outputs.json" >> "$GITHUB_OUTPUT"
+        terraform output -json | jq 'with_entries(select(.value.sensitive != true))' > "$OUTPUTS_PATH"
+        echo "outputs_file=$OUTPUTS_PATH" >> "$GITHUB_OUTPUT"
 
     - name: Post Terraform outputs to step summary
       if: steps.apply.outcome == 'success'
@@ -212,18 +256,16 @@ runs:
       with:
         script: |
           const fs = require('fs');
-          const outputsPath = process.env.OUTPUTS_FILE;
           const planName = process.env.PLAN_NAME;
 
           let outputsContent = '';
           try {
-            const outputsJson = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
+            const outputsJson = JSON.parse(fs.readFileSync(process.env.OUTPUTS_FILE, 'utf8'));
             const outputKeys = Object.keys(outputsJson).filter(key => !outputsJson[key].sensitive);
-
             if (outputKeys.length === 0) {
               outputsContent = '_No outputs defined._';
             } else {
-              outputsContent = '<table>\n<tr><th>Output</th><th>Value</th></tr>\n';
+              const rows = ['<table>', '<tr><th>Output</th><th>Value</th></tr>'];
               for (const key of outputKeys) {
                 const output = outputsJson[key];
                 let value;
@@ -235,35 +277,37 @@ runs:
                   const escaped = JSON.stringify(output.value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                   value = `<code>${escaped}</code>`;
                 }
-                outputsContent += `<tr><td><code>${key}</code></td><td>\n\n${value}\n\n</td></tr>\n`;
+                rows.push(`<tr><td><code>${key}</code></td><td>\n\n${value}\n\n</td></tr>`);
               }
-              outputsContent += '</table>';
+              rows.push('</table>');
+              outputsContent = rows.join('\n');
             }
           } catch (e) {
             outputsContent = `_Failed to parse outputs: ${e.message}_`;
           }
 
-          const timestamp = new Date().toLocaleString('de-CH', {
-            timeZone: 'Europe/Zurich',
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
+          const tz = 'Europe/Zurich';
+          const now = new Date();
+          const timestamp = now.toLocaleString('en-CH', {
+            timeZone: tz,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false,
           });
+          const tzAbbr = new Intl.DateTimeFormat('en', {
+            timeZone: tz, timeZoneName: 'short',
+          }).formatToParts(now).find(p => p.type === 'timeZoneName')?.value ?? tz;
 
-          const summary = `## 🚀 Terraform Apply: ${planName}
+          const summary = [
+            `## 🚀 Terraform Apply: ${planName}`,
+            '',
+            `**Applied at:** ${timestamp} ${tzAbbr}`,
+            `**Actor:** @${context.actor}`,
+            `**Workflow:** \`${context.workflow}\``,
+            '',
+            '### Outputs',
+            '',
+            outputsContent,
+          ].join('\n');
 
-          **Applied at:** ${timestamp} CEST
-          **Actor:** @${context.actor}
-          **Workflow:** \`${context.workflow}\`
-
-          ### Outputs
-
-          ${outputsContent}
-          `;
-
-          await core.summary
-            .addRaw(summary)
-            .write();
+          await core.summary.addRaw(summary).write();
