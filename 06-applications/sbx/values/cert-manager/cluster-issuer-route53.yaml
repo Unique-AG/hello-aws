@@ -22,8 +22,8 @@ resources:
                 # When using IRSA, cert-manager automatically uses the IAM role
                 # annotated on the service account (no need for accessKeyIDSecretRef)
                 region: <AWS_REGION>
-                hostedZoneID: Z03833732DAIIS62GPG8S
+                hostedZoneID: <AWS_HOSTED_ZONE_ID>
             selector:
               dnsZones:
-                - aws.unique.dev
+                - <DNS_ZONE>
 

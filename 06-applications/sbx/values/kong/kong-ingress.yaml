@@ -1,5 +1,5 @@
 # Kong Ingress Resources for AWS EKS
-# Updated for AWS environment with aws.unique.dev domain
+# Updated for AWS environment with <DNS_ZONE> domain
 resources:
   - apiVersion: networking.k8s.io/v1
     kind: Ingress
