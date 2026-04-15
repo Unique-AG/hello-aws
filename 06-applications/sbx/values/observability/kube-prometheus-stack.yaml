@@ -1,0 +1,338 @@
+cleanPrometheusOperatorObjectNames: true
+
+crds:
+  enabled: true
+  upgradeJob:
+    enabled: true
+    forceConflicts: true
+
+# Disabled — EKS-managed control plane components
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false
+
+alertmanager:
+  alertmanagerSpec:
+    replicas: 1
+    alertmanagerConfigMatcherStrategy:
+      type: None
+    secrets:
+      - alertmanager-slack-webhook
+    storage:
+      volumeClaimTemplate:
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 10Gi
+          storageClassName: gp3
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['namespace', 'alertname']
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: slack-alerts
+      routes:
+        - receiver: 'null'
+          matchers:
+            - alertname = "InfoInhibitor"
+        - receiver: 'null'
+          matchers:
+            - alertname = "Watchdog"
+    receivers:
+      - name: 'null'
+      - name: slack-alerts
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/alertmanager-slack-webhook/webhook-url
+            channel: '#team-solution-engineering-alerts-aws-internal'
+            send_resolved: true
+            title: '{{ template "slack.default.title" . }}'
+            text: >-
+              {{ range .Alerts }}
+              *Alert:* {{ .Annotations.summary }} - `{{ .Labels.severity }}`
+
+              *Description:* {{ .Annotations.description }}
+
+              *Details:*
+                {{ range .Labels.SortedPairs }} - *{{ .Name }}:* `{{ .Value }}`
+                {{ end }}
+              {{ end }}
+
+grafana:
+  enabled: true
+  replicas: 1
+  serviceMonitor:
+    enabled: false
+  admin:
+    existingSecret: grafana-admin-credentials
+  grafana.ini:
+    server:
+      root_url: https://<DOMAIN_BASE>/grafana
+      serve_from_sub_path: true
+    security:
+      allow_embedding: true
+    auth:
+      sigv4_auth_enabled: true
+    auth.anonymous:
+      enabled: true
+      org_role: Editor
+  sidecar:
+    dashboards:
+      annotations:
+        grafana_folder: kubernetes
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+  additionalDataSources:
+    - name: Amazon Managed Prometheus
+      type: prometheus
+      url: "https://aps-workspaces.<AWS_REGION>.amazonaws.com/workspaces/<AMP_WORKSPACE_ID>"
+      access: proxy
+      isDefault: false
+      jsonData:
+        httpMethod: POST
+        sigV4Auth: true
+        sigV4AuthType: default
+        sigV4Region: <AWS_REGION>
+    - name: CloudWatch
+      type: cloudwatch
+      access: proxy
+      jsonData:
+        authType: default
+        defaultRegion: <AWS_REGION>
+    - name: Loki
+      type: loki
+      url: http://loki.unique.svc.cluster.local:3100
+      access: proxy
+    - name: Tempo
+      type: tempo
+      url: http://tempo.unique.svc.cluster.local:3100
+      access: proxy
+      jsonData:
+        tracesToMetrics:
+          datasourceUid: prometheus
+        tracesToLogs:
+          datasourceUid: loki
+          filterByTraceID: true
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  persistence:
+    enabled: true
+    storageClassName: gp3
+    size: 10Gi
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+prometheus-node-exporter:
+  priorityClassName: system-node-critical
+  resources:
+    requests:
+      cpu: 50m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+  tolerations:
+    - key: scalability
+      operator: Exists
+      effect: NoSchedule
+    - key: lifecycle
+      operator: Exists
+      effect: NoSchedule
+
+prometheus:
+  prometheusSpec:
+    replicas: 1
+    retention: 2h
+    retentionSize: 15GB
+    enableAdminAPI: true
+    replicaExternalLabelName: replica
+    externalLabels:
+      cluster: <EKS_CLUSTER_NAME>
+    podMonitorSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    serviceMonitorSelectorNilUsesHelmValues: false
+    scrapeConfigSelectorNilUsesHelmValues: false
+    remoteWrite:
+      - url: "https://aps-workspaces.<AWS_REGION>.amazonaws.com/workspaces/<AMP_WORKSPACE_ID>/api/v1/remote_write"
+        sigv4:
+          region: <AWS_REGION>
+        queueConfig:
+          maxSamplesPerSend: 1000
+          maxShards: 200
+          capacity: 2500
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: gp3
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 20Gi
+    resources:
+      requests:
+        cpu: 200m
+        memory: 1Gi
+      limits:
+        memory: 2Gi
+
+defaultRules:
+  create: true
+  additionalRuleLabels:
+    team: infra
+  disabled:
+    InfoInhibitor: true
+    KubeCPUOvercommit: true
+    KubeMemoryOvercommit: true
+  rules:
+    alertmanager: true
+    configReloaders: true
+    general: true
+    k8sContainerCpuUsageSecondsTotal: true
+    k8sContainerMemoryCache: true
+    k8sContainerMemoryRss: true
+    k8sContainerMemorySwap: true
+    k8sContainerResource: true
+    k8sContainerMemoryWorkingSetBytes: true
+    k8sPodOwner: true
+    kubeApiserverAvailability: true
+    kubeApiserverBurnrate: true
+    kubeApiserverHistogram: true
+    kubelet: true
+    kubePrometheusGeneral: true
+    kubePrometheusNodeRecording: true
+    kubernetesApps: true
+    kubernetesResources: true
+    kubernetesStorage: true
+    kubeSchedulerRecording: true
+    kubeStateMetrics: true
+    network: true
+    node: true
+    nodeExporterAlerting: true
+    nodeExporterRecording: true
+    prometheus: true
+    prometheusOperator: true
+    etcd: false
+    kubeApiserverSlos: false
+    kubeControllerManager: false
+    kubeProxy: false
+    kubernetesSystem: false
+    kubeSchedulerAlerting: false
+    windows: false
+
+additionalPrometheusRulesMap:
+  application-alerts:
+    groups:
+      - name: kubernetes-apps-custom
+        rules:
+          - alert: KubePodFrequentRestarts
+            expr: increase(kube_pod_container_status_restarts_total{namespace="unique"}[1h]) > 5
+            for: 10m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarting frequently"
+              description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} has restarted {{ $value }} times in the last hour."
+          - alert: KubeContainerOOMKilled
+            expr: kube_pod_container_status_last_terminated_reason{reason="OOMKilled", namespace="unique"} == 1
+            for: 0m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "Container {{ $labels.container }} in {{ $labels.namespace }}/{{ $labels.pod }} was OOM killed"
+              description: "Container {{ $labels.container }} was terminated due to OOM in pod {{ $labels.pod }}."
+      - name: resource-alerts
+        rules:
+          - alert: PodHighCPUUsage
+            expr: |
+              sum(rate(container_cpu_usage_seconds_total{namespace="unique", container!=""}[5m])) by (pod, namespace)
+              /
+              sum(kube_pod_container_resource_requests{namespace="unique", resource="cpu"}) by (pod, namespace)
+              > 0.8
+            for: 15m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} CPU usage > 80%"
+              description: "Pod {{ $labels.pod }} is using more than 80% of its CPU request for 15 minutes."
+          - alert: PodNearMemoryLimit
+            expr: |
+              sum(container_memory_working_set_bytes{namespace="unique", container!=""}) by (pod, namespace)
+              /
+              sum(kube_pod_container_resource_limits{namespace="unique", resource="memory"}) by (pod, namespace)
+              > 0.9
+            for: 15m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "Pod {{ $labels.namespace }}/{{ $labels.pod }} memory usage > 90% of limit"
+              description: "Pod {{ $labels.pod }} is using more than 90% of its memory limit for 15 minutes."
+          - alert: PVCHighUsage
+            expr: |
+              kubelet_volume_stats_used_bytes{namespace="unique"}
+              /
+              kubelet_volume_stats_capacity_bytes{namespace="unique"}
+              > 0.8
+            for: 15m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "PVC {{ $labels.persistentvolumeclaim }} in {{ $labels.namespace }} is > 80% full"
+              description: "PVC {{ $labels.persistentvolumeclaim }} has less than 20% space remaining."
+      - name: rabbitmq-alerts
+        rules:
+          - alert: IngestionBackpressureBuildingUp
+            expr: rabbitmq_detailed_queue_messages_ready{queue=~"unique.node.*"} > 20
+            for: 10m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "RabbitMQ queue {{ $labels.queue }} has {{ $value }} ready messages"
+              description: "Queue {{ $labels.queue }} has more than 20 ready messages for 10 minutes, indicating backpressure."
+      - name: kong-alerts
+        rules:
+          - alert: KongHighErrorRate
+            expr: |
+              sum(rate(kong_http_requests_total{code=~"5.."}[5m])) by (service)
+              /
+              sum(rate(kong_http_requests_total[5m])) by (service)
+              > 0.05
+            for: 5m
+            labels:
+              severity: warning
+              team: infra
+            annotations:
+              summary: "Kong service {{ $labels.service }} has > 5% error rate"
+              description: "Service {{ $labels.service }} is returning more than 5% 5xx responses."

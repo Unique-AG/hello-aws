@@ -1,0 +1,187 @@
+resources:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: alloy-config
+      namespace: unique
+    data:
+      config.alloy: |
+        logging {
+          level  = "info"
+          format = "logfmt"
+        }
+
+        discovery.kubernetes "pods" {
+          role = "pod"
+        }
+
+        discovery.relabel "pods" {
+          targets = discovery.kubernetes.pods.targets
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_controller_name"]
+            regex         = "([0-9a-z-.]+?)(-[0-9a-f]{8,10})?"
+            target_label  = "__tmp_controller_name"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_label_app", "__tmp_controller_name", "__meta_kubernetes_pod_name"]
+            regex         = "^;*([^;]+)(;.*)?$"
+            target_label  = "app"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_instance", "__meta_kubernetes_pod_label_instance"]
+            regex         = "^;*([^;]+)(;.*)?$"
+            target_label  = "instance"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component", "__meta_kubernetes_pod_label_component"]
+            regex         = "^;*([^;]+)(;.*)?$"
+            target_label  = "component"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_node_name"]
+            target_label  = "node_name"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_namespace"]
+            target_label  = "namespace"
+          }
+
+          rule {
+            source_labels = ["namespace", "app"]
+            separator     = "/"
+            target_label  = "job"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_name"]
+            target_label  = "pod"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_container_name"]
+            target_label  = "container"
+          }
+
+          rule {
+            source_labels = ["__meta_kubernetes_pod_label_logging_unique_app_format"]
+            target_label  = "logging_unique_app_format"
+          }
+
+          rule {
+            target_label = "collector"
+            replacement  = "alloy"
+          }
+        }
+
+        loki.relabel "journal" {
+          forward_to = []
+
+          rule {
+            source_labels = ["__journal__hostname"]
+            target_label  = "hostname"
+          }
+          rule {
+            source_labels = ["__journal__systemd_unit"]
+            target_label  = "unit"
+          }
+          rule {
+            source_labels = ["__journal_priority_keyword"]
+            target_label  = "level"
+          }
+        }
+
+        loki.source.journal "journal" {
+          forward_to    = [loki.write.loki.receiver]
+          relabel_rules = loki.relabel.journal.rules
+          path          = "/var/log/journal"
+          matches       = "_SYSTEMD_UNIT=kubelet.service _SYSTEMD_UNIT=containerd.service"
+          max_age       = "12h"
+          labels        = {job = "systemd-journal", collector = "alloy"}
+        }
+
+        loki.source.kubernetes "pods" {
+          targets    = discovery.relabel.pods.output
+          forward_to = [loki.process.kubernetes_pods.receiver]
+        }
+
+        loki.process "kubernetes_pods" {
+          forward_to = [loki.write.loki.receiver]
+
+          stage.cri { }
+
+          stage.match {
+            selector = "{logging_unique_app_format=\"pino-json\"}"
+
+            stage.json {
+              expressions = {
+                context        = "context",
+                level          = "level",
+                msg            = "msg",
+                operation_name = "operationName",
+                req            = "req",
+              }
+            }
+
+            stage.json {
+              expressions = {
+                headers    = "headers",
+                req_id     = "id",
+                req_method = "method",
+                req_url    = "url",
+              }
+              source = "req"
+            }
+
+            stage.json {
+              expressions = {
+                x_company_domain  = "\"x-company-domain\"",
+                x_company_id      = "\"x-company-id\"",
+                x_company_name    = "\"x-company-name\"",
+                x_kong_request_id = "\"x-kong-request-id\"",
+                x_service_id      = "\"x-service-id\"",
+                x_user_id         = "\"x-user-id\"",
+                x_user_roles      = "\"x-user-roles\"",
+              }
+              source = "headers"
+            }
+
+          }
+
+          stage.labels {
+            values = {
+              context        = "context",
+              level          = "level_name",
+              operation_name = "operation_name",
+              req_method     = "req_method",
+              x_service_id   = "x_service_id",
+            }
+          }
+
+          stage.structured_metadata {
+            values = {
+              __path__          = "__path__",
+              filename          = "filename",
+              original          = "original",
+              pod               = "pod",
+              req_id            = "req_id",
+              x_company_domain  = "x_company_domain",
+              x_company_id      = "x_company_id",
+              x_company_name    = "x_company_name",
+              x_kong_request_id = "x_kong_request_id",
+              x_user_id         = "x_user_id",
+              x_user_roles      = "x_user_roles",
+            }
+          }
+        }
+
+        loki.write "loki" {
+          endpoint {
+            url = sys.env("LOKI_ENDPOINT")
+          }
+        }

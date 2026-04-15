@@ -1,0 +1,32 @@
+replicas: 1
+
+tempo:
+  metricsGenerator:
+    enabled: true
+    remoteWriteUrl: "http://kube-prometheus-stack-prometheus.unique:9090/api/v1/write"
+  storage:
+    trace:
+      backend: s3
+      s3:
+        bucket: "<OBSERVABILITY_S3_BUCKET_NAME>"
+        endpoint: s3.<AWS_REGION>.amazonaws.com
+        region: <AWS_REGION>
+        forcepathstyle: true
+  retention: 720h # 30 days
+  resources:
+    requests:
+      cpu: 200m
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+serviceAccount:
+  name: tempo
+
+serviceMonitor:
+  enabled: true
+
+persistence:
+  enabled: true
+  storageClassName: gp3
+  size: 10Gi
