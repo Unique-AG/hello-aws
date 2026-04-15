@@ -22,14 +22,17 @@ aws_region     = "eu-central-2"  # Your AWS region
 aws_account_id = null            # Auto-detected; set explicitly for deterministic plans in CI/CD
 
 # Organization identifiers
-org         = "dogfood"  # Your organization name (lowercase, used in tags)
-org_moniker = "df"       # Short form for resource names (2-10 chars)
+org         = "unique"    # Your organization name (lowercase, used in tags)
+org_moniker = "uq"        # Short form for resource names (2-10 chars)
 
 # Product identifiers
-product         = "unique"      # Full product name (lowercase, used in tags)
-product_moniker = "uq"          # Short form for resource names (2-10 chars)
+product         = "dogfood"    # Full product name (lowercase, used in tags)
+product_moniker = "df"         # Short form for resource names (2-10 chars)
 
 # Governance tracking
 # This should be injected by CI/CD from git tags, not maintained manually.
 # e.g., -var="semantic_version=$(git describe --tags --abbrev=0)"
 semantic_version = "0.0.0"
+
+# Azure Container Registry (for ECR pull-through cache in compute layer)
+acr_registry_url = "example.azurecr.io"  # Your Azure Container Registry URL
