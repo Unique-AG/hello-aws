@@ -32,6 +32,16 @@ jobs:
       - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: '1.14.0'
+      - name: Render tfvars for scanners
+        # main stays generic (rendered tfvars are gitignored). CI renders the
+        # template + copies it plus the env-specific tfvars into the layer's
+        # terraform dir so trivy/checkov auto-load them. Without this, trivy
+        # crashes on `default_tags { tags = local.tags }` with null variables.
+        run: |
+          cp common.auto.tfvars.template common.auto.tfvars
+          cp common.auto.tfvars ${{ matrix.dir }}/terraform/common.auto.tfvars
+          cp ${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars \
+             ${{ matrix.dir }}/terraform/01-env.auto.tfvars
       - name: fmt
         run: terraform -chdir=${{ matrix.dir }}/terraform fmt -check -recursive
       - name: init
