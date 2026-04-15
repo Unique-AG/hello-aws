@@ -160,20 +160,22 @@ Common configuration values are defined in `common.auto.tfvars` at the repositor
 These values are critical because the naming module uses them to generate globally unique resource names. AWS resources such as S3 buckets, IAM roles, and KMS aliases must be unique within an account or globally across AWS. The naming module combines `org_moniker`, `product`, `environment`, and region into deterministic prefixes:
 
 ```
-s3-df-unique-sbx-euc2-state          # S3 bucket (globally unique)
-iam-df-unique-sbx-euc2-deploy        # IAM role (account-unique)
-kms-df-unique-sbx-euc2-state         # KMS alias (account-unique)
-eks-df-unique-sbx-euc2               # EKS cluster name
+s3-uq-df-x-euc2-tfstate              # S3 bucket (globally unique, uses id_short)
+iam-uq-df-sbx-euc2-deploy            # IAM role (account-unique)
+kms-uq-df-sbx-euc2-tfstate           # KMS alias (account-unique)
+eks-uq-df-sbx-euc2                   # EKS cluster name
 ```
 
-For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `org_moniker = "df"` with `product = "unique-pr42"`, producing resource names like `s3-df-unique-pr42-sbx-euc2-state` that are isolated from the main deployment and can be torn down without risk.
+For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `product_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `product_moniker = "df-pr42"`, producing resource names like `s3-uq-df-pr42-x-euc2-tfstate` that are isolated from the main deployment and can be torn down without risk.
 
 **Important**: This file must be created manually before deploying the bootstrap layer. Copy `common.auto.tfvars.template` to `common.auto.tfvars` and update the values for your organization and product.
 
 ## Deployment Workflow
 
 > [!NOTE]
-> All scripts in this repository are provided for convenience only. The recommended approach is to release and deploy using CI/CD pipelines (e.g., GitHub Actions). The scripts are useful for initial bootstrapping, local development, and troubleshooting.
+> All scripts in this repository are provided for convenience only. The recommended approach is to release and deploy using CI/CD pipelines. The scripts are useful for initial bootstrapping, local development, and troubleshooting.
+>
+> A reusable Terraform GitHub Actions composite action lives in `.github/actions/terraform/` (fmt, init, validate, plan, apply with PR comments and OIDC-based auth) and a PR-gated validation workflow lives in `.github/workflows/tf.validate.yaml` (terraform fmt/validate, tflint, trivy, checkov on every layer). Deploy-branch workflows are not tracked on `main` — each deployment branch provides its own `{env}.deploy.yaml`.
 
 ### Step 1: Configure Common Values
 
@@ -186,10 +188,11 @@ Before deploying any layer, you must configure the common values file:
 
 2. Edit `common.auto.tfvars` and update the following values:
    - `aws_region`: Your AWS region (e.g., `"eu-central-2"`)
-   - `org`: Your organization name (e.g., `"dogfood"`)
-   - `org_moniker`: Your organization short name (e.g., `"df"`)
-   - `product`: Your product/project name (e.g., `"unique"`)
-   - `product_moniker`: Your product short name (e.g., `"uq"`)
+   - `org`: Your organization name (e.g., `"unique"`)
+   - `org_moniker`: Your organization short name (e.g., `"uq"`)
+   - `product`: Your product/project name (e.g., `"dogfood"`)
+   - `product_moniker`: Your product short name (e.g., `"df"`)
+   - `acr_registry_url`: Your Azure Container Registry URL (e.g., `"example.azurecr.io"`), used by the compute layer's ECR pull-through cache
    - `semantic_version`: Version number (typically set by CI/CD, default: `"0.1.0"`)
 
 ### Step 2: Deploy Bootstrap Layer
@@ -247,6 +250,8 @@ After the bootstrap layer is deployed, deploy the remaining layers in order:
    ```bash
    ./scripts/deploy.sh applications sbx
    ```
+
+   > **Identity provider setup**: Zitadel is bootstrapped out-of-band by `scripts/setup-zitadel.sh` (creates project, client, org, service user, and populates the `manual-zitadel-scope-mgmt-pat` secret in Secrets Manager). Run this once per environment after the applications layer reconciles Zitadel.
 
 **Deployment Script Options**:
 - `--auto-approve`: Skip interactive confirmation
@@ -361,15 +366,22 @@ Each layer has comprehensive documentation covering design rationale, security p
 
 The compute layer (05-compute) configures an ECR pull-through cache that mirrors container images from Unique AI's Azure Container Registry (ACR). This allows your EKS cluster to pull application images without direct internet access to the ACR.
 
-To deploy the compute layer, you need ACR credentials:
-1. Contact [Unique AI](https://unique.ch) to obtain your ACR registry URL, username, and password
-2. Set the credentials as environment variables before running `deploy.sh`:
+The ACR credentials secret is provisioned by Terraform (in `05-compute`), but the credential *value* is populated out-of-band by `.scripts/seed-secrets.sh` — never passed through Terraform variables, and never written to state or plan files.
+
+To deploy the compute layer with ACR credentials:
+
+1. Set `acr_registry_url` in `common.auto.tfvars` (e.g., `"uniquecr.azurecr.io"`). Contact [Unique AI](https://unique.ch) to obtain the registry URL and credentials.
+2. Store credentials in your secrets vault (1Password is the supported default) and deploy via the helper script:
    ```bash
-   export TF_VAR_acr_registry_url="<your-registry>.azurecr.io"
-   export TF_VAR_acr_username="<your-username>"
-   export TF_VAR_acr_password="<your-password>"
-   ./scripts/deploy.sh compute sbx
+   ./scripts/deploy-with-acr.sh compute sbx
    ```
+   The script pulls the credentials from 1Password at apply time and writes them to the Secrets Manager secret created by Terraform.
+
+To deploy without ACR credentials (e.g., if you manage the secret value manually), use the standard script:
+
+```bash
+./scripts/deploy.sh compute sbx
+```
 
 ## Security
 
