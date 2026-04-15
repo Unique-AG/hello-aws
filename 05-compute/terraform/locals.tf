@@ -26,10 +26,21 @@ locals {
     kms_key_id                               = data.terraform_remote_state.infrastructure.outputs.kms_key_general_id
     kms_key_secrets_manager_arn              = data.terraform_remote_state.infrastructure.outputs.kms_key_secrets_manager_arn
     cloudwatch_log_group_infrastructure_name = data.terraform_remote_state.infrastructure.outputs.cloudwatch_log_group_infrastructure_name
-    route53_private_zone_id                  = data.terraform_remote_state.infrastructure.outputs.route53_private_zone_id
-    route53_private_zone_domain              = data.terraform_remote_state.infrastructure.outputs.route53_private_zone_domain
+    route53_private_zone_id                  = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_id, null)
+    route53_private_zone_domain              = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_domain, null)
     ingress_nlb_security_group_id            = try(data.terraform_remote_state.infrastructure.outputs.ingress_nlb_security_group_id, null)
   }
+
+  # Data-and-AI layer outputs (from remote state)
+  data_and_ai = {
+    prometheus_workspace_arn      = try(data.terraform_remote_state.data_and_ai.outputs.prometheus_workspace_arn, null)
+    prometheus_workspace_endpoint = try(data.terraform_remote_state.data_and_ai.outputs.prometheus_workspace_endpoint, null)
+    s3_bucket_observability_arn   = try(data.terraform_remote_state.data_and_ai.outputs.s3_bucket_observability_arn, null)
+    s3_bucket_observability_id    = try(data.terraform_remote_state.data_and_ai.outputs.s3_bucket_observability_id, null)
+  }
+
+  # Secondary CIDR for EKS pod networking (must match infrastructure layer)
+  secondary_cidr = "100.64.0.0/20"
 
   # ACR alias extracted from registry URL (e.g., "uniqueapp" from "uniqueapp.azurecr.io")
   acr_alias = var.acr_registry_url != "" ? split(".azurecr.io", var.acr_registry_url)[0] : ""

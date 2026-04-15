@@ -179,19 +179,7 @@ resource "aws_secretsmanager_secret" "acr_credentials" {
   }
 }
 
-resource "aws_secretsmanager_secret_version" "acr_credentials" {
-  count = var.acr_registry_url != "" ? 1 : 0
-
-  secret_id = aws_secretsmanager_secret.acr_credentials[0].id
-
-  # Use write-only attribute to avoid storing secret in Terraform state
-  secret_string_wo = jsonencode({
-    username    = var.acr_username
-    accessToken = var.acr_password
-  })
-  # Increment this when the secret value changes to trigger an update
-  secret_string_wo_version = 2
-}
+# Secret value is populated by seed-secrets.sh (reads ACR credentials from 1Password)
 
 # Resource policy to allow ECR to access the secret
 resource "aws_secretsmanager_secret_policy" "acr_credentials" {
@@ -204,7 +192,7 @@ resource "aws_secretsmanager_secret_policy" "acr_credentials" {
       {
         Sid       = "AllowECRPullThroughCache"
         Effect    = "Allow"
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/pullthroughcache.ecr.amazonaws.com/AWSServiceRoleForECRPullThroughCache" }
+        Principal = { Service = "pullthroughcache.ecr.amazonaws.com" }
         Action    = "secretsmanager:GetSecretValue"
         Resource  = aws_secretsmanager_secret.acr_credentials[0].arn
       }
