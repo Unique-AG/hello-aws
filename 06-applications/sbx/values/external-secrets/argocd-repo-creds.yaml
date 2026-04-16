@@ -3,7 +3,7 @@
 # ArgoCD auto-discovers secrets with the repo-creds label
 
 resources:
-  - apiVersion: external-secrets.io/v1beta1
+  - apiVersion: external-secrets.io/v1
     kind: ExternalSecret
     metadata:
       name: argocd-repo-creds-github
