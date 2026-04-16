@@ -21,4 +21,3 @@ spec:
           - $values/06-applications/sbx/values/observability/kube-prometheus-stack.yaml
   syncOptions:
     - ServerSideApply=true
-    - ServerSideDiff=true
