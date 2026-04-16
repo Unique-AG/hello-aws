@@ -1,6 +1,6 @@
 extraManifests:
 
-- apiVersion: external-secrets.io/v1
+- apiVersion: external-secrets.io/v1beta1
   kind: ExternalSecret
   metadata:
     name: systemzitadel
@@ -39,7 +39,7 @@ extraManifests:
 # AWS RDS CA Certificate - pulled from Secrets Manager
 # The certificate is stored in Secrets Manager by Terraform (04-data-and-ai layer)
 # and automatically fetched from AWS trust store: https://truststore.pki.rds.amazonaws.com/{region}/{region}-bundle.pem
-- apiVersion: external-secrets.io/v1
+- apiVersion: external-secrets.io/v1beta1
   kind: ExternalSecret
   metadata:
     name: zitadel-certs

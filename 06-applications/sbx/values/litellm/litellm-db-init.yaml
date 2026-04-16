@@ -46,7 +46,7 @@ resources:
                       key: PGPASSWORD
 
   # ExternalSecret to pull Aurora admin credentials for the init Job
-  - apiVersion: external-secrets.io/v1
+  - apiVersion: external-secrets.io/v1beta1
     kind: ExternalSecret
     metadata:
       name: litellm-db-init-secrets
