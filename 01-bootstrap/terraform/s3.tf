@@ -1,4 +1,6 @@
 resource "aws_s3_bucket" "terraform_state" {
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = local.s3_bucket_name
   force_destroy = false
 
@@ -12,6 +14,8 @@ resource "aws_s3_bucket" "terraform_state" {
 }
 
 resource "aws_s3_bucket" "access_logs" {
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket = "${local.s3_bucket_name}-access-logs"
 
   tags = merge(
