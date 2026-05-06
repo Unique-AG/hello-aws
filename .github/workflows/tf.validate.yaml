@@ -45,8 +45,10 @@ jobs:
       - name: Install checkov
         # Pinned to match local scripts/validate.sh output. Bumping this can
         # introduce new checks — update docs/security-baseline.md + inline skips
-        # before upgrading.
-        run: pipx install checkov==3.2.500
+        # before upgrading. Local devs: `brew upgrade checkov` (or `uvx --from
+        # "checkov==3.2.526" checkov ...`) — homebrew checkov silently skips
+        # CKV2_*** graph checks, so use uvx for reliable parity with CI.
+        run: pipx install checkov==3.2.526
 
       - name: Render common.auto.tfvars
         # main keeps only the .template (rendered file is gitignored). The script
