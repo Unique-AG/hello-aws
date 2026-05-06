@@ -218,3 +218,43 @@ resource "aws_s3_bucket_policy" "ai_data_vpc_only" {
 
   depends_on = [aws_s3_bucket_public_access_block.ai_data]
 }
+
+# Lifecycle — transition to cheaper storage classes
+resource "aws_s3_bucket_lifecycle_configuration" "ai_data" {
+  bucket = aws_s3_bucket.ai_data.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+  }
+
+  rule {
+    id     = "transition-to-glacier"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
