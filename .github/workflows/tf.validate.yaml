@@ -29,10 +29,18 @@ jobs:
         uses: terraform-linters/setup-tflint@6e87008f9dd1fe3e34e66aca6c97b4a69f72a7f4 # v4
 
       - name: Install trivy
-        # Matches the version used in scripts/validate.sh locally.
-        run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sudo sh -s -- -b /usr/local/bin v0.69.1
+        # trivy-action installs trivy as a side effect; we use it for the install
+        # so scripts/validate.sh runs the real terraform scan in the next step.
+        # Track the action's default trivy version to avoid pinning to an upstream
+        # release whose install path can break (as v0.69.1 does today via the
+        # get.trivy.dev 404). Keep local trivy in sync via `brew upgrade trivy`.
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: scripts
+          scanners: misconfig
+          severity: CRITICAL
+          exit-code: '0'
 
       - name: Install checkov
         # Pinned to match local scripts/validate.sh output. Bumping this can
