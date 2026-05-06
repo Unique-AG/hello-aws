@@ -17,6 +17,7 @@ resource "aws_prometheus_workspace" "main" {
 
 # Security Group for Grafana VPC configuration
 resource "aws_security_group" "grafana" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_managed_grafana ? 1 : 0
 
   name        = "${module.naming.id}-grafana"

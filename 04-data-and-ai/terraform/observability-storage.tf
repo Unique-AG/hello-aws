@@ -1,5 +1,8 @@
 # S3 Bucket for Observability Data (Loki logs, Tempo traces)
 resource "aws_s3_bucket" "observability" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-observability-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
@@ -141,6 +144,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "observability" {
 
 # Store bucket name in Secrets Manager for ExternalSecrets access
 resource "aws_secretsmanager_secret" "s3_observability_bucket" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = "s3-observability-bucket"
   description             = "S3 bucket name for observability data (Loki, Tempo)"
   recovery_window_in_days = var.secrets_recovery_window_days

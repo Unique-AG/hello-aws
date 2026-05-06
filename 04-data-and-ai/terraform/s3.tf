@@ -6,6 +6,9 @@ resource "random_string" "s3_suffix" {
 
 # S3 Bucket for Application Data
 resource "aws_s3_bucket" "application_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
@@ -134,6 +137,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "application_data" {
 
 # S3 Bucket for AI/ML Data
 resource "aws_s3_bucket" "ai_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 

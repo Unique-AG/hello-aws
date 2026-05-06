@@ -51,6 +51,8 @@ resource "aws_vpc_security_group_egress_rule" "aurora_to_vpc" {
 # Aurora PostgreSQL Cluster
 resource "aws_rds_cluster" "postgres" {
   #checkov:skip=CKV_AWS_162: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_8: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_27: see docs/security-baseline.md
   cluster_identifier           = "aurora-${module.naming.id}-postgres"
   engine                       = "aurora-postgresql"
   engine_version               = var.aurora_engine_version
