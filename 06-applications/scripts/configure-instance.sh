@@ -93,6 +93,7 @@ aws:
     url: "<REDIS_URL>"
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
+    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"
   prometheus:
     workspaceId: "<AMP_WORKSPACE_ID>"
     remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"
@@ -156,6 +157,7 @@ FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
 FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
+FROM_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion // "<BEDROCK_MINIMAX_REGION>"' "$FROM")
 FROM_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$FROM")
 FROM_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$FROM")
 FROM_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$FROM")
@@ -207,6 +209,7 @@ TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
+TO_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion' "$CONFIG")
 TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId' "$CONFIG")
 TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl' "$CONFIG")
 TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName' "$CONFIG")
@@ -318,6 +321,11 @@ replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
 # 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
 echo "  Bedrock Cohere Embed v4 profile ID ..."
 replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
+
+# 3b-2. Bedrock MiniMax region (must run before the generic AWS region replacement
+# at step 6; placeholder is region-shaped but distinct from <AWS_REGION>).
+echo "  Bedrock MiniMax region ..."
+replace_all "$FROM_BEDROCK_MINIMAX_REGION" "$TO_BEDROCK_MINIMAX_REGION"
 
 # 3c. Prometheus / Observability (before region and account, since URLs contain both)
 echo "  AMP remote write URL ..."

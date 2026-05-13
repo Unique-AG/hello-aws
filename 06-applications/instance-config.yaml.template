@@ -37,6 +37,7 @@ aws:
     url: <REDIS_URL>                               # e.g. rediss://master.<cluster>.cache.amazonaws.com:6380/0
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"  # Application inference profile ID for Cohere Embed v4
+    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"                       # AWS region for MiniMax invocation (not in eu-central-2; e.g. eu-central-1)
   ecr:
     primary:                            # ECR for Unique application images
       accountId: "000000000000"

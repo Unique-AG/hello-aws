@@ -105,6 +105,15 @@ proxy_config:
         model: bedrock/amazon.titan-embed-text-v2:0
         aws_region_name: eu-central-2
 
+    # MiniMax M2.5 via AWS Bedrock — not available in eu-central-2; pinned to
+    # eu-central-1 (no EU CRI exists for MiniMax). Cross-region invocation
+    # leaves Switzerland; acceptable for hello-aws reference deployment only.
+    - model_name: minimax-m2-5
+      litellm_params:
+        model: bedrock/minimax.minimax-m2.5
+        aws_region_name: eu-central-1
+        max_tokens: 8192
+
     # OpenAI model name aliases (for chat service Azure SDK compatibility)
     # Maps OpenAI model names to Bedrock Claude models via LiteLLM
     - model_name: gpt-4o
