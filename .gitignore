@@ -47,8 +47,12 @@ terraform.rc
 .DS_Store
 Thumbs.db
 
-# Backend configuration files (generated from templates)
+# Backend configuration files (generated from templates by bootstrap script).
+# Exception: Azure layers ship their backend-config.hcl in-tree because the GHA
+# workflow uses them directly via `terraform init -backend-config=...`. There's
+# no bootstrap step in CI to generate them.
 **/backend-config.hcl
+!azure/**/backend-config.hcl
 
 # Common configuration file (must be set manually from template)
 common.auto.tfvars
