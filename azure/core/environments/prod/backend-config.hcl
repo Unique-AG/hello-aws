@@ -4,3 +4,4 @@ storage_account_name = "stawshello001core"
 container_name       = "tfstatecore"
 key                  = "terraform.tfstate"
 use_oidc             = true
+use_azuread_auth     = true

@@ -4,3 +4,4 @@ storage_account_name = "stawshello001apps"
 container_name       = "tfstateapps"
 key                  = "unique-ag-infrastructure-automation-apps-awshello001.tfstate"
 use_oidc             = true
+use_azuread_auth     = true
