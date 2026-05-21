@@ -289,6 +289,12 @@ variable "litellm_salt_key_secret_name" {
   default     = "litellm-salt-key"
 }
 
+variable "litellm_azure_foundry_api_key_secret_name" {
+  description = "Secret name for the Azure AI Foundry API key (populated by Azure GHA workflow)"
+  type        = string
+  default     = "litellm-azure-foundry-api-key"
+}
+
 variable "rds_ca_bundle_secret_name" {
   description = "Secret name for RDS CA certificate bundle"
   type        = string
