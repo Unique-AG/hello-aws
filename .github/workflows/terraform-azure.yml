@@ -234,19 +234,24 @@ jobs:
       - name: Terraform Init
         run: terraform init -backend-config=environments/prod/backend-config.hcl
 
-      - name: Read Foundry key from TF output
+      - name: Read Foundry key + endpoint from TF outputs
         run: |
           key=$(terraform output -raw foundry_primary_key)
+          endpoint=$(terraform output -raw foundry_endpoint)
           echo "::add-mask::$key"
           echo "FOUNDRY_API_KEY=$key" >> "$GITHUB_ENV"
+          echo "FOUNDRY_ENDPOINT=$endpoint" >> "$GITHUB_ENV"
 
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}
           aws-region: eu-central-2
 
-      - name: Push key to AWS Secrets Manager
+      - name: Push Foundry key + endpoint to AWS Secrets Manager
         run: |
           aws secretsmanager put-secret-value \
             --secret-id litellm-azure-foundry-api-key \
             --secret-string "$FOUNDRY_API_KEY"
+          aws secretsmanager put-secret-value \
+            --secret-id litellm-azure-foundry-endpoint \
+            --secret-string "$FOUNDRY_ENDPOINT"

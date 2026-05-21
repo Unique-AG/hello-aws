@@ -295,6 +295,12 @@ variable "litellm_azure_foundry_api_key_secret_name" {
   default     = "litellm-azure-foundry-api-key"
 }
 
+variable "litellm_azure_foundry_endpoint_secret_name" {
+  description = "Secret name for the Azure AI Foundry endpoint URL (populated by Azure GHA workflow)"
+  type        = string
+  default     = "litellm-azure-foundry-endpoint"
+}
+
 variable "rds_ca_bundle_secret_name" {
   description = "Secret name for RDS CA certificate bundle"
   type        = string
