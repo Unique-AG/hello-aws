@@ -114,19 +114,29 @@ proxy_config:
         aws_region_name: eu-central-1
         max_tokens: 8192
 
-    # OpenAI model name aliases (for chat service Azure SDK compatibility)
-    # Maps OpenAI model names to Bedrock Claude models via LiteLLM
+    # GPT-4o via Azure AI Foundry. api_base and api_key come from K8s env vars
+    # set by the `litellm` ExternalSecret (sourced from AWS Secrets Manager,
+    # populated by the Azure GHA workflow's push-to-aws-secrets job).
     - model_name: gpt-4o
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: eu-central-2
-        max_tokens: 10000
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
 
     - model_name: gpt-4o-2024-11-20
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: eu-central-2
-        max_tokens: 10000
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: azure-gpt-4o
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
 
     - model_name: gpt-4-turbo
       litellm_params:
