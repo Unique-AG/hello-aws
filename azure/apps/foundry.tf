@@ -1,8 +1,5 @@
 # Azure AI Foundry account + GPT-4o deployment.
-#
-# Public network access is enabled (no private endpoints) — interim until the
-# Entra-token migration lands. Compliance risk + Defender waiver tracked in
-# UN-18528; do not merge until that lands.
+# Public network access enabled; private endpoints are a planned follow-up.
 
 # 4-char random suffix on the subdomain only — the subdomain is a global Azure
 # DNS label and `apply` fails if the name is taken. The account `name` stays
