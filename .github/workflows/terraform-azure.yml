@@ -1,0 +1,257 @@
+name: Terraform Azure
+
+on:
+  push:
+    branches: [deploy/sbx]
+    paths:
+      - "azure/**"
+      - ".github/workflows/terraform-azure.yml"
+  pull_request:
+    branches: [deploy/sbx]
+    paths:
+      - "azure/**"
+      - ".github/workflows/terraform-azure.yml"
+
+env:
+  # Pinned < 1.14: the azurerm OIDC backend regresses on 1.14+ (see comment 50988
+  # on UN-18320). The version-assertion step below catches drift if this is ever bumped.
+  TF_VERSION: "1.13.3"
+
+jobs:
+  # ─── Core Layer ──────────────────────────────────────────────
+  plan-core:
+    name: "Plan: Azure Core"
+    runs-on: ubuntu-latest
+    environment: az-lz-aws-hello-001-core
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: azure/core
+    env:
+      ARM_CLIENT_ID: ${{ vars.CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Assert Terraform version < 1.14
+        run: terraform version | head -1 | grep -E 'v1\.(10|11|12|13)\.'
+
+      - name: Terraform Init
+        run: terraform init -backend-config=environments/prod/backend-config.hcl
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/prod/00-config.auto.tfvars -out=tfplan
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tfplan-core
+          path: azure/core/tfplan
+
+  apply-core:
+    name: "Apply: Azure Core"
+    needs: plan-core
+    if: github.ref == 'refs/heads/deploy/sbx' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: az-lz-aws-hello-001-core
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: azure/core
+    env:
+      ARM_CLIENT_ID: ${{ vars.CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: tfplan-core
+          path: azure/core
+
+      - name: Terraform Init
+        run: terraform init -backend-config=environments/prod/backend-config.hcl
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+  # ─── Apps Layer ──────────────────────────────────────────────
+  plan-apps:
+    name: "Plan: Azure Apps"
+    needs: apply-core
+    if: always() && (needs.apply-core.result == 'success' || needs.apply-core.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: az-lz-aws-hello-001-apps
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: azure/apps
+    env:
+      ARM_CLIENT_ID: ${{ vars.CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Assert Terraform version < 1.14
+        run: terraform version | head -1 | grep -E 'v1\.(10|11|12|13)\.'
+
+      - name: Terraform Init
+        run: terraform init -backend-config=environments/prod/backend-config.hcl
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/prod/00-config.auto.tfvars -out=tfplan
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: tfplan-apps
+          path: azure/apps/tfplan
+
+  apply-apps:
+    name: "Apply: Azure Apps"
+    needs: [apply-core, plan-apps]
+    if: github.ref == 'refs/heads/deploy/sbx' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: az-lz-aws-hello-001-apps
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: azure/apps
+    env:
+      ARM_CLIENT_ID: ${{ vars.CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: tfplan-apps
+          path: azure/apps
+
+      - name: Terraform Init
+        run: terraform init -backend-config=environments/prod/backend-config.hcl
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+  # ─── Push Foundry key to AWS Secrets Manager ─────────────────
+  push-to-aws-secrets:
+    name: "Push: Foundry key → AWS Secrets Manager"
+    needs: apply-apps
+    if: github.ref == 'refs/heads/deploy/sbx' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment: az-lz-aws-hello-001-apps
+    permissions:
+      id-token: write
+      contents: read
+    defaults:
+      run:
+        working-directory: azure/apps
+    env:
+      ARM_CLIENT_ID: ${{ vars.CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.SUBSCRIPTION_ID }}
+      ARM_USE_OIDC: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
+        with:
+          client-id: ${{ vars.CLIENT_ID }}
+          tenant-id: ${{ vars.TENANT_ID }}
+          subscription-id: ${{ vars.SUBSCRIPTION_ID }}
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init -backend-config=environments/prod/backend-config.hcl
+
+      - name: Read Foundry key + endpoint from TF outputs
+        run: |
+          key=$(terraform output -raw foundry_primary_key)
+          endpoint=$(terraform output -raw foundry_endpoint)
+          echo "::add-mask::$key"
+          echo "FOUNDRY_API_KEY=$key" >> "$GITHUB_ENV"
+          echo "FOUNDRY_ENDPOINT=$endpoint" >> "$GITHUB_ENV"
+
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_OIDC_ROLE_ARN }}
+          aws-region: eu-central-2
+
+      - name: Push Foundry key + endpoint to AWS Secrets Manager
+        run: |
+          aws secretsmanager put-secret-value \
+            --secret-id litellm-azure-foundry-api-key \
+            --secret-string "$FOUNDRY_API_KEY"
+          aws secretsmanager put-secret-value \
+            --secret-id litellm-azure-foundry-endpoint \
+            --secret-string "$FOUNDRY_ENDPOINT"

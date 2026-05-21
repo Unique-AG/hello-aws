@@ -232,6 +232,28 @@ resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
   tags = { Name = var.azure_openai_endpoint_definitions_secret_name, Purpose = "litellm" }
 }
 
+# Azure AI Foundry API key — populated by the Azure GHA workflow post-apply.
+resource "aws_secretsmanager_secret" "litellm_azure_foundry_api_key" {
+  name                    = var.litellm_azure_foundry_api_key_secret_name
+  description             = "Azure AI Foundry primary access key for LiteLLM azure provider"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_azure_foundry_api_key_secret_name, Purpose = "litellm" }
+}
+
+# Azure AI Foundry endpoint URL — populated by the Azure GHA workflow post-apply.
+# Foundry's custom subdomain has a random suffix so the endpoint can't be hardcoded;
+# LiteLLM reads it at runtime via os.environ/AZURE_FOUNDRY_ENDPOINT.
+resource "aws_secretsmanager_secret" "litellm_azure_foundry_endpoint" {
+  name                    = var.litellm_azure_foundry_endpoint_secret_name
+  description             = "Azure AI Foundry endpoint URL for LiteLLM azure provider"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_azure_foundry_endpoint_secret_name, Purpose = "litellm" }
+}
+
 # ---------------------------------------------------------------------------
 # S3 Bucket Config — infrastructure facts (Terraform-managed values)
 # ---------------------------------------------------------------------------
