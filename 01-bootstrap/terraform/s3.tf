@@ -177,7 +177,7 @@ resource "aws_s3_bucket_policy" "terraform_state" {
         Effect = "Allow"
         Principal = {
           AWS = compact([
-            data.aws_caller_identity.current.arn,
+            data.aws_iam_session_context.current.issuer_arn,
             var.use_oidc && var.github_repository != "" ? aws_iam_role.github_actions[0].arn : ""
           ])
         }
