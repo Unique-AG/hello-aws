@@ -72,7 +72,7 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     effect = "Allow"
     actions = [
       "ec2:*", "eks:*", "ecr:*", "elasticloadbalancing:*",
-      "rds:*", "elasticache:*", "kms:*",
+      "rds:*", "elasticache:*", "kms:*", "elasticfilesystem:*",
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
       "s3:GetBucketLocation", "s3:GetBucketPolicy", "s3:PutBucketPolicy",
       "s3:GetBucketAcl", "s3:PutBucketAcl", "s3:GetBucketVersioning",
@@ -82,6 +82,15 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "s3:PutBucketPublicAccessBlock", "s3:GetBucketOwnershipControls",
       "s3:PutBucketOwnershipControls", "s3:CreateBucket", "s3:DeleteBucket",
       "s3:GetBucketTagging", "s3:PutBucketTagging",
+      # Bucket-config reads on resources=* — covers buckets in layers 03/04
+      # (observability, application_data, ai_data) the same way bootstrap's
+      # state-bucket policy does for layer 01. Note IAM-vs-API name pairs:
+      # API GetBucketReplication → IAM s3:GetReplicationConfiguration,
+      # API GetBucketAccelerateConfiguration → IAM s3:GetAccelerateConfiguration.
+      "s3:GetBucketCORS", "s3:GetBucketLogging", "s3:GetBucketWebsite",
+      "s3:GetReplicationConfiguration", "s3:GetBucketObjectLockConfiguration",
+      "s3:GetAccelerateConfiguration", "s3:GetBucketRequestPayment",
+      "s3:GetBucketPolicyStatus",
       "secretsmanager:*", "logs:*", "cloudwatch:*", "sns:*",
       "budgets:*", "acm:*", "route53:*", "ram:*",
       "cloudfront:*", "bedrock:*", "aps:*", "grafana:*",
