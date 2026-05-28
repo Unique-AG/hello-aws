@@ -7,11 +7,13 @@
 
 environment = "sbx"
 
-# EKS Cluster Configuration (sandbox — public access for development)
+# EKS Cluster Configuration
+# Private endpoint only — k8s API not internet-reachable. Developers reach the
+# cluster via SSM session → bastion (management_server) → kubectl. Variable
+# defaults (public=false, cidrs=[]) already enforce this; the previous
+# permissive overrides have been removed.
 eks_cluster_version              = "1.35"
-eks_endpoint_public_access       = true
 eks_endpoint_private_access      = true
-eks_endpoint_public_access_cidrs = ["0.0.0.0/0"]
 eks_cluster_log_retention_days   = 7
 
 # EKS Node Group Configuration
