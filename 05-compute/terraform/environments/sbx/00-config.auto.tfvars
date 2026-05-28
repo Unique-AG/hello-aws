@@ -8,7 +8,7 @@
 environment = "sbx"
 
 # EKS Cluster Configuration (sandbox — public access for development)
-eks_cluster_version              = "1.34"
+eks_cluster_version              = "1.35"
 eks_endpoint_public_access       = true
 eks_endpoint_private_access      = true
 eks_endpoint_public_access_cidrs = ["0.0.0.0/0"]
