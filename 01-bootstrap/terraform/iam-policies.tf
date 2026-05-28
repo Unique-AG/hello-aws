@@ -10,6 +10,17 @@ data "aws_iam_policy_document" "github_actions_terraform_state" {
       "s3:PutObject",
       "s3:ListBucket",
       "s3:DeleteObject",
+      # Read-only bucket-config attributes that aws_s3_bucket reads during
+      # refresh. Without these, plan/apply fails with 403 before reaching
+      # any code path that could fix this same policy.
+      "s3:GetBucketCORS",
+      "s3:GetBucketLogging",
+      "s3:GetBucketWebsite",
+      "s3:GetBucketReplication",
+      "s3:GetBucketObjectLockConfiguration",
+      "s3:GetBucketAccelerateConfiguration",
+      "s3:GetBucketRequestPayment",
+      "s3:GetBucketPolicyStatus",
     ]
 
     resources = [
