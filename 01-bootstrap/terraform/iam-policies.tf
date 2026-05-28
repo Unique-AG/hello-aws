@@ -12,20 +12,27 @@ data "aws_iam_policy_document" "github_actions_terraform_state" {
       "s3:DeleteObject",
       # Read-only bucket-config attributes that aws_s3_bucket reads during
       # refresh. Without these, plan/apply fails with 403 before reaching
-      # any code path that could fix this same policy.
+      # any code path that could fix this same policy. Note IAM action names
+      # don't always match the S3 API call names (e.g. API GetBucketReplication
+      # is IAM s3:GetReplicationConfiguration).
       "s3:GetBucketCORS",
       "s3:GetBucketLogging",
       "s3:GetBucketWebsite",
-      "s3:GetBucketReplication",
+      "s3:GetReplicationConfiguration",
       "s3:GetBucketObjectLockConfiguration",
-      "s3:GetBucketAccelerateConfiguration",
+      "s3:GetAccelerateConfiguration",
       "s3:GetBucketRequestPayment",
       "s3:GetBucketPolicyStatus",
     ]
 
+    # Both buckets are managed by this layer; access_logs is the destination
+    # for terraform_state's access logging, so the role needs the same reads
+    # on it during refresh.
     resources = [
       aws_s3_bucket.terraform_state.arn,
       "${aws_s3_bucket.terraform_state.arn}/*",
+      aws_s3_bucket.access_logs.arn,
+      "${aws_s3_bucket.access_logs.arn}/*",
     ]
   }
 
