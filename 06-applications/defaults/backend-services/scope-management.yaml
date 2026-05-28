@@ -46,7 +46,7 @@ nodeSelector:
 hooks:
   migration:
     command: |
-      cd /home/node/app/services/node-scope-management/prisma; pnpm exec prisma migrate deploy --config ../prisma.config.ts; cd ../dist; RUNNING_MODE=DATA_MIGRATION node main.js;
+      cd /home/node/app/services/node-scope-management && pnpm exec prisma migrate deploy --config prisma.config.ts; cd /home/node/app/services/node-scope-management/dist; RUNNING_MODE=DATA_MIGRATION node main.js;
     enabled: true
 replicaCount: 1
 resources:
