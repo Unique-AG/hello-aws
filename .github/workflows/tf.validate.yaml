@@ -1,11 +1,18 @@
 name: '[tf] Validate'
 on:
   pull_request:
+    # Broad on purpose: any change to layer code, tfvars, the deploy workflow,
+    # the composite action, or the common tfvars triggers validate so the
+    # branch-protection ruleset always has a status check to gate on. Some
+    # paths (e.g. layer README updates) over-trigger; that's cheap noise vs
+    # missing-check stalls on PRs that legitimately need to merge.
     paths:
-      - '0[1-5]-*/**/*.tf'
-      - 'modules/**/*.tf'
+      - '0[1-5]-*/**'
+      - 'modules/**'
       - 'scripts/**'
-      - '.github/workflows/tf.validate.yaml'
+      - 'common.auto.tfvars'
+      - '.github/workflows/**'
+      - '.github/actions/**'
 
 permissions:
   contents: read
