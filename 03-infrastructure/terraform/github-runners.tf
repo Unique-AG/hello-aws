@@ -146,7 +146,9 @@ resource "aws_codebuild_project" "github_runners" {
 
   artifacts { type = "NO_ARTIFACTS" }
   environment {
-    compute_type    = "BUILD_GENERAL1_SMALL"
+    # MEDIUM: 4 vCPU / 7 GB — SMALL (2 vCPU / 3 GB) bottlenecks terraform
+    # plan/apply on the heavier layers (data-and-ai, compute).
+    compute_type    = "BUILD_GENERAL1_MEDIUM"
     image           = "aws/codebuild/amazonlinux2-x86_64-standard:5.0"
     type            = "LINUX_CONTAINER"
     privileged_mode = false
