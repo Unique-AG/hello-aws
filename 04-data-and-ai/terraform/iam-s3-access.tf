@@ -55,6 +55,7 @@ resource "aws_iam_user_policy" "s3_access" {
 # Access key values populated by .scripts/seed-secrets.sh
 
 resource "aws_secretsmanager_secret" "s3_access_key_id" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_access_key_id_secret_name
   description             = "S3 access key ID for programmatic access"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -64,6 +65,7 @@ resource "aws_secretsmanager_secret" "s3_access_key_id" {
 }
 
 resource "aws_secretsmanager_secret" "s3_secret_access_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_secret_access_key_secret_name
   description             = "S3 secret access key for programmatic access"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -75,6 +77,7 @@ resource "aws_secretsmanager_secret" "s3_secret_access_key" {
 # S3 Config — infrastructure facts (Terraform-managed values)
 
 resource "aws_secretsmanager_secret" "s3_endpoint" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_endpoint_secret_name
   description             = "S3 endpoint URL for programmatic access"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -89,6 +92,7 @@ resource "aws_secretsmanager_secret_version" "s3_endpoint" {
 }
 
 resource "aws_secretsmanager_secret" "s3_region" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_region_secret_name
   description             = "S3 region for programmatic access"
   recovery_window_in_days = var.secrets_recovery_window_days

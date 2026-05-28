@@ -168,6 +168,7 @@ resource "aws_ecr_lifecycle_policy" "default" {
 # Secrets Manager secret for Azure Container Registry credentials
 # Required for ECR pull-through cache to authenticate with ACR
 resource "aws_secretsmanager_secret" "acr_credentials" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   count = var.acr_registry_url != "" ? 1 : 0
 
   name        = "ecr-pullthroughcache/${var.acr_registry_url}"

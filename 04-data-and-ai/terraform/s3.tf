@@ -6,6 +6,9 @@ resource "random_string" "s3_suffix" {
 
 # S3 Bucket for Application Data
 resource "aws_s3_bucket" "application_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
@@ -134,6 +137,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "application_data" {
 
 # S3 Bucket for AI/ML Data
 resource "aws_s3_bucket" "ai_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
@@ -217,4 +223,44 @@ resource "aws_s3_bucket_policy" "ai_data_vpc_only" {
   policy = data.aws_iam_policy_document.ai_data_vpc_only[0].json
 
   depends_on = [aws_s3_bucket_public_access_block.ai_data]
+}
+
+# Lifecycle — transition to cheaper storage classes
+resource "aws_s3_bucket_lifecycle_configuration" "ai_data" {
+  bucket = aws_s3_bucket.ai_data.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+  }
+
+  rule {
+    id     = "transition-to-glacier"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 }

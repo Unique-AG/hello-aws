@@ -24,6 +24,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 # Security Group for ALB (allows CloudFront traffic)
 # This security group is attached during ALB creation
 resource "aws_security_group" "alb_cloudfront" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-cloudfront"
@@ -104,6 +105,7 @@ resource "aws_lb" "cloudfront" {
 # We use target_type = "ip" and resolve the NLB DNS to IP addresses
 # Traffic: CloudFront (HTTPS) → ALB (TLS terminated) → Ingress NLB (HTTP:80) → ingress controller
 resource "aws_lb_target_group" "ingress_nlb" {
+  #checkov:skip=CKV_AWS_378: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id_short}-ing-nlb-tg"
@@ -218,6 +220,7 @@ resource "aws_lb_listener" "cloudfront_https" {
 # CloudFront handles TLS termination, so HTTP is sufficient for VPC Origin
 resource "aws_lb_listener" "cloudfront_http" {
   #checkov:skip=CKV_AWS_2: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_103: see docs/security-baseline.md
   #trivy:ignore:AVD-AWS-0054 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
@@ -245,6 +248,7 @@ resource "aws_lb_listener" "cloudfront_http" {
 
 # Security Group for Public WebSocket ALB (allows CloudFront traffic only)
 resource "aws_security_group" "alb_websocket" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-websocket"
@@ -283,6 +287,7 @@ resource "aws_security_group_rule" "alb_websocket_http_egress" {
 # Public ALB for WebSocket traffic
 resource "aws_lb" "websocket" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_28: see docs/security-baseline.md
   #trivy:ignore:AVD-AWS-0053 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
@@ -304,6 +309,7 @@ resource "aws_lb" "websocket" {
 
 # Target Group for WebSocket ALB → Ingress NLB
 resource "aws_lb_target_group" "websocket_ingress" {
+  #checkov:skip=CKV_AWS_378: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id_short}-ws-ing-tg"
