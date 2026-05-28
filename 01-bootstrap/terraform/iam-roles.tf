@@ -16,10 +16,21 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       values   = ["sts.amazonaws.com"]
     }
 
+    # Narrow the OIDC subject claim from "any context" (StringLike with :*) to
+    # an explicit allowlist of refs/events. Reduces blast radius of a stolen
+    # or forged OIDC token — only push to deploy/sbx, push to main, and
+    # pull_request events can assume this role.
+    #
+    # Format reference:
+    # https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#example-subject-claims
     condition {
-      test     = "StringLike"
+      test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_repository}:*"]
+      values = [
+        "repo:${var.github_repository}:ref:refs/heads/deploy/sbx",
+        "repo:${var.github_repository}:ref:refs/heads/main",
+        "repo:${var.github_repository}:pull_request",
+      ]
     }
   }
 }
