@@ -69,7 +69,11 @@ jobs:
 
   data-and-ai:
     needs: infrastructure
-    runs-on: codebuild-${{ vars.CODEBUILD_PROJECT }}-${{ github.run_id }}-${{ github.run_attempt }}
+    # ubuntu-latest: every resource in this layer is managed via the public
+    # AWS API. No in-cluster (helm/kubernetes/postgresql) providers are used,
+    # so VPC reach isn't required. Revisit if a kubernetes-side provider is
+    # added or buckets switch to VPC-only access.
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
@@ -87,7 +91,11 @@ jobs:
 
   compute:
     needs: infrastructure
-    runs-on: codebuild-${{ vars.CODEBUILD_PROJECT }}-${{ github.run_id }}-${{ github.run_attempt }}
+    # ubuntu-latest: terraform manages aws_eks_cluster via the public AWS
+    # API. The cluster's k8s API can be private (no kubectl/helm in CI). If
+    # we later add a kubernetes/helm provider, this job has to move to a
+    # VPC-attached runner.
+    runs-on: ubuntu-latest
     env:
       TF_VAR_acr_username: ${{ secrets.TF_VAR_ACR_USERNAME }}
       TF_VAR_acr_password: ${{ secrets.TF_VAR_ACR_PASSWORD }}
