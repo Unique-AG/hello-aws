@@ -109,7 +109,7 @@ variable "cloudwatch_log_retention_days" {
 variable "aurora_engine_version" {
   description = "Aurora PostgreSQL engine version"
   type        = string
-  default     = "14.19"
+  default     = "14.20"
 }
 
 variable "aurora_database_name" {
