@@ -2,9 +2,13 @@ cleanPrometheusOperatorObjectNames: true
 
 crds:
   enabled: true
+  # Upgrade Job disabled: the chart's default `registry.k8s.io/kubectl` image
+  # is not pullable from this cluster's egress path (S3 mirror returns 403).
+  # CRDs are already installed; the Job is a no-op for re-sync at the same
+  # chart version. Re-enable (with a routable image) or apply CRDs manually
+  # when bumping the chart to a version that introduces CRD schema changes.
   upgradeJob:
-    enabled: true
-    forceConflicts: true
+    enabled: false
 
 # Disabled — EKS-managed control plane components
 kubeControllerManager:
