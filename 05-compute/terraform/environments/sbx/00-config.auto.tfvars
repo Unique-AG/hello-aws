@@ -48,5 +48,6 @@ ecr_pull_through_cache_upstream_registries = [
   "uniquecr.azurecr.io",
   "uniquecr",
   "quay.io",
+  "registry.k8s.io",
 ]
 

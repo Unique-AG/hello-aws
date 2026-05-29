@@ -198,12 +198,13 @@ variable "ecr_pull_through_cache_upstream_urls" {
   description = "Map of registry prefix to upstream registry URL for pull-through cache"
   type        = map(string)
   default = {
-    "docker.io"      = "registry-1.docker.io"
-    "public.ecr.aws" = "public.ecr.aws"
-    "quay.io"        = "quay.io"
-    "gcr.io"         = "gcr.io"
-    "k8s.gcr.io"     = "k8s.gcr.io"
-    "ghcr.io"        = "ghcr.io"
+    "docker.io"       = "registry-1.docker.io"
+    "public.ecr.aws"  = "public.ecr.aws"
+    "quay.io"         = "quay.io"
+    "gcr.io"          = "gcr.io"
+    "k8s.gcr.io"      = "k8s.gcr.io"
+    "ghcr.io"         = "ghcr.io"
+    "registry.k8s.io" = "registry.k8s.io"
   }
   # Note: ACR URLs are dynamically added via locals based on acr_registry_url variable
 }
