@@ -55,8 +55,10 @@ env:
     {"name": "HallucinationLevelEvaluation", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/evaluations/hallucination-level"},
     {"name": "DueDiligence", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/magic_table_dd"},
     {"name": "RfpAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/rfp_agent"},
-    {"name": "UniqueAi", "apiURL": "http://assistants-core.chat.svc.cluster.local:8081/core/unique_ai"},
-    {"name": "KycReviewAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/kyc_review_agent"}
+    {"name": "UniqueAi", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/unique_ai"},
+    {"name": "UniqueAIV2", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/unique_ai_v2"},
+    {"name": "KycReviewAgent", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/kyc_review_agent"},
+    {"name": "SwappableIntelligence", "apiURL": "http://assistants-core.unique.svc.cluster.local:8081/core/sandbox_orchestrator"}
     ]
   LOG_LEVEL: info
   MAX_HEAP_MB: 3700
@@ -89,7 +91,7 @@ envVars:
 hooks:
   migration:
     command: |
-      cd /home/node/app/services/node-chat/prisma; pnpm exec prisma migrate deploy --config ../prisma.config.ts; cd ../dist; RUNNING_MODE=DATA_MIGRATION node main.js;
+      cd /home/node/app/services/node-chat && pnpm exec prisma migrate deploy --config prisma.config.ts && cd dist && RUNNING_MODE=DATA_MIGRATION node main.js
     enabled: true
 nodeSelector:
   scalability: steady

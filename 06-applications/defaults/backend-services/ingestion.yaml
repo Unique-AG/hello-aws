@@ -55,7 +55,7 @@ env:
 hooks:
   migration:
     command: |
-      cd /home/node/app/services/node-ingestion/prisma; pnpm exec prisma migrate deploy --config ../prisma.config.ts;
+      cd /home/node/app/services/node-ingestion && pnpm exec prisma migrate deploy --config prisma.config.ts
     enabled: true
 nodeSelector:
   scalability: steady
