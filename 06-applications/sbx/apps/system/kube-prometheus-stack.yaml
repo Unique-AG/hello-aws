@@ -19,5 +19,7 @@ spec:
         releaseName: kube-prometheus-stack
         valueFiles:
           - $values/06-applications/sbx/values/observability/kube-prometheus-stack.yaml
-  syncOptions:
-    - ServerSideApply=true
+  # ServerSideApply removed 2026-05-29: dry-run was returning `context deadline
+  # exceeded` against EKS 1.35 (PVC + admission PostSync resources blocked).
+  # Backend-service apps sync fine without SSA; revisit only if SSA is required
+  # for a specific resource conflict.
