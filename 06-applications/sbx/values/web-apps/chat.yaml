@@ -12,4 +12,4 @@ env:
 
 image:
   repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/web-app-chat
-  tag: "2026.22.0-b012aa"
+  tag: "2026.22.0"
