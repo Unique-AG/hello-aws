@@ -145,6 +145,12 @@ grafana:
     size: 10Gi
 
 kube-state-metrics:
+  # Route through ECR pull-through cache: registry.k8s.io's S3 mirror returns
+  # 403 from this cluster's egress. PT rule for registry.k8s.io is provisioned
+  # in 05-compute terraform.
+  image:
+    registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com
+    repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
   resources:
     requests:
       cpu: 50m
