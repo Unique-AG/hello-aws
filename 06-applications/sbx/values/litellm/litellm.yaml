@@ -114,6 +114,24 @@ proxy_config:
         aws_region_name: eu-central-1
         max_tokens: 8192
 
+    # Gemma-4-31B-IT self-hosted on a SageMaker real-time endpoint in
+    # ap-northeast-2. The endpoint serves an OpenAI-compatible chat schema
+    # (vLLM backend), so use the sagemaker_chat provider. This is a cross-region
+    # call from the eu-central-2 cluster (data leaves the EU) — sandbox/reference
+    # deployment only. Same AWS account; auth via the litellm Pod Identity role,
+    # which needs sagemaker:InvokeEndpoint + InvokeEndpointWithResponseStream on
+    # this endpoint (05-compute iam.tf) — apply that layer before this syncs.
+    # *_cost_per_token: rough amortized placeholder so this self-hosted model
+    # shows non-zero spend in spend logs / max_budget (LiteLLM has no price map
+    # for a self-hosted endpoint). Tune to real $/token if cost tracking matters.
+    - model_name: gemma-4-31b-it
+      litellm_params:
+        model: sagemaker_chat/gemma-4-31b
+        aws_region_name: ap-northeast-2
+        max_tokens: 4096
+        input_cost_per_token: 0.000001
+        output_cost_per_token: 0.000001
+
     # GPT-4o via Azure AI Foundry. api_base and api_key come from K8s env vars
     # set by the `litellm` ExternalSecret (sourced from AWS Secrets Manager,
     # populated by the Azure GHA workflow's push-to-aws-secrets job).

@@ -305,10 +305,27 @@ data "aws_iam_policy_document" "litellm" {
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:application-inference-profile/*",
     ]
   }
+
+  # Invoke the self-hosted Gemma SageMaker endpoint in ap-northeast-2
+  # (cross-region, same account). Used by the gemma-4-31b-it model in
+  # the LiteLLM proxy_config model_list. Both the unary and the streaming
+  # action are required — the chat backend streams, and SageMaker treats
+  # InvokeEndpointWithResponseStream as a distinct action (mirrors the
+  # Bedrock statement above, which pairs InvokeModel + ...WithResponseStream).
+  statement {
+    effect = "Allow"
+    actions = [
+      "sagemaker:InvokeEndpoint",
+      "sagemaker:InvokeEndpointWithResponseStream",
+    ]
+    resources = [
+      "arn:aws:sagemaker:ap-northeast-2:${data.aws_caller_identity.current.account_id}:endpoint/gemma-4-31b",
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "litellm" {
-  name   = "bedrock-access"
+  name   = "litellm-model-access"
   role   = aws_iam_role.litellm.id
   policy = data.aws_iam_policy_document.litellm.json
 }
