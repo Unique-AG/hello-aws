@@ -124,11 +124,21 @@ proxy_config:
     # *_cost_per_token: rough amortized placeholder so this self-hosted model
     # shows non-zero spend in spend logs / max_budget (LiteLLM has no price map
     # for a self-hosted endpoint). Tune to real $/token if cost tracking matters.
+    #
+    # CONSTRAINTS of this single-g6.24xl deployment (verified against the live
+    # endpoint, 2026-06-02) — both otherwise cause HTTP 400 from the vLLM container:
+    #   1. max_model_len is only 2275 tokens (weights + KV barely fit 4x L4 /
+    #      96 GB), so max_tokens must stay well under 2275 to leave prompt room.
+    #   2. the JumpStart container was not started with --enable-auto-tool-choice
+    #      / --tool-call-parser, so any tool_choice/tools in the request is
+    #      rejected. Drop both via additional_drop_params until a g6e redeploy
+    #      can enable tool calling and a real context window.
     - model_name: gemma-4-31b-it
       litellm_params:
         model: sagemaker_chat/gemma-4-31b
         aws_region_name: ap-northeast-2
-        max_tokens: 4096
+        max_tokens: 1024
+        additional_drop_params: ["tool_choice", "tools"]
         input_cost_per_token: 0.000001
         output_cost_per_token: 0.000001
 
