@@ -22,7 +22,7 @@ env:
   # below. Users hit ModelRestrictedException 400 ("not available on the
   # cluster").
   LITELLM_ENABLED: "true"
-  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-4-6,litellm:anthropic-claude-sonnet-4-6,litellm:qwen-3-235B-A22B,litellm:minimax-m2-5,litellm:gemma-4-31b-it,gpt-4o-2024-11-20"
+  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-4-6,litellm:anthropic-claude-sonnet-4-6,litellm:qwen-3-235B-A22B,litellm:minimax-m2-5,litellm:gemma-4-31b-it,litellm:qwen3-6-35b-a3b,gpt-4o-2024-11-20"
   LOG_LEVEL: info
   MAX_HEAP_MB: "3700"
   MIN_NO_OF_MESSAGES_BY_USER_BEFORE_NPS_TRIGGER: "30"

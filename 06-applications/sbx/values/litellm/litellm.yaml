@@ -142,6 +142,26 @@ proxy_config:
         input_cost_per_token: 0.000001
         output_cost_per_token: 0.000001
 
+    # Qwen3.6-35B-A3B (MoE) self-hosted on a SageMaker real-time endpoint in
+    # ap-northeast-2, same sagemaker_chat (vLLM, OpenAI-compatible) pattern as
+    # gemma above — cross-region from eu-central-2, sandbox/reference only.
+    # Unlike gemma this endpoint runs on ml.g6e.24xlarge with tensor_parallel=4
+    # and a pinned 131072-token window (SM_VLLM_MAX_MODEL_LEN), so max_tokens
+    # can be generous. Tool calling still isn't enabled on the container
+    # (no --enable-auto-tool-choice / --tool-call-parser qwen3_coder), so
+    # tool_choice/tools are dropped. *_cost_per_token: amortized placeholder
+    # (no LiteLLM price map for a self-hosted endpoint). IAM: the litellm Pod
+    # Identity role's sagemaker invoke statement is scoped to endpoint/* in
+    # this region (05-compute iam.tf) — apply 05-compute before this syncs.
+    - model_name: qwen3-6-35b-a3b
+      litellm_params:
+        model: sagemaker_chat/qwen3-6-35b
+        aws_region_name: ap-northeast-2
+        max_tokens: 8192
+        additional_drop_params: ["tool_choice", "tools"]
+        input_cost_per_token: 0.000001
+        output_cost_per_token: 0.000001
+
     # GPT-4o via Azure AI Foundry. api_base and api_key come from K8s env vars
     # set by the `litellm` ExternalSecret (sourced from AWS Secrets Manager,
     # populated by the Azure GHA workflow's push-to-aws-secrets job).

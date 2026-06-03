@@ -306,12 +306,15 @@ data "aws_iam_policy_document" "litellm" {
     ]
   }
 
-  # Invoke the self-hosted Gemma SageMaker endpoint in ap-northeast-2
-  # (cross-region, same account). Used by the gemma-4-31b-it model in
-  # the LiteLLM proxy_config model_list. Both the unary and the streaming
-  # action are required — the chat backend streams, and SageMaker treats
-  # InvokeEndpointWithResponseStream as a distinct action (mirrors the
+  # Invoke the self-hosted SageMaker endpoints in ap-northeast-2 (cross-region,
+  # same account). Used by the sagemaker_chat/* models in the LiteLLM
+  # proxy_config model_list (gemma-4-31b, qwen3-6-35b, ...). Both the unary and
+  # the streaming action are required — the chat backend streams, and SageMaker
+  # treats InvokeEndpointWithResponseStream as a distinct action (mirrors the
   # Bedrock statement above, which pairs InvokeModel + ...WithResponseStream).
+  # Scoped to all endpoints in the region (not a single ARN) so adding a new
+  # self-hosted model needs only the LiteLLM + allowlist edits, no IAM change.
+  # Acceptable in this sandbox account where every endpoint is ours.
   statement {
     effect = "Allow"
     actions = [
@@ -319,7 +322,7 @@ data "aws_iam_policy_document" "litellm" {
       "sagemaker:InvokeEndpointWithResponseStream",
     ]
     resources = [
-      "arn:aws:sagemaker:ap-northeast-2:${data.aws_caller_identity.current.account_id}:endpoint/gemma-4-31b",
+      "arn:aws:sagemaker:ap-northeast-2:${data.aws_caller_identity.current.account_id}:endpoint/*",
     ]
   }
 }
