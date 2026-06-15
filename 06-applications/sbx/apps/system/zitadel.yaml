@@ -2,9 +2,6 @@ spec:
   name: zitadel
   autoSync: false
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
-      ref: values
     - chart: zitadel
       repoURL: https://charts.zitadel.com
       targetRevision: 8.13.1

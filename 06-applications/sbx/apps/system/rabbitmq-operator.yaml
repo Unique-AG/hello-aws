@@ -2,9 +2,6 @@ spec:
   name: rabbitmq-operator
   autoSync: false
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
-      ref: values
     - chart: rabbitmq-cluster-operator
       repoURL: registry-1.docker.io/bitnamicharts
       targetRevision: 4.3.21

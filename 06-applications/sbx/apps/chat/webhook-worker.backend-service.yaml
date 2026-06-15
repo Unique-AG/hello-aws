@@ -2,9 +2,6 @@ spec:
   name: backend-service-webhook-worker
   autoSync: false
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
-      ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: backend-service
       targetRevision: 10.3.0

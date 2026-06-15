@@ -1,7 +1,7 @@
 name: '[tf] [sbx] Deploy'
 on:
   push:
-    branches: [deploy/sbx]
+    branches: [deploy]
     paths: ['0[1-5]-*/**', 'modules/**', 'common.auto.tfvars']
   workflow_dispatch:
 
@@ -40,7 +40,7 @@ jobs:
           backend_config: environments/sbx/backend-config.hcl
           var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
           plan_name: sbx-bootstrap
-          apply_branch: deploy/sbx
+          apply_branch: deploy
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   governance:
@@ -62,7 +62,7 @@ jobs:
           backend_config: environments/sbx/backend-config.hcl
           var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
           plan_name: sbx-governance
-          apply_branch: deploy/sbx
+          apply_branch: deploy
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   infrastructure:
@@ -84,7 +84,7 @@ jobs:
           backend_config: environments/sbx/backend-config.hcl
           var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
           plan_name: sbx-infrastructure
-          apply_branch: deploy/sbx
+          apply_branch: deploy
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   data-and-ai:
@@ -110,7 +110,7 @@ jobs:
           backend_config: environments/sbx/backend-config.hcl
           var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
           plan_name: sbx-data-and-ai
-          apply_branch: deploy/sbx
+          apply_branch: deploy
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   compute:
@@ -141,5 +141,5 @@ jobs:
           backend_config: environments/sbx/backend-config.hcl
           var_files: ../../common.auto.tfvars environments/sbx/00-config.auto.tfvars
           plan_name: sbx-compute
-          apply_branch: deploy/sbx
+          apply_branch: deploy
           github_token: ${{ secrets.GITHUB_TOKEN }}
