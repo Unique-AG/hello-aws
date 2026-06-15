@@ -45,17 +45,17 @@ fix/*  ─┤ squash PR (CI gates — see Quality gates)
 chore/*┘
         ▼
       main ──tag 202X.22.0 → GitHub Release──►  trunk + environment template
-        │                                       (release content: version BOM + defaults/)
-        │  each environment adopts a release tag — forward only
+        │                                       (release content: app specs + defaults/)
+        │  adopt a release = merge its content into the env folder — forward only
         ▼
       deploy ──push──►  per-env Terraform apply (01–05) + ArgoCD reconcile (06)
-        ├── sbx/    adopts 202X.22.0   (latest)
-        └── prod/   adopts 202X.21.0   (until validated, then advances)
+        ├── sbx/    at 202X.22.0   (latest)
+        └── prod/   at 202X.21.0   (until validated, then advances)
 ```
 
 ### `main` — trunk and environment template
 - The single source of truth. All work lands via **squash-merged PRs**; CI gates every PR.
-- Carries **release content** (the version BOM and `defaults/`) and the **environment
+- Carries **release content** (the app specs and `defaults/`) and the **environment
   template** — the shape an environment instantiates. It holds **no** environment-specific
   values and **no** per-environment version pin.
 - A **release** is a Git tag on `main`, published as a **GitHub Release** with notes. The tag
@@ -126,26 +126,26 @@ can differ.
 > current clones use `<env>/values/`.
 
 ### How they compose
-ArgoCD generates one Application per service from two sources:
-- **release content** — the app specs (`apps/*.yaml`, carrying chart + image versions) +
-  `defaults/` — read at the **release tag the environment adopts**;
-- **instance config** — `<env>/value-overlays/` — read from the `deploy` branch.
+ArgoCD generates one Application per service, reading the app specs (`<env>/apps/*.yaml`) and
+all value files from the environment's folder on the `deploy` branch. The app specs are
+**instance-free**: the Git reference they share (your fork's repo and the `deploy` branch) is
+defined **once** in the ApplicationSet, not repeated per app.
 
 Service values resolve by a **last-wins Helm merge** (lowest → highest priority):
 
 ```
-defaults/<service>.yaml          (release config — on main, at the adopted tag)
+defaults/<service>.yaml          (release config)
    └─ overridden by →
-<env>/value-overlays/<service>   (instance config — on deploy)
+<env>/value-overlays/<service>   (instance config)
 ```
 
-Concretely, each Application has **two sources**: a release-content source whose
-`targetRevision` is the **adopted release tag** (it provides the app specs and `defaults/`
-from `main`), and an instance-config source whose `targetRevision` is the `deploy` branch (it
-provides `<env>/value-overlays/`). The app specs and `defaults/` are therefore **not present
-on the `deploy` branch** — they are read at the adopted tag. Adopting a release means
-**re-pointing the release-content source to the new tag**; your instance config stays in
-place.
+Both `defaults/` (release config) and `<env>/value-overlays/` (instance config) are read from
+the `deploy` branch through a single shared `$values` source; component versions come from the
+app specs in the env folder. **Adopting a release** brings the new release content (the
+environment's `apps/` and `defaults/`) onto the `deploy` branch (see the runbook); your
+`value-overlays/` stay as they are. `defaults/` is shared across environment folders, so a
+release's `defaults/` apply to every environment once adopted — keep them backward-compatible
+when environments run different releases.
 
 ### Configuration — the decision rule
 > - Changes with a **Unique release** and the same for every customer?
@@ -179,15 +179,13 @@ rather than silently rendering an empty or placeholder string.
 - **Component versions** (per-service chart version and image tag) live in the **app specs**
   under `06-applications/sbx/apps/`. Diff the versions between two releases:
   `git diff 202X.21.0 202X.22.0 -- 06-applications/sbx/apps`.
-- **Per-environment version.** An environment's version is the **release tag it has adopted**,
-  recorded in its `deploy` folder. Environments can adopt different tags and run different
-  versions.
+- **Per-environment version.** An environment's version is the release content in its
+  `<env>/apps/` folder on `deploy`, advanced by merging a release. Environments can sit on
+  different releases (different folder content).
 - **Resource traceability.** Terraform stamps a `governance:SemanticVersion` tag on the
-  resources it manages. The value is the **release tag the environment has adopted** (recorded
-  in its `deploy` folder) and is passed to Terraform as a **per-environment variable** at apply
-  time, so every AWS resource traces back to the release that environment runs — `prod`
-  resources can read `202X.21.0` while `sbx` reads `202X.22.0`.
-- **Image registry.** Image *tags* are version content (manifest); the image *registry* (your
+  resources it manages, derived in CI from `git describe --tags` on the `deploy` branch — so
+  every AWS resource traces back to the release the branch currently carries.
+- **Image registry.** Image *tags* are version content (in the app specs); the image *registry* (your
   ECR account) is instance content (`value-overlays` / common env config), composed at render
   time.
 
@@ -248,10 +246,9 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 7. Squash-merge; **tag `202X.XX.X`**; **publish the GitHub Release** with notes.
 
 ### Part B — Adopt a release in an environment (on `deploy`)
-1. **Point the environment at the release** — set the **release-content source's
-   `targetRevision`** to `202X.XX.X` for the environment (recorded once in `<env>/`'s
-   ApplicationSet values; the ApplicationSet applies it to every app). Supply any new instance
-   values flagged in `defaults/` (`unset_default_value`) under `<env>/value-overlays/`. Commit.
+1. **Bring the release into the environment** — merge the release into the `deploy` branch so
+   the environment's `apps/` and `defaults/` are at `202X.XX.X`. Supply any new instance
+   values flagged with `unset_default_value` under `<env>/value-overlays/`. Commit.
 2. **Push — this is the deployment:**
    - **Infrastructure:** the pipeline applies layers 01→05 for this environment. Watch to
      completion.
@@ -348,7 +345,7 @@ release content (versions + `defaults/`).
 |---|---|---|
 | Chart or image version (for a release) | `apps/<service>.yaml` | `main`, then tag |
 | A release-wide default (flag, env wiring, default sizing) | `defaults/<service>.yaml` | `main` |
-| Which release an environment runs | adopted tag in `<env>/` | `deploy` |
+| Which release an environment runs | merge the release into `<env>/apps/` | `deploy` |
 | Your domains / identity / registry / secrets | `<env>/value-overlays/` | `deploy` |
 | Enable an optional feature for your install | `<env>/value-overlays/<service>` | `deploy` |
 | Per-environment sizing (e.g. prod > sbx) | `<env>/value-overlays/<service>` | `deploy` |
