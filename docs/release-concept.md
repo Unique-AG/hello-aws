@@ -1,0 +1,354 @@
+# Release Concept
+
+How a Unique platform release becomes a running deployment in your fork of `hello-aws`,
+and how you keep one or more environments up to date over time.
+
+`hello-aws` is **trunk-based**. One `main` branch is the source of truth and the
+**environment template**; one long-lived **`deploy`** branch holds the real, per-environment
+configuration as one folder per environment. Updates always flow **forward** (`main` →
+`deploy`).
+
+A **release** is a Git tag on `main` (`202X.XX.X`) that names a complete, immutable set of
+component versions and configuration, **published as a
+[GitHub Release](https://github.com/Unique-AG/hello-aws/releases)** with notes describing
+what changed and any newly-required configuration. The tag is the identity; the GitHub
+Release is its published, human-facing wrapper — and what you watch to learn a new version is
+available.
+
+Each environment **adopts** a release independently — so different environments can run
+different releases (e.g. `sbx` on a new release while `prod` stays on the previous one until
+it is validated). Deploying is advancing an environment's folder to the release it adopts and
+pushing.
+
+---
+
+## At a glance
+
+| | |
+|---|---|
+| **Trunk** | `main` — source of truth and **environment template**; CI-gated; carries release content (versions + `defaults/`) but no environment-specific values |
+| **Deploy branch** | a single long-lived `deploy` branch with **one folder per environment** (`sbx/`, `prod/`, …) holding that environment's real values |
+| **Release** | a Git tag `202X.XX.X` on `main`, **published as a GitHub Release** with notes — the *only* place a release version exists |
+| **Per-environment version** | each environment **adopts** a release tag independently → environments can run **different releases** (staged rollout: `sbx` → validate → `prod`) |
+| **Flow direction** | always forward: `feat/*` → `main` → `deploy`. Never `deploy` → `main` |
+| **Infrastructure (layers 01–05)** | Terraform — a push to `deploy` applies the layers for the changed environment |
+| **Applications (layer 06)** | ArgoCD — watches the `deploy` branch and reconciles each environment's apps |
+| **What varies** | three separate concerns — **version**, **release config**, **instance config** — each with its own home (see [Separating…](#separating-version-release-config-and-instance-config)) |
+
+---
+
+## Branching model
+
+```
+feat/* ─┐
+fix/*  ─┤ squash PR (CI gates — see Quality gates)
+chore/*┘
+        ▼
+      main ──tag 202X.22.0 → GitHub Release──►  trunk + environment template
+        │                                       (release content: version BOM + defaults/)
+        │  each environment adopts a release tag — forward only
+        ▼
+      deploy ──push──►  per-env Terraform apply (01–05) + ArgoCD reconcile (06)
+        ├── sbx/    adopts 202X.22.0   (latest)
+        └── prod/   adopts 202X.21.0   (until validated, then advances)
+```
+
+### `main` — trunk and environment template
+- The single source of truth. All work lands via **squash-merged PRs**; CI gates every PR.
+- Carries **release content** (the version BOM and `defaults/`) and the **environment
+  template** — the shape an environment instantiates. It holds **no** environment-specific
+  values and **no** per-environment version pin.
+- A **release** is a Git tag on `main`, published as a **GitHub Release** with notes. The tag
+  is the only release-version string in the repository (see
+  [Release identity](#release-identity-and-versioning)).
+
+### `deploy` — one branch, one folder per environment
+- A single long-lived branch. Each environment is a **folder** (`sbx/`, `prod/`, …) carrying
+  its real values **and the release tag it currently adopts**. ArgoCD points each cluster at
+  its own folder.
+- **A push to `deploy` is a deployment** for the changed environment: Terraform applies its
+  layers (01–05), and ArgoCD — watching the `deploy` branch — reconciles its applications
+  (layer 06).
+- Each environment **adopts releases independently**, so environments can sit on **different
+  releases** (staged rollout). Resource version tags (`governance:SemanticVersion`) therefore
+  differ per environment too.
+- The `deploy` branch **diverges forward** from `main` and is never merged back. Because it
+  has diverged, it is never fast-forwarded to a `main` tag: an environment records the release
+  tag it adopts as a **pointer**, and the release content is resolved at that tag (see
+  [How they compose](#how-they-compose)). Release content always originates on `main`.
+
+### Feature branches
+`feat/*`, `fix/*`, `chore/*` → PR → squash-merge to `main`. PRs run the full validation
+suite per layer. Applies happen only from a push to `deploy`, never from a PR.
+
+---
+
+## Quality gates (CI)
+
+A release is only as trustworthy as the trunk it is cut from, so **every PR to `main` must
+pass the gates below** before it can be squash-merged. Forks should keep these enabled.
+
+**Per-layer checks** (`.github/workflows/tf.validate.yaml`, run for each Terraform layer):
+- **Format** — `terraform fmt -check`
+- **Validate** — `terraform init -backend=false` + `terraform validate`
+- **Lint** — `tflint`
+- **Misconfiguration scanning** — `trivy` (HIGH/CRITICAL, with `.trivyignore`) and `checkov`
+- **Plan preview** — `terraform plan` posted as a PR comment (no apply on PRs)
+
+**Repository-wide checks:**
+- **Secret scanning** — push protection / pre-commit secret detection to keep credentials out
+  of history
+- **GitHub Advanced Security** — code scanning (CodeQL), dependency review, and Dependabot
+  updates
+
+Applies are never part of CI — they happen only on a push to the `deploy` branch (see
+[The two delivery tracks](#the-two-delivery-tracks)).
+
+---
+
+## Separating version, release config, and instance config
+
+Three kinds of content kept strictly apart, each changing for its own reason and flowing to
+its own place. This is the core of the model.
+
+| Concern | Examples | Changes when… | Lives in | On |
+|---|---|---|---|---|
+| **Version** (the BOM) | Helm chart version, `image.tag` | a new Unique **release** | the **version manifest** (bill of materials) | `main`, at each release tag |
+| **Release config** | feature-flag defaults, env-var wiring, default resources, cron jobs, newly-*required* settings | a new **release** (config, not a version) | **`defaults/`** | `main`, at each release tag |
+| **Instance config** | domains, ECR registry/account, Zitadel IDs, KMS keys, secret refs, model lists, theme/CSP, per-env sizing | a new **customer or environment** | **`<env>/value-overlays/`** | the `deploy` branch |
+
+**Version** and **release config** together are the **release content** — defined once per
+release on `main`, identical for every environment that adopts that release. *Which* release
+an environment runs is recorded in its `deploy` folder (the tag it adopts), so environments
+can differ.
+
+> The instance-config folder is written `<env>/value-overlays/` throughout this document;
+> current clones use `<env>/values/`.
+
+### How they compose
+ArgoCD generates one Application per service from two sources:
+- **release content** — version manifest + `defaults/` — read at the **release tag the
+  environment adopts**;
+- **instance config** — `<env>/value-overlays/` — read from the `deploy` branch.
+
+Service values resolve by a **last-wins Helm merge** (lowest → highest priority):
+
+```
+defaults/<service>.yaml          (release config — on main, at the adopted tag)
+   └─ overridden by →
+<env>/value-overlays/<service>   (instance config — on deploy)
+```
+
+Concretely, each Application has **two sources**: a release-content source whose
+`targetRevision` is the **adopted release tag** (it provides the version manifest + `defaults/`
+from `main`), and an instance-config source whose `targetRevision` is the `deploy` branch (it
+provides `<env>/value-overlays/`). The version manifest and `defaults/` are therefore **not
+present on the `deploy` branch** — they are read at the adopted tag. Adopting a release means
+**re-pointing the release-content source to the new tag**; your instance config stays in
+place.
+
+### Configuration — the decision rule
+> - Changes with a **Unique release** and the same for every customer?
+>   → **`defaults/`** (ships on `main`; adopted with the tag).
+> - A **customer/environment** choice, identity, or secret?
+>   → **`<env>/value-overlays/`** (on the `deploy` branch).
+> - A **version string** (chart or image)?
+>   → the **version manifest** (adopted with the tag).
+
+A release may introduce a **required** setting (for example, a feature flag a service needs
+at startup, or a flag that must match between backend and frontend). Because such defaults
+live in `defaults/` and are adopted with the tag, an environment gets them automatically when
+it adopts the release — no manual discovery, and backend/frontend parity holds. Keep
+`value-overlays/` limited to genuine per-environment overrides.
+
+### Declaring instance values
+`defaults/` declares the keys a service expects and marks the ones you must supply per
+environment (e.g. `ADMIN_FRONTEND_URL: unset_default_value`). Your `<env>/value-overlays/`
+provides the real values. A value you forget to set is visible as `unset_default_value`
+rather than silently rendering an empty or placeholder string.
+
+---
+
+## Release identity and versioning
+
+- **Release version.** A release is identified by its **Git tag** (`202X.XX.X`) on `main`,
+  published as a **GitHub Release**.
+- **GitHub Release.** The GitHub Release wraps the tag with human-facing notes — what changed,
+  dependency upgrades, and any newly-required configuration — and is what consumers **watch**
+  to learn a new version is available.
+- **Component versions** (per-service chart version and image tag) live in the **version
+  manifest** (`06-applications/version-manifest.yaml`). Bill of materials for a release:
+  `git show 202X.22.0:06-applications/version-manifest.yaml`. Diff two releases:
+  `git diff 202X.21.0 202X.22.0 -- 06-applications/version-manifest.yaml`.
+- **Per-environment version.** An environment's version is the **release tag it has adopted**,
+  recorded in its `deploy` folder. Environments can adopt different tags and run different
+  versions.
+- **Resource traceability.** Terraform stamps a `governance:SemanticVersion` tag on the
+  resources it manages. The value is the **release tag the environment has adopted** (recorded
+  in its `deploy` folder) and is passed to Terraform as a **per-environment variable** at apply
+  time, so every AWS resource traces back to the release that environment runs — `prod`
+  resources can read `202X.21.0` while `sbx` reads `202X.22.0`.
+- **Image registry.** Image *tags* are version content (manifest); the image *registry* (your
+  ECR account) is instance content (`value-overlays` / common env config), composed at render
+  time.
+
+---
+
+## The two delivery tracks
+
+A push to `deploy` drives two independent mechanisms for the changed environment.
+
+### Track 1 — Infrastructure (layers 01–05): Terraform
+The layers apply in dependency order:
+
+```
+bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-ai (04)
+                                                          └→ compute (05)
+```
+
+- Each layer assumes the deployment role via OIDC and runs `terraform apply` for the changed
+  environment. State is per-layer, per-environment, in the shared S3 backend created by the
+  bootstrap layer.
+- Apply happens only for a push to the `deploy` branch; pull requests are plan/validate only.
+
+### Track 2 — Applications (layer 06): ArgoCD
+- ArgoCD runs in the cluster and watches the `deploy` branch. An ApplicationSet generates one
+  Application per service from that environment's folder, reading **release content at the tag
+  the environment adopts** and **instance config from the `deploy` branch** (see
+  [How they compose](#how-they-compose)).
+- Applications are reconciled when the environment's folder on `deploy` advances.
+
+---
+
+## How a release flows
+
+1. **Cut on `main`** — bump the version manifest (chart versions + image tags) and update
+   `defaults/` for any new or newly-required release config, and the Terraform module/provider
+   versions for the release. Open a PR; CI gates it; squash-merge.
+2. **Tag** — tag the merge commit `202X.XX.X`. This is the release.
+3. **Adopt per environment** — set the environment's adopted release tag (see
+   [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)) and supply any new instance
+   values in `<env>/value-overlays/`, then push. The Terraform pipeline applies that
+   environment's infrastructure; ArgoCD reconciles its apps.
+4. **Verify** — confirm infrastructure applied cleanly and applications are healthy
+   (see the runbook).
+
+---
+
+## Runbook
+
+### Part A — Cut the release (on `main`)
+1. Identify the target Unique release; review its infrastructure-relevant changes (new or
+   required environment variables and feature flags; dependency upgrades).
+2. Branch from `main`: `chore/release-202X.XX`.
+3. **Bump versions** in the version manifest (chart + image tags).
+4. **Update `defaults/`**: add newly-required flags / env defaults; leave optional ones out.
+5. **Bump Terraform** module/provider versions in layers 01–05 if the release requires it.
+6. Open a PR to `main`; CI must be green; review the per-layer plan.
+7. Squash-merge; **tag `202X.XX.X`**; **publish the GitHub Release** with notes.
+
+### Part B — Adopt a release in an environment (on `deploy`)
+1. **Point the environment at the release** — set the **release-content source's
+   `targetRevision`** to `202X.XX.X` for the environment (recorded once in `<env>/`'s
+   ApplicationSet values; the ApplicationSet applies it to every app). Supply any new instance
+   values flagged in `defaults/` (`unset_default_value`) under `<env>/value-overlays/`. Commit.
+2. **Push — this is the deployment:**
+   - **Infrastructure:** the pipeline applies layers 01→05 for this environment. Watch to
+     completion.
+   - **Applications:** ArgoCD shows the environment's apps out of sync; review each diff
+     (version bumps + new release config only), reconcile, and wait for **Healthy**.
+3. Environments adopt independently — roll out to `sbx`, validate, then `prod`.
+
+> **Note:** application versions are pinned **per environment** (each folder adopts its own
+> tag), so environments can run different app versions at once. The Terraform layer code is
+> **shared** on the `deploy` branch — environments differ by *when each was last applied*, so
+> advance and apply one environment at a time.
+
+### Part C — Verify
+- Infrastructure pipeline green for all five layers.
+- ArgoCD apps **Synced + Healthy** for the environment.
+- End to end: open a space, send a chat message, upload a document, ask a question that
+  requires retrieval, and confirm a fresh sign-in works.
+
+### Part D — Rollback
+- **Applications:** re-point the environment to the previous release tag and reconcile, or
+  roll the app back in ArgoCD. Schema migrations are forward-only — a version revert runs
+  older code against a newer database schema, so prefer fixing forward for services that ran
+  migrations.
+- **Infrastructure:** revert the environment to the previous release and re-apply. Some
+  changes are not reversible in place (for example, database engine version changes); plan
+  data-tier rollbacks deliberately rather than via auto-apply.
+
+---
+
+## Consuming releases in your fork
+
+Self-hosting means maintaining your **own private copy** of `hello-aws` (it carries your
+`value-overlays/` — domains, identity, secret references) while tracking the public repo as
+an **upstream** to pull releases from.
+
+### Why not a GitHub "Fork"
+A GitHub fork of a public repository is itself **public and cannot be made private**, so it is
+unsuitable for a private deployment. Instead, create your own **private repository** and add
+`hello-aws` as an `upstream` remote.
+
+### Set up your private repository
+Generic Git (works on any host):
+
+```bash
+# 1. Create an empty PRIVATE repo on your platform (see below), then mirror upstream into it:
+git clone --bare https://github.com/Unique-AG/hello-aws.git
+git -C hello-aws.git push --mirror <your-private-repo-url>
+
+# 2. Clone your private repo and add the public upstream:
+git clone <your-private-repo-url> && cd <your-repo>
+git remote add upstream https://github.com/Unique-AG/hello-aws.git
+git fetch upstream --tags
+```
+
+Creating the private repo, per platform. **Mirror-push** paths start from an empty repo and
+use the recipe above; **Import** paths populate the repo on creation from the GitHub URL:
+- **GitHub** (mirror-push) — create a new **private** repository, then mirror-push as above (a
+  native *Fork* stays public).
+- **Azure DevOps** (import) — *Repos → Import repository* with the GitHub URL, into a private
+  project.
+- **GitLab** (import) — *New project → Import project → Repository by URL*, or configure **pull
+  mirroring** from the GitHub URL.
+- **Bitbucket** (import) — *Import repository* with the GitHub URL.
+- **AWS CodeCommit** (mirror-push) — create a repository, then mirror-push as above; pushing
+  uses `git-remote-codecommit` or IAM-derived HTTPS Git credentials rather than a plain URL.
+
+Whichever method you use, add the public repo as an `upstream` remote locally so you can pull
+releases:
+
+```bash
+git remote add upstream https://github.com/Unique-AG/hello-aws.git
+git fetch upstream --tags
+```
+
+### Adopt releases
+1. **Watch the upstream GitHub Releases** to learn when a new version is available.
+2. Keep your `main` a clean mirror of upstream (never commit to it), so updating it is always a
+   fast-forward: `git fetch upstream --tags && git switch main && git merge --ff-only 202X.XX.X
+   && git push`.
+3. Maintain your `deploy` branch with one folder per environment, holding your real
+   `value-overlays/`.
+4. Adopt a release per environment with the
+   **[Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)** flow — `sbx` first, then
+   `prod`.
+
+Your `value-overlays/` is yours and persists across releases; adopting a tag advances only the
+release content (versions + `defaults/`).
+
+---
+
+## Configuration reference (summary)
+
+| You want to change… | Edit | Branch |
+|---|---|---|
+| Chart or image version (for a release) | version manifest | `main`, then tag |
+| A release-wide default (flag, env wiring, default sizing) | `defaults/<service>.yaml` | `main` |
+| Which release an environment runs | adopted tag in `<env>/` | `deploy` |
+| Your domains / identity / registry / secrets | `<env>/value-overlays/` | `deploy` |
+| Enable an optional feature for your install | `<env>/value-overlays/<service>` | `deploy` |
+| Per-environment sizing (e.g. prod > sbx) | `<env>/value-overlays/<service>` | `deploy` |
