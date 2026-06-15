@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-ingestion
         valueFiles:
           - $values/06-applications/defaults/backend-services/ingestion.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/ingestion.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/ingestion.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

@@ -11,14 +11,14 @@ spec:
       helm:
         releaseName: rabbitmq-operator
         valueFiles:
-          - $values/06-applications/sbx/values/rabbitmq-operator/rabbitmq-operator.yaml
+          - $values/06-applications/sbx/value-overlays/rabbitmq-operator/rabbitmq-operator.yaml
     - chart: raw
       repoURL: https://bedag.github.io/helm-charts
       targetRevision: 2.0.0
       helm:
         releaseName: rabbitmqcluster-chat-unique-user
         valueFiles:
-          - $values/06-applications/sbx/values/rabbitmq-operator/rabbitmq-cluster-operator-secret.yaml
+          - $values/06-applications/sbx/value-overlays/rabbitmq-operator/rabbitmq-cluster-operator-secret.yaml
   ignoreDifferences:
     - group: ""
       kind: Secret

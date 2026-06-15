@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-scope-management
         valueFiles:
           - $values/06-applications/defaults/backend-services/scope-management.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/scope-management.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/scope-management.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

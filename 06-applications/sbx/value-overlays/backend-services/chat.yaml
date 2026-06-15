@@ -61,7 +61,6 @@ env:
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-chat
-  tag: "2026.22.0"
 
 resources:
   limits:

@@ -11,11 +11,11 @@ spec:
       helm:
         releaseName: alloy-config
         valueFiles:
-          - $values/06-applications/sbx/values/observability/alloy-config-cm.yaml
+          - $values/06-applications/sbx/value-overlays/observability/alloy-config-cm.yaml
     - chart: alloy
       repoURL: https://grafana.github.io/helm-charts
       targetRevision: 0.12.0
       helm:
         releaseName: alloy
         valueFiles:
-          - $values/06-applications/sbx/values/observability/alloy.yaml
+          - $values/06-applications/sbx/value-overlays/observability/alloy.yaml

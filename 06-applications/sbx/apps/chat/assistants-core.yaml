@@ -12,5 +12,7 @@ spec:
         releaseName: assistants-core
         valueFiles:
           - $values/06-applications/defaults/ai-services/assistants-core.yaml
-          - $values/06-applications/sbx/values/ai-services/assistants-core.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/ai-services/assistants-core.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

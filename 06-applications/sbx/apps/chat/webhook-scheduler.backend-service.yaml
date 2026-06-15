@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-webhook-scheduler
         valueFiles:
           - $values/06-applications/defaults/backend-services/webhook-scheduler.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/webhook-scheduler.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/webhook-scheduler.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

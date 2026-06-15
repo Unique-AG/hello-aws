@@ -22,6 +22,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Derive semantic_version from git
+        # git describe needs full history + tags (fetch-depth: 0). Falls back
+        # to a short SHA when no tag exists. Exported as TF_VAR_ so Terraform
+        # picks it up; TF_VAR_ env is lower precedence than any -var-file, so
+        # semantic_version must NOT be set in common.auto.tfvars.
+        run: echo "TF_VAR_semantic_version=$(git describe --tags --always)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -40,6 +48,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Derive semantic_version from git
+        run: echo "TF_VAR_semantic_version=$(git describe --tags --always)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -58,6 +70,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Derive semantic_version from git
+        run: echo "TF_VAR_semantic_version=$(git describe --tags --always)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -80,6 +96,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Derive semantic_version from git
+        run: echo "TF_VAR_semantic_version=$(git describe --tags --always)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
@@ -107,6 +127,10 @@ jobs:
       TF_VAR_acr_password: ${{ secrets.TF_VAR_ACR_PASSWORD }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+      - name: Derive semantic_version from git
+        run: echo "TF_VAR_semantic_version=$(git describe --tags --always)" >> "$GITHUB_ENV"
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}

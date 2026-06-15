@@ -30,9 +30,11 @@ product         = "dogfood"    # Full product name (lowercase, used in tags)
 product_moniker = "df"         # Short form for resource names (2-10 chars)
 
 # Governance tracking
-# This should be injected by CI/CD from git tags, not maintained manually.
-# e.g., -var="semantic_version=$(git describe --tags --abbrev=0)"
-semantic_version = "0.0.0"
+# semantic_version is injected by CI/CD as the TF_VAR_semantic_version env var,
+# derived from `git describe --tags --always`. It is intentionally NOT set here:
+# TF_VAR_ env vars are lower precedence than any -var-file, so defining it in
+# this var-file would override the CI value. The variable defaults to "0.0.0"
+# in each layer's variables.tf for local/manual runs without a tag.
 
 # Azure Container Registry (for ECR pull-through cache in compute layer)
 acr_registry_url = "example.azurecr.io"  # Your Azure Container Registry URL
