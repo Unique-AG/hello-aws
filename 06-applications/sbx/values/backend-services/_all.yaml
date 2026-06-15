@@ -1,19 +1,19 @@
 # Base configuration for all backend services (AWS sbx)
 #
-# Domain: hello.aws.unique.dev
+# Domain: <DOMAIN_BASE>
 # Secrets: AWS Secrets Manager via ExternalSecrets
 # Images: ECR pull-through cache
 
 env:
-  ADMIN_FRONTEND_URL: https://hello.aws.unique.dev/admin
-  CHAT_FRONTEND_URL: https://hello.aws.unique.dev/chat
-  CORS_ALLOWED_ORIGINS: https://hello.aws.unique.dev
-  INGESTION_UPLOAD_API_URL: https://api.hello.aws.unique.dev/scoped/ingestion/upload
-  UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
-  ZITADEL_HOST: https://id.hello.aws.unique.dev
+  ADMIN_FRONTEND_URL: https://<DOMAIN_BASE>/admin
+  CHAT_FRONTEND_URL: https://<DOMAIN_BASE>/chat
+  CORS_ALLOWED_ORIGINS: https://<DOMAIN_BASE>
+  INGESTION_UPLOAD_API_URL: https://<DOMAIN_API>/scoped/ingestion/upload
+  UNIQUE_INSTALLATION_ID: <DOMAIN_BASE>
+  ZITADEL_HOST: https://<DOMAIN_IDENTITY>
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
-  ZITADEL_PROJECT_ID: "368533034342811339"
-  ZITADEL_ROOT_ORG_ID: "368533034040821451"
+  ZITADEL_PROJECT_ID: "<ZITADEL_PROJECT_ID>"
+  ZITADEL_ROOT_ORG_ID: "<ZITADEL_ORG_ID>"
   # 2026.22+: shared FeatureFlagContextService reads remote feature-flag config
   # from configuration-backend at startup (onModuleInit). Required on every
   # backend service; missing → exits 1 with `Error: CONFIGURATION_BACKEND_URL not set`.
@@ -62,7 +62,7 @@ env:
   FEATURE_FLAG_AGENTIC_TABLE_NEW_FILES_DROPDOWN_UN_12713: "false"
 
 routes:
-  hostname: api.hello.aws.unique.dev
+  hostname: <DOMAIN_API>
   skipCrdCheck: true
 
 # Disable Azure secretProvider (use ExternalSecrets for AWS instead)

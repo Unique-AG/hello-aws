@@ -1,6 +1,6 @@
-clusterName: eks-uq-dogfood-sbx-euc2
+clusterName: <EKS_CLUSTER_NAME>
 serviceAccount:
   create: true
   name: aws-load-balancer-controller
-vpcId: vpc-0e4a169431f5a73c4  # Set from: terraform output -raw vpc_id (infrastructure layer)
-region: eu-central-2
+vpcId: <VPC_ID>  # Set from: terraform output -raw vpc_id (infrastructure layer)
+region: <AWS_REGION>

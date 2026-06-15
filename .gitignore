@@ -48,11 +48,10 @@ terraform.rc
 Thumbs.db
 
 # Backend configuration files (generated from templates)
-# On deploy branches, these are committed with real values
-# **/backend-config.hcl  # un-ignored on deploy branches
+**/backend-config.hcl
 
 # Common configuration file (must be set manually from template)
-# common.auto.tfvars  # un-ignored on deploy branches
+common.auto.tfvars
 
 # Local working directories
 # Used .docs/ and .scripts/ for local drafts and scripts that should not be committed to the repository
@@ -60,8 +59,7 @@ Thumbs.db
 .scripts/
 
 # Instance configuration (contains deployment-specific values, generated from template)
-# On deploy branches, instance-config.yaml is committed with real values
-# 06-applications/instance-config.yaml
+06-applications/instance-config.yaml
 06-applications/.instance-applied.yaml
-# 06-applications/*/instance-config.yaml
+06-applications/*/instance-config.yaml
 06-applications/*/.instance-applied.yaml

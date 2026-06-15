@@ -28,10 +28,10 @@
 #   - curl, jq
 #   - Zitadel deployed with a machine user that has IAM_OWNER
 #
-# Domain pattern: <env>.aws.unique.dev
-#   Identity: id.<env>.aws.unique.dev
-#   App:      <env>.aws.unique.dev
-#   API:      api.<env>.aws.unique.dev
+# Domain pattern: <env>.<DNS_ZONE>
+#   Identity: id.<env>.<DNS_ZONE>
+#   App:      <env>.<DNS_ZONE>
+#   API:      api.<env>.<DNS_ZONE>
 #
 # Examples:
 #   AWS_PROFILE=sandbox scripts/setup-zitadel.sh sbx wf7dDj...uUOEVBDaM5c
@@ -74,8 +74,8 @@ done
 #######################################
 # Configuration
 #######################################
-ZITADEL_HOST="https://id.${ENV}.aws.unique.dev"
-BASE_URL="https://${ENV}.aws.unique.dev"
+ZITADEL_HOST="https://id.${ENV}.<DNS_ZONE>"
+BASE_URL="https://${ENV}.<DNS_ZONE>"
 AWS_SM_SECRET="manual-zitadel-scope-mgmt-pat"
 PROJECT_NAME="unique"
 APP_NAME="unique-app"

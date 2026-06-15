@@ -9,13 +9,13 @@ resources:
     config:
       algorithm: RS256
       allowed_iss:
-        - https://id.hello.aws.unique.dev
+        - https://<DOMAIN_IDENTITY>
       jwks_extra_headers:
-        forwarded: host=id.hello.aws.unique.dev
+        forwarded: host=<DOMAIN_IDENTITY>
       jwks_uri: http://zitadel.unique.svc.cluster.local:8080/oauth/v2/keys
       uri_param_names:
         - token
-      zitadel_project_id: '368533034342811339'
+      zitadel_project_id: '<ZITADEL_PROJECT_ID>'
   - apiVersion: configuration.konghq.com/v1
     kind: KongClusterPlugin
     metadata:
@@ -37,9 +37,9 @@ resources:
     config:
       credentials: true
       origins:
-        - https://hello.aws.unique.dev
-        - https://id.hello.aws.unique.dev
-        - https://api.hello.aws.unique.dev
+        - https://<DOMAIN_BASE>
+        - https://<DOMAIN_IDENTITY>
+        - https://<DOMAIN_API>
   - apiVersion: configuration.konghq.com/v1
     kind: KongClusterPlugin
     metadata:

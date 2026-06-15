@@ -2,8 +2,8 @@ spec:
   name: assistants-core
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
       ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: ai-service

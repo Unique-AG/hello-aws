@@ -11,7 +11,7 @@ resources:
       type: gp3
       fsType: ext4
       encrypted: "true"
-      kmsKeyId: arn:aws:kms:eu-central-2:217381566492:key/30d4470d-c11f-4890-b17a-4077c7e2976d
+      kmsKeyId: <KMS_KEY_ARN>
     volumeBindingMode: WaitForFirstConsumer
     allowVolumeExpansion: true
     reclaimPolicy: Delete

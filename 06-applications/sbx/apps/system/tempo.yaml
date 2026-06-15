@@ -2,8 +2,8 @@ spec:
   name: tempo
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
       ref: values
     - chart: tempo
       repoURL: https://grafana.github.io/helm-charts

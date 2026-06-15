@@ -36,19 +36,19 @@ loki:
   storage:
     type: s3
     bucketNames:
-      chunks: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
-      ruler: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
-      admin: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
+      chunks: "<OBSERVABILITY_S3_BUCKET_NAME>"
+      ruler: "<OBSERVABILITY_S3_BUCKET_NAME>"
+      admin: "<OBSERVABILITY_S3_BUCKET_NAME>"
     s3:
-      region: eu-central-2
+      region: <AWS_REGION>
       s3ForcePathStyle: true
   storage_config:
     tsdb_shipper:
       active_index_directory: /var/loki/tsdb-index
       cache_location: /var/loki/tsdb-cache
     aws:
-      region: eu-central-2
-      bucketnames: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
+      region: <AWS_REGION>
+      bucketnames: "<OBSERVABILITY_S3_BUCKET_NAME>"
       s3forcepathstyle: true
   compactor:
     working_directory: /var/loki/compactor

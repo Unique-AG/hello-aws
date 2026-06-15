@@ -7,8 +7,8 @@ applicationsets:
     preserveResourcesOnDeletion: true
     generators:
       - git:
-          repoURL: https://github.com/unique-ag/hello-aws
-          revision: deploy/sbx
+          repoURL: <GITHUB_REPO_URL>
+          revision: <GIT_TARGET_REVISION>
           files:
             - path: "06-applications/sbx/apps/system/*.yaml"
     template:
@@ -58,8 +58,8 @@ applicationsets:
     preserveResourcesOnDeletion: true
     generators:
       - git:
-          repoURL: https://github.com/unique-ag/hello-aws
-          revision: deploy/sbx
+          repoURL: <GITHUB_REPO_URL>
+          revision: <GIT_TARGET_REVISION>
           files:
             - path: "06-applications/sbx/apps/chat/*.yaml"
     template:

@@ -86,7 +86,7 @@ grafana:
     existingSecret: grafana-admin-credentials
   grafana.ini:
     server:
-      root_url: https://hello.aws.unique.dev/grafana
+      root_url: https://<DOMAIN_BASE>/grafana
       serve_from_sub_path: true
     security:
       allow_embedding: true
@@ -105,20 +105,20 @@ grafana:
   additionalDataSources:
     - name: Amazon Managed Prometheus
       type: prometheus
-      url: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4"
+      url: "https://aps-workspaces.<AWS_REGION>.amazonaws.com/workspaces/<AMP_WORKSPACE_ID>"
       access: proxy
       isDefault: false
       jsonData:
         httpMethod: POST
         sigV4Auth: true
         sigV4AuthType: default
-        sigV4Region: eu-central-2
+        sigV4Region: <AWS_REGION>
     - name: CloudWatch
       type: cloudwatch
       access: proxy
       jsonData:
         authType: default
-        defaultRegion: eu-central-2
+        defaultRegion: <AWS_REGION>
     - name: Loki
       type: loki
       url: http://loki.unique.svc.cluster.local:3100
@@ -149,7 +149,7 @@ kube-state-metrics:
   # 403 from this cluster's egress. PT rule for registry.k8s.io is provisioned
   # in 05-compute terraform.
   image:
-    registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
     repository: registry.k8s.io/kube-state-metrics/kube-state-metrics
   resources:
     requests:
@@ -182,16 +182,16 @@ prometheus:
     enableAdminAPI: true
     replicaExternalLabelName: replica
     externalLabels:
-      cluster: eks-uq-dogfood-sbx-euc2
+      cluster: <EKS_CLUSTER_NAME>
     podMonitorSelectorNilUsesHelmValues: false
     probeSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
     serviceMonitorSelectorNilUsesHelmValues: false
     scrapeConfigSelectorNilUsesHelmValues: false
     remoteWrite:
-      - url: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4/api/v1/remote_write"
+      - url: "<AMP_REMOTE_WRITE_URL>"
         sigv4:
-          region: eu-central-2
+          region: <AWS_REGION>
         queueConfig:
           maxSamplesPerSend: 1000
           maxShards: 200
