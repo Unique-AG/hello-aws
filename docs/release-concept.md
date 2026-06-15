@@ -113,7 +113,7 @@ its own place. This is the core of the model.
 
 | Concern | Examples | Changes when… | Lives in | On |
 |---|---|---|---|---|
-| **Version** (the BOM) | Helm chart version, `image.tag` | a new Unique **release** | the **version manifest** (bill of materials) | `main`, at each release tag |
+| **Version** | Helm chart version, `image.tag` | a new Unique **release** | the **app specs** (`apps/*.yaml`) | `main`, at each release tag |
 | **Release config** | feature-flag defaults, env-var wiring, default resources, cron jobs, newly-*required* settings | a new **release** (config, not a version) | **`defaults/`** | `main`, at each release tag |
 | **Instance config** | domains, ECR registry/account, Zitadel IDs, KMS keys, secret refs, model lists, theme/CSP, per-env sizing | a new **customer or environment** | **`<env>/value-overlays/`** | the `deploy` branch |
 
@@ -127,8 +127,8 @@ can differ.
 
 ### How they compose
 ArgoCD generates one Application per service from two sources:
-- **release content** — version manifest + `defaults/` — read at the **release tag the
-  environment adopts**;
+- **release content** — the app specs (`apps/*.yaml`, carrying chart + image versions) +
+  `defaults/` — read at the **release tag the environment adopts**;
 - **instance config** — `<env>/value-overlays/` — read from the `deploy` branch.
 
 Service values resolve by a **last-wins Helm merge** (lowest → highest priority):
@@ -140,10 +140,10 @@ defaults/<service>.yaml          (release config — on main, at the adopted tag
 ```
 
 Concretely, each Application has **two sources**: a release-content source whose
-`targetRevision` is the **adopted release tag** (it provides the version manifest + `defaults/`
+`targetRevision` is the **adopted release tag** (it provides the app specs and `defaults/`
 from `main`), and an instance-config source whose `targetRevision` is the `deploy` branch (it
-provides `<env>/value-overlays/`). The version manifest and `defaults/` are therefore **not
-present on the `deploy` branch** — they are read at the adopted tag. Adopting a release means
+provides `<env>/value-overlays/`). The app specs and `defaults/` are therefore **not present
+on the `deploy` branch** — they are read at the adopted tag. Adopting a release means
 **re-pointing the release-content source to the new tag**; your instance config stays in
 place.
 
@@ -153,7 +153,7 @@ place.
 > - A **customer/environment** choice, identity, or secret?
 >   → **`<env>/value-overlays/`** (on the `deploy` branch).
 > - A **version string** (chart or image)?
->   → the **version manifest** (adopted with the tag).
+>   → the **app spec** (`apps/<service>.yaml`, adopted with the tag).
 
 A release may introduce a **required** setting (for example, a feature flag a service needs
 at startup, or a flag that must match between backend and frontend). Because such defaults
@@ -176,10 +176,9 @@ rather than silently rendering an empty or placeholder string.
 - **GitHub Release.** The GitHub Release wraps the tag with human-facing notes — what changed,
   dependency upgrades, and any newly-required configuration — and is what consumers **watch**
   to learn a new version is available.
-- **Component versions** (per-service chart version and image tag) live in the **version
-  manifest** (`06-applications/version-manifest.yaml`). Bill of materials for a release:
-  `git show 202X.22.0:06-applications/version-manifest.yaml`. Diff two releases:
-  `git diff 202X.21.0 202X.22.0 -- 06-applications/version-manifest.yaml`.
+- **Component versions** (per-service chart version and image tag) live in the **app specs**
+  under `06-applications/sbx/apps/`. Diff the versions between two releases:
+  `git diff 202X.21.0 202X.22.0 -- 06-applications/sbx/apps`.
 - **Per-environment version.** An environment's version is the **release tag it has adopted**,
   recorded in its `deploy` folder. Environments can adopt different tags and run different
   versions.
@@ -222,10 +221,11 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 
 ## How a release flows
 
-1. **Cut on `main`** — bump the version manifest (chart versions + image tags) and update
-   `defaults/` for any new or newly-required release config, and the Terraform module/provider
-   versions for the release. Open a PR; CI gates it; squash-merge.
-2. **Tag** — tag the merge commit `202X.XX.X`. This is the release.
+1. **Cut on `main`** — bump the chart + image versions in the affected app specs
+   (`apps/*.yaml`) and update `defaults/` for any new or newly-required release config, and the
+   Terraform module/provider versions for the release. Open a PR; CI gates it; squash-merge.
+2. **Tag and publish** — tag the merge commit `202X.XX.X` and publish the GitHub Release with
+   notes. This is the release.
 3. **Adopt per environment** — set the environment's adopted release tag (see
    [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)) and supply any new instance
    values in `<env>/value-overlays/`, then push. The Terraform pipeline applies that
@@ -241,7 +241,7 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 1. Identify the target Unique release; review its infrastructure-relevant changes (new or
    required environment variables and feature flags; dependency upgrades).
 2. Branch from `main`: `chore/release-202X.XX`.
-3. **Bump versions** in the version manifest (chart + image tags).
+3. **Bump versions** in the affected app specs (`apps/*.yaml`: chart `targetRevision` + image tag).
 4. **Update `defaults/`**: add newly-required flags / env defaults; leave optional ones out.
 5. **Bump Terraform** module/provider versions in layers 01–05 if the release requires it.
 6. Open a PR to `main`; CI must be green; review the per-layer plan.
@@ -346,7 +346,7 @@ release content (versions + `defaults/`).
 
 | You want to change… | Edit | Branch |
 |---|---|---|
-| Chart or image version (for a release) | version manifest | `main`, then tag |
+| Chart or image version (for a release) | `apps/<service>.yaml` | `main`, then tag |
 | A release-wide default (flag, env wiring, default sizing) | `defaults/<service>.yaml` | `main` |
 | Which release an environment runs | adopted tag in `<env>/` | `deploy` |
 | Your domains / identity / registry / secrets | `<env>/value-overlays/` | `deploy` |
