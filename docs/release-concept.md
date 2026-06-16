@@ -91,7 +91,11 @@ pass the gates below** before it can be squash-merged. Forks should keep these e
 - **Format** — `terraform fmt -check`
 - **Validate** — `terraform init -backend=false` + `terraform validate`
 - **Lint** — `tflint`
-- **Misconfiguration scanning** — `trivy` (HIGH/CRITICAL, with `.trivyignore`) and `checkov`
+- **Security / IaC policy scanning** — `trivy` scans each layer's Terraform for
+  misconfigurations and **fails the build on HIGH/CRITICAL**; `checkov` (3.x) runs the full
+  Terraform policy set. Every suppression for both (`.trivyignore` and `checkov` skips) is
+  documented with rationale in [`docs/security-baseline.md`](security-baseline.md) — the single
+  source of truth for suppressions and sbx relaxations, reviewed toward a goal of zero.
 - **Plan preview** — `terraform plan` posted as a PR comment (no apply on PRs)
 
 **Repository-wide checks:**
