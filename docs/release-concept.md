@@ -247,8 +247,9 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 
 ### Part B — Adopt a release in an environment (on `deploy`)
 1. **Bring the release into the environment** — merge the release into the `deploy` branch so
-   the environment's `apps/` and `defaults/` are at `202X.XX.X`. Supply any new instance
-   values flagged with `unset_default_value` under `<env>/value-overlays/`. Commit.
+   the environment's `apps/`, `defaults/`, and the layer 01–05 Terraform are at `202X.XX.X`.
+   Supply any new instance values flagged with `unset_default_value` under
+   `<env>/value-overlays/`. Commit.
 2. **Push — this is the deployment:**
    - **Infrastructure:** the pipeline applies layers 01→05 for this environment. Watch to
      completion.
@@ -256,8 +257,8 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
      (version bumps + new release config only), reconcile, and wait for **Healthy**.
 3. Environments adopt independently — roll out to `sbx`, validate, then `prod`.
 
-> **Note:** application versions are pinned **per environment** (each folder adopts its own
-> tag), so environments can run different app versions at once. The Terraform layer code is
+> **Note:** application versions are pinned **per environment** (in each env's app specs), so
+> environments can run different app versions at once. The Terraform layer code is
 > **shared** on the `deploy` branch — environments differ by *when each was last applied*, so
 > advance and apply one environment at a time.
 
@@ -315,18 +316,19 @@ use the recipe above; **Import** paths populate the repo on creation from the Gi
 - **AWS CodeCommit** (mirror-push) — create a repository, then mirror-push as above; pushing
   uses `git-remote-codecommit` or IAM-derived HTTPS Git credentials rather than a plain URL.
 
-Whichever method you use, add the public repo as an `upstream` remote locally so you can pull
-releases:
+If you used an **Import** path (Azure DevOps / GitLab / Bitbucket), add the upstream remote
+locally so you can pull releases (mirror-push users already did this in step 2):
 
 ```bash
+git clone <your-private-repo-url> && cd <your-repo>
 git remote add upstream https://github.com/Unique-AG/hello-aws.git
 git fetch upstream --tags
 ```
 
 ### Adopt releases
 1. **Watch the upstream GitHub Releases** to learn when a new version is available.
-2. Keep your `main` a clean mirror of upstream (never commit to it), so updating it is always a
-   fast-forward: `git fetch upstream --tags && git switch main && git merge --ff-only 202X.XX.X
+2. Keep your `main` free of local commits so it fast-forwards cleanly to each upstream release
+   tag you adopt: `git fetch upstream --tags && git switch main && git merge --ff-only 202X.XX.X
    && git push`.
 3. Maintain your `deploy` branch with one folder per environment, holding your real
    `value-overlays/`.
