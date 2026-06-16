@@ -90,7 +90,9 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   compute:
-    needs: infrastructure
+    # data-and-ai too: 05-compute reads data.terraform_remote_state.data_and_ai
+    # (Prometheus workspace, observability S3), so layer 04 must finish first.
+    needs: [infrastructure, data-and-ai]
     # ubuntu-latest: terraform manages aws_eks_cluster via the public AWS
     # API. The cluster's k8s API can be private (no kubectl/helm in CI). If
     # we later add a kubernetes/helm provider, this job has to move to a

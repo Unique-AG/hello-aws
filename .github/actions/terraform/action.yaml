@@ -143,7 +143,7 @@ runs:
             second: '2-digit'
           }).replace('T', ' ');
 
-          const changes = plan.includes('No changes.') && plan.includes('found no differences');
+          const changes = plan.includes('No changes.') || plan.includes('found no differences');
           const planSection = plan.length > 60000
             ? 'Plan is too large to display. Please check the actions output for the full plan.'
             : `<details><summary>Show Plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>`;
