@@ -87,7 +87,9 @@ suite per layer. Applies happen only from a push to `deploy`, never from a PR.
 A release is only as trustworthy as the trunk it is cut from, so **every PR to `main` must
 pass the gates below** before it can be squash-merged. Forks should keep these enabled.
 
-**Per-layer checks** (`.github/workflows/tf.validate.yaml`, run for each Terraform layer):
+**Per-layer checks** — run for each Terraform layer by CI
+(`.github/workflows/tf.validate.yaml`); `scripts/validate.sh <layer> <env>` runs the same
+checks locally:
 - **Format** — `terraform fmt -check`
 - **Validate** — `terraform init -backend=false` + `terraform validate`
 - **Lint** — `tflint`
