@@ -229,10 +229,13 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 
 ### Track 2 — Applications (layer 06): ArgoCD
 - ArgoCD runs in the cluster and watches the `deploy` branch. An ApplicationSet generates one
-  Application per service from that environment's folder, reading **release content at the tag
-  the environment adopts** and **instance config from the `deploy` branch** (see
-  [How they compose](#how-they-compose)).
+  Application per service from that environment's folder, resolving values from the env folder
+  on `deploy` (see [How they compose](#how-they-compose)).
 - Applications are reconciled when the environment's folder on `deploy` advances.
+- **Bootstrapping ArgoCD** is handled by the deploy workflow: after the cluster exists (the
+  compute layer, Track 1), a job installs ArgoCD and the ApplicationSets via
+  `helmfile -e <env> -f 06-applications/argo-bootstrap.yaml.gotmpl sync`, run on a VPC runner
+  with cluster access. From then on, app changes reconcile automatically.
 
 ---
 
