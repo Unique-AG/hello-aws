@@ -190,7 +190,9 @@ rather than silently rendering an empty or placeholder string.
 ## Release identity and versioning
 
 - **Release version.** A release is identified by its **Git tag** (`202X.XX.X`) on `main`,
-  published as a **GitHub Release**.
+  published as a **GitHub Release**. It corresponds to a Unique platform release — see the
+  [Unique Release Notes & Calendar](https://docs.unique.ai/it-operators/installing-and-upgrading-unique/release-notes-and-calendar)
+  for what each version changes, dependency upgrades, and any newly-required configuration.
 - **GitHub Release.** The GitHub Release wraps the tag with human-facing notes — what changed,
   dependency upgrades, and any newly-required configuration — and is what consumers **watch**
   to learn a new version is available.
