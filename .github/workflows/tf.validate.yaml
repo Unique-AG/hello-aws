@@ -62,8 +62,10 @@ jobs:
           trivyignores: .trivyignore
           # Resolve naming-module vars so the AWS provider's default_tags map
           # doesn't contain nulls — trivy 0.70.0's adaptDefaultTags panics on
-          # AsString of a null value otherwise.
-          tf-vars: common.auto.tfvars,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars
+          # AsString of a null value otherwise. Use the tracked *.template
+          # (common.auto.tfvars itself is gitignored — real values live only on
+          # the deploy branch); its example values are sufficient for the scan.
+          tf-vars: common.auto.tfvars.template,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars
       # bridgecrewio/checkov-action's last release (2022) ships checkov 2.0.930,
       # which predates the split S3 resource pattern (separate versioning /
       # encryption / logging resources). Install checkov 3.x directly so rules
