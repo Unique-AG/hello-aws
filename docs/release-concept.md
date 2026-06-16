@@ -29,7 +29,7 @@ pushing.
 | **Trunk** | `main` — source of truth and **environment template**; CI-gated; carries release content (versions + `defaults/`) but no environment-specific values |
 | **Deploy branch** | a long-lived `deploy` branch holding each environment's real values — **suggested layout:** one folder per environment (`sbx/`, `prod/`, …); per-environment branches work too |
 | **Release** | a Git tag `202X.XX.X` on `main`, **published as a GitHub Release** with notes — the *only* place a release version exists |
-| **Per-environment version** | each environment **adopts** a release tag independently → environments can run **different releases** (staged rollout: `sbx` → validate → `prod`) |
+| **Per-environment version** | per-environment **chart/image versions** (each env's `apps/` folder) enable staged rollout (`sbx` → validate → `prod`); `defaults/` is shared across environments |
 | **Flow direction** | always forward: `feat/*` → `main` → `deploy`. Never `deploy` → `main` |
 | **Infrastructure (layers 01–05)** | Terraform — a push to `deploy` applies the layers for the changed environment |
 | **Applications (layer 06)** | ArgoCD — watches the `deploy` branch and reconciles each environment's apps |
@@ -154,9 +154,16 @@ Both `defaults/` (release config) and `<env>/value-overlays/` (instance config) 
 the `deploy` branch through a single shared `$values` source; component versions come from the
 app specs in the env folder. **Adopting a release** brings the new release content (the
 environment's `apps/` and `defaults/`) onto the `deploy` branch (see the runbook); your
-`value-overlays/` stay as they are. `defaults/` is shared across environment folders, so a
-release's `defaults/` apply to every environment once adopted — keep them backward-compatible
-when environments run different releases.
+`value-overlays/` stay as they are.
+
+**Scope of per-environment independence.** Chart and image versions are per environment (each
+env's `apps/` folder), so environments can be **staged independently** on different versions.
+`defaults/` (release config), by contrast, is **shared** across environments — once a release's
+`defaults/` are on the `deploy` branch they apply to every environment. A staged rollout
+therefore assumes a release's `defaults/` changes are backward-compatible with the previous
+release (typically additive — new flags an older app version simply ignores). A **breaking**
+`defaults/` change can't be staggered: roll it out to all environments together, or hold the
+rollout until every environment can move.
 
 ### Configuration — the decision rule
 > - Changes with a **Unique release** and the same for every customer?
@@ -190,9 +197,10 @@ rather than silently rendering an empty or placeholder string.
 - **Component versions** (per-service chart version and image tag) live in the **app specs**
   under `06-applications/sbx/apps/`. Diff the versions between two releases:
   `git diff 202X.21.0 202X.22.0 -- 06-applications/sbx/apps`.
-- **Per-environment version.** An environment's version is the release content in its
-  `<env>/apps/` folder on `deploy`, advanced by merging a release. Environments can sit on
-  different releases (different folder content).
+- **Per-environment version.** An environment's **chart/image versions** are the content of its
+  `<env>/apps/` folder on `deploy`, advanced by merging a release — so environments can be
+  staged on different versions. `defaults/` (release config) is **shared** across environments,
+  not per-environment (see [How they compose](#how-they-compose)).
 - **Resource traceability.** Terraform stamps a `governance:SemanticVersion` tag on the
   resources it manages, derived in CI from `git describe --tags` on the `deploy` branch — so
   every AWS resource traces back to the release the branch currently carries.
