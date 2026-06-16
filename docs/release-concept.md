@@ -104,6 +104,14 @@ pass the gates below** before it can be squash-merged. Forks should keep these e
 - **GitHub Advanced Security** — code scanning (CodeQL), dependency review, and Dependabot
   updates
 
+These gates cover **this repository's IaC**. The **Unique application artifacts** a release
+pins (container images and Helm charts) are independently built, scanned, and hardened through
+Unique's **secure SDLC**: every build artifact is scanned for OS and dependency
+vulnerabilities (Trivy), source is scanned (CodeQL), dependencies are auto-patched
+(Renovate/Dependabot), and images are rebuilt weekly for base-image patches, with CVSS-based
+remediation SLAs. See
+[Vulnerability & Patch Management](https://docs.unique.ai/security-and-compliance/it-security/vulnerability-patch-management-process).
+
 Applies are never part of CI — they happen only on a push to the `deploy` branch (see
 [The two delivery tracks](#the-two-delivery-tracks)).
 
