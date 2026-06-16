@@ -27,7 +27,7 @@ pushing.
 | | |
 |---|---|
 | **Trunk** | `main` — source of truth and **environment template**; CI-gated; carries release content (versions + `defaults/`) but no environment-specific values |
-| **Deploy branch** | a single long-lived `deploy` branch with **one folder per environment** (`sbx/`, `prod/`, …) holding that environment's real values |
+| **Deploy branch** | a long-lived `deploy` branch holding each environment's real values — **suggested layout:** one folder per environment (`sbx/`, `prod/`, …); per-environment branches work too |
 | **Release** | a Git tag `202X.XX.X` on `main`, **published as a GitHub Release** with notes — the *only* place a release version exists |
 | **Per-environment version** | each environment **adopts** a release tag independently → environments can run **different releases** (staged rollout: `sbx` → validate → `prod`) |
 | **Flow direction** | always forward: `feat/*` → `main` → `deploy`. Never `deploy` → `main` |
@@ -62,20 +62,19 @@ chore/*┘
   is the only release-version string in the repository (see
   [Release identity](#release-identity-and-versioning)).
 
-### `deploy` — one branch, one folder per environment
-- A single long-lived branch. Each environment is a **folder** (`sbx/`, `prod/`, …) carrying
-  its real values **and the release tag it currently adopts**. ArgoCD points each cluster at
-  its own folder.
-- **A push to `deploy` is a deployment** for the changed environment: Terraform applies its
-  layers (01–05), and ArgoCD — watching the `deploy` branch — reconciles its applications
-  (layer 06).
-- Each environment **adopts releases independently**, so environments can sit on **different
-  releases** (staged rollout). Resource version tags (`governance:SemanticVersion`) therefore
-  differ per environment too.
-- The `deploy` branch **diverges forward** from `main` and is never merged back. Because it
-  has diverged, it is never fast-forwarded to a `main` tag: an environment records the release
-  tag it adopts as a **pointer**, and the release content is resolved at that tag (see
-  [How they compose](#how-they-compose)). Release content always originates on `main`.
+### `deploy` — the deployment branch
+- A long-lived branch holding the real, per-environment configuration. **A push to `deploy` is
+  a deployment** for the changed environment: Terraform applies its layers (01–05), and ArgoCD
+  — watching `deploy` — reconciles its applications (layer 06).
+- **Suggested layout: one `deploy` branch with one folder per environment** (`sbx/`, `prod/`,
+  …), with ArgoCD pointing each cluster at its own folder. This is a recommendation, not a
+  requirement — a **per-environment-branch** layout (`deploy/sbx`, `deploy/prod`) works equally
+  well; pick whichever suits your access and review model.
+- Each environment **adopts a release independently** by merging the release into its folder,
+  so environments can sit on **different releases** (staged rollout).
+- The `deploy` branch **diverges forward** from `main` and is never merged back; release
+  content always originates on `main` and is brought in by adoption (see
+  [How they compose](#how-they-compose)).
 
 ### Feature branches
 `feat/*`, `fix/*`, `chore/*` → PR → squash-merge to `main`. PRs run the full validation
