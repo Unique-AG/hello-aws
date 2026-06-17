@@ -13,6 +13,10 @@ permissions:
 env:
   AWS_REGION: eu-central-2
 
+concurrency:
+  group: sbx-deploy
+  cancel-in-progress: false
+
 jobs:
   bootstrap:
     runs-on: ubuntu-latest

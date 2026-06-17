@@ -154,6 +154,9 @@ data "aws_network_interfaces" "ingress_nlb" {
     name   = "vpc-id"
     values = [aws_vpc.main.id]
   }
+
+  # Read ENIs only after the NLB exists, so its interfaces can be discovered.
+  depends_on = [aws_lb.ingress_nlb]
 }
 
 data "aws_network_interface" "ingress_nlb" {

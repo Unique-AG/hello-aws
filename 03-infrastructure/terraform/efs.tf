@@ -13,6 +13,8 @@
 #   - Elastic throughput to handle burst model reads on cold start
 #######################################
 
+# No prevent_destroy: this EFS only holds a regenerable Docling model cache,
+# so it must be destroyable for sandbox teardown.
 resource "aws_efs_file_system" "docling_models" {
   encrypted        = true
   kms_key_id       = aws_kms_key.general.arn
@@ -23,10 +25,6 @@ resource "aws_efs_file_system" "docling_models" {
     Name    = "efs-${module.naming.id}-docling-models"
     Purpose = "docling-models"
   })
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 #######################################

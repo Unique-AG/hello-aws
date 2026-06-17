@@ -82,6 +82,8 @@ aws:
     clusterName: "<EKS_CLUSTER_NAME>"
   vpc:
     id: "<VPC_ID>"
+  efs:
+    doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
   route53:
     privateZoneId: "<ROUTE53_PRIVATE_ZONE_ID>"
   connectivity:
@@ -151,6 +153,7 @@ FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
+FROM_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$FROM")
 FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
 FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
@@ -203,6 +206,7 @@ TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
 TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
+TO_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$CONFIG")
 TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
 TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
@@ -210,9 +214,9 @@ TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
 TO_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion' "$CONFIG")
-TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId' "$CONFIG")
-TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl' "$CONFIG")
-TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName' "$CONFIG")
+TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$CONFIG")
+TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$CONFIG")
+TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -390,6 +394,10 @@ replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
 # 9. VPC ID
 echo "  VPC ID ..."
 replace_all "$FROM_VPC_ID" "$TO_VPC_ID"
+
+# 9b. EFS Docling models file system ID
+echo "  EFS Docling models ID ..."
+replace_all "$FROM_EFS_DOCLING_MODELS_ID" "$TO_EFS_DOCLING_MODELS_ID"
 
 # 10. Zitadel IDs
 echo "  Zitadel project ID ..."

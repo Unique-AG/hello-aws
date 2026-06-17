@@ -9,6 +9,7 @@ tempo:
       backend: s3
       s3:
         bucket: "<OBSERVABILITY_S3_BUCKET_NAME>"
+        prefix: tempo/
         endpoint: s3.<AWS_REGION>.amazonaws.com
         region: <AWS_REGION>
         forcepathstyle: true

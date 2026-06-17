@@ -214,7 +214,7 @@ locals {
 }
 
 resource "aws_ecr_pull_through_cache_rule" "main" {
-  for_each = toset(local.ecr_pull_through_cache_registries)
+  for_each = toset([for reg in local.ecr_pull_through_cache_registries : reg if contains(keys(local.ecr_pull_through_cache_upstream_urls), reg)])
 
   ecr_repository_prefix = each.value
   upstream_registry_url = local.ecr_pull_through_cache_upstream_urls[each.value]

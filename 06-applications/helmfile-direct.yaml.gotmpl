@@ -8,18 +8,18 @@
 #
 # Usage:
 #   cd 06-applications
-#   helmfile -e dev -f helmfile-direct.yaml.gotmpl sync           # deploy everything
-#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l tier=system sync  # system only
-#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l tier=chat sync    # chat only
-#   helmfile -e dev -f helmfile-direct.yaml.gotmpl -l name=cert-manager sync  # single app
+#   helmfile -e sbx -f helmfile-direct.yaml.gotmpl sync           # deploy everything
+#   helmfile -e sbx -f helmfile-direct.yaml.gotmpl -l tier=system sync  # system only
+#   helmfile -e sbx -f helmfile-direct.yaml.gotmpl -l tier=chat sync    # chat only
+#   helmfile -e sbx -f helmfile-direct.yaml.gotmpl -l name=cert-manager sync  # single app
 #
 # NOTE: rabbitmq-chat (directory-based app) is not managed by this helmfile.
-#   Apply it manually:  kubectl apply -f dev/values/rabbitmq/
+#   Apply it manually:  kubectl apply -f sbx/values/rabbitmq/
 
 environments:
-  dev:
+  sbx:
     values:
-      - env: dev
+      - env: sbx
 
 ---
 
