@@ -13,7 +13,7 @@ The layer implements three storage tiers:
 - **Aurora PostgreSQL** (provisioned mode): Relational data for application services
   - Isolated subnets (no internet access)
   - KMS encryption at rest, SSL/TLS in transit
-  - `manage_master_user_password = true` — AWS manages the master password in its own Secrets Manager secret (never in Terraform state)
+  - Master password supplied at apply via the ephemeral `aurora_master_password` variable (write-only `master_password_wo` — never written to Terraform state or plan output) and stored in the `psql-password` Secrets Manager secret
   - Per-database connection strings populated by seed script as `postgresql://dbadmin:<password>@<endpoint>:5432/<db_name>`
   - Six default databases: `app_repository`, `chat`, `ingestion`, `litellm`, `scope_management`, `theme`
 
@@ -118,11 +118,11 @@ LiteLLM acts as an OpenAI-compatible proxy in front of Bedrock:
 
 - **Infrastructure facts** (endpoints, ports, bucket names, ARNs, CA certs) are managed as `aws_secretsmanager_secret_version` by Terraform — always in sync with actual resources, not sensitive.
 - **Generated credentials** (passwords, encryption keys, IAM access keys) are populated by `.scripts/seed-secrets.sh` after `terraform apply` — never in Terraform state.
-- **Aurora master password** is managed by AWS itself (`manage_master_user_password = true`), read by the seed script from the AWS-managed secret.
+- **Aurora master password** is supplied at apply time via the ephemeral `aurora_master_password` variable (write-only; never in Terraform state or plan) and stored in the `psql-password` secret. On the first apply set `set_aurora_master_password = true` and provide it (e.g. `TF_VAR_aurora_master_password`); leave it `false` on later applies (password unchanged) and bump `master_password_wo_version` only to rotate.
 
 The seed script:
 
-- Reads the Aurora master password from the AWS-managed secret
+- Reads the Aurora master password from the `psql-password` secret
 - Generates passwords and encryption keys via `openssl rand`
 - Creates IAM access keys via `aws iam create-access-key`
 - Builds LiteLLM endpoint definitions JSON with the generated master key
@@ -147,7 +147,7 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 
 ### Aurora PostgreSQL
 
-- **Cluster**: Provisioned mode, engine 14.19, `dbadmin` master user, `manage_master_user_password = true`
+- **Cluster**: Provisioned mode, engine 14.20, `dbadmin` master user, write-only master password (`master_password_wo`, supplied via the ephemeral `aurora_master_password` var)
 - **Instances**: Configurable count and instance class (default: 2x `db.r6g.large`, sbx: 1x `db.t4g.medium`)
 - **Subnet Group**: Isolated subnets
 - **Security Group**: PostgreSQL (5432) from VPC CIDR, egress to VPC CIDR
