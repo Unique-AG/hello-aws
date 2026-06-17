@@ -1,6 +1,12 @@
 # Direct deploy helmfile — bypasses ArgoCD
 # Deploys all 06-applications charts directly via helm.
 #
+# DEV/DEBUG ESCAPE HATCH — NOT a release path. Unique release image tags are
+# pinned in the ArgoCD Application specs (sbx/apps/*.yaml -> helm.valuesObject.
+# image.tag), which only ArgoCD reads. A direct deploy here uses each chart's
+# DEFAULT image tag, NOT the release version. Use the ArgoCD path for releases;
+# use this only for local iteration/debugging.
+#
 # Prerequisites:
 #   1. Run configure-instance.sh to replace placeholders
 #   2. Create the namespace:  kubectl create namespace unique
