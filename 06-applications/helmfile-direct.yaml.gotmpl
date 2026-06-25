@@ -432,8 +432,9 @@ releases:
               name: docling-models-pvc
               namespace: unique
             spec:
-              accessModes: ["ReadWriteOnce"]
-              storageClassName: gp3
+              # RWX on EFS so all KEDA ingestor replicas can share the models volume (matches the Argo path); gp3/EBS is RWO-only.
+              accessModes: ["ReadWriteMany"]
+              storageClassName: efs-sc
               resources:
                 requests:
                   storage: 30Gi
@@ -455,7 +456,7 @@ releases:
   - name: ingestor
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - docling-models-pvc
       - application-secrets
@@ -470,7 +471,7 @@ releases:
   - name: backend-service-scope-management
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -484,7 +485,7 @@ releases:
   - name: backend-service-chat
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -498,7 +499,7 @@ releases:
   - name: backend-service-ingestion
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -512,7 +513,7 @@ releases:
   - name: backend-service-ingestion-worker
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -543,7 +544,7 @@ releases:
   - name: backend-service-ingestion-worker-chat
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -574,7 +575,7 @@ releases:
   - name: backend-service-configuration
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -588,7 +589,7 @@ releases:
   - name: backend-service-app-repository
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -602,7 +603,7 @@ releases:
   - name: backend-service-event-socket
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -616,7 +617,7 @@ releases:
   - name: backend-service-speech
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -630,7 +631,7 @@ releases:
   - name: backend-service-webhook-scheduler
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -644,7 +645,7 @@ releases:
   - name: backend-service-webhook-worker
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
@@ -658,7 +659,7 @@ releases:
   - name: client-insights-exporter
     namespace: unique
     chart: unique-ag/backend-service
-    version: 7.1.0
+    version: 10.3.0
     needs:
       - application-secrets
     labels:
