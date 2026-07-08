@@ -1,4 +1,6 @@
 resource "aws_s3_bucket" "terraform_state" {
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = local.s3_bucket_name
   force_destroy = false
 
@@ -12,6 +14,8 @@ resource "aws_s3_bucket" "terraform_state" {
 }
 
 resource "aws_s3_bucket" "access_logs" {
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket = "${local.s3_bucket_name}-access-logs"
 
   tags = merge(
@@ -173,7 +177,7 @@ resource "aws_s3_bucket_policy" "terraform_state" {
         Effect = "Allow"
         Principal = {
           AWS = compact([
-            data.aws_caller_identity.current.arn,
+            data.aws_iam_session_context.current.issuer_arn,
             var.use_oidc && var.github_repository != "" ? aws_iam_role.github_actions[0].arn : ""
           ])
         }

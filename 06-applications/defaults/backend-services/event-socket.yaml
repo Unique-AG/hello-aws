@@ -22,6 +22,8 @@ envVars:
       secretKeyRef:
         name: rabbitmqcluster-chat-default-user
         key: port
+prometheus:
+  enabled: false
 nodeSelector:
   scalability: steady
   lifecycle: persistent

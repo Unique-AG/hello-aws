@@ -5,4 +5,4 @@ env:
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/web-app-knowledge-upload
-  tag: "2026.06.1"
+  tag: "2026.22.0"

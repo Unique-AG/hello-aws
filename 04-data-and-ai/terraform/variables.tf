@@ -109,7 +109,7 @@ variable "cloudwatch_log_retention_days" {
 variable "aurora_engine_version" {
   description = "Aurora PostgreSQL engine version"
   type        = string
-  default     = "14.19"
+  default     = "14.20"
 }
 
 variable "aurora_database_name" {
@@ -217,6 +217,12 @@ variable "s3_force_destroy" {
   default     = false
 }
 
+variable "enable_s3_vpc_only_policy" {
+  description = "Attach VPC-only bucket policies to S3 buckets. Disable temporarily when deploying from outside the VPC."
+  type        = bool
+  default     = true
+}
+
 variable "s3_application_data_bucket_secret_name" {
   description = "Secret name for S3 application data bucket name"
   type        = string
@@ -283,10 +289,36 @@ variable "litellm_salt_key_secret_name" {
   default     = "litellm-salt-key"
 }
 
+variable "litellm_azure_foundry_api_key_secret_name" {
+  description = "Secret name for the Azure AI Foundry API key (populated by Azure GHA workflow)"
+  type        = string
+  default     = "litellm-azure-foundry-api-key"
+}
+
+variable "litellm_azure_foundry_endpoint_secret_name" {
+  description = "Secret name for the Azure AI Foundry endpoint URL (populated by Azure GHA workflow)"
+  type        = string
+  default     = "litellm-azure-foundry-endpoint"
+}
+
 variable "rds_ca_bundle_secret_name" {
   description = "Secret name for RDS CA certificate bundle"
   type        = string
   default     = "rds-ca-bundle"
+}
+
+variable "aurora_master_password" {
+  description = "Aurora master password (ephemeral — never stored in state or plan output)"
+  type        = string
+  sensitive   = true
+  ephemeral   = true
+  default     = null
+}
+
+variable "set_aurora_master_password" {
+  description = "Set to true when providing aurora_master_password to update the password"
+  type        = bool
+  default     = false
 }
 
 variable "aurora_instance_class" {

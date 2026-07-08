@@ -17,6 +17,7 @@ resource "aws_prometheus_workspace" "main" {
 
 # Security Group for Grafana VPC configuration
 resource "aws_security_group" "grafana" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_managed_grafana ? 1 : 0
 
   name        = "${module.naming.id}-grafana"
@@ -117,7 +118,7 @@ data "aws_iam_policy_document" "grafana_vpc" {
     condition {
       test     = "StringEquals"
       variable = "aws:RequestedRegion"
-      values   = [data.aws_region.current.name]
+      values   = [data.aws_region.current.id]
     }
   }
 }
@@ -173,7 +174,7 @@ data "aws_iam_policy_document" "grafana_cloudwatch" {
       "cloudwatch:GetMetricData",
       "cloudwatch:GetInsightRuleReport",
     ]
-    resources = ["arn:aws:cloudwatch:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+    resources = ["arn:aws:cloudwatch:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
   }
 
   statement {
@@ -186,7 +187,7 @@ data "aws_iam_policy_document" "grafana_cloudwatch" {
       "logs:GetQueryResults",
       "logs:GetLogEvents",
     ]
-    resources = ["arn:aws:logs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"]
+    resources = ["arn:aws:logs:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:*"]
   }
 }
 

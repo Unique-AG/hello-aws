@@ -168,6 +168,7 @@ resource "aws_ecr_lifecycle_policy" "default" {
 # Secrets Manager secret for Azure Container Registry credentials
 # Required for ECR pull-through cache to authenticate with ACR
 resource "aws_secretsmanager_secret" "acr_credentials" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   count = var.acr_registry_url != "" ? 1 : 0
 
   name        = "ecr-pullthroughcache/${var.acr_registry_url}"
@@ -179,19 +180,7 @@ resource "aws_secretsmanager_secret" "acr_credentials" {
   }
 }
 
-resource "aws_secretsmanager_secret_version" "acr_credentials" {
-  count = var.acr_registry_url != "" ? 1 : 0
-
-  secret_id = aws_secretsmanager_secret.acr_credentials[0].id
-
-  # Use write-only attribute to avoid storing secret in Terraform state
-  secret_string_wo = jsonencode({
-    username    = var.acr_username
-    accessToken = var.acr_password
-  })
-  # Increment this when the secret value changes to trigger an update
-  secret_string_wo_version = 2
-}
+# Secret value is populated by seed-secrets.sh (reads ACR credentials from 1Password)
 
 # Resource policy to allow ECR to access the secret
 resource "aws_secretsmanager_secret_policy" "acr_credentials" {
@@ -204,7 +193,7 @@ resource "aws_secretsmanager_secret_policy" "acr_credentials" {
       {
         Sid       = "AllowECRPullThroughCache"
         Effect    = "Allow"
-        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/aws-service-role/pullthroughcache.ecr.amazonaws.com/AWSServiceRoleForECRPullThroughCache" }
+        Principal = { Service = "pullthroughcache.ecr.amazonaws.com" }
         Action    = "secretsmanager:GetSecretValue"
         Resource  = aws_secretsmanager_secret.acr_credentials[0].arn
       }
@@ -225,7 +214,7 @@ locals {
 }
 
 resource "aws_ecr_pull_through_cache_rule" "main" {
-  for_each = toset(local.ecr_pull_through_cache_registries)
+  for_each = toset([for reg in local.ecr_pull_through_cache_registries : reg if contains(keys(local.ecr_pull_through_cache_upstream_urls), reg)])
 
   ecr_repository_prefix = each.value
   upstream_registry_url = local.ecr_pull_through_cache_upstream_urls[each.value]

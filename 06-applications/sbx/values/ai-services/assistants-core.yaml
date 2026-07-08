@@ -11,7 +11,7 @@ env:
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/ai-service-assistants-core
-  tag: "2026.06.1"
+  tag: "2026.22.0"
 
 replicaCount: 1
 

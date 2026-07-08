@@ -93,10 +93,25 @@ resource "aws_vpc_endpoint" "s3" {
           "s3:DeleteObjectVersion"
         ]
         Resource = [
-          "arn:aws:s3:::s3-${module.naming.id}-application-data",
-          "arn:aws:s3:::s3-${module.naming.id}-application-data/*",
-          "arn:aws:s3:::s3-${module.naming.id}-ai-data",
-          "arn:aws:s3:::s3-${module.naming.id}-ai-data/*"
+          "arn:aws:s3:::s3-${module.naming.id}-application-data*",
+          "arn:aws:s3:::s3-${module.naming.id}-application-data*/*",
+          "arn:aws:s3:::s3-${module.naming.id}-ai-data*",
+          "arn:aws:s3:::s3-${module.naming.id}-ai-data*/*"
+        ]
+      },
+      {
+        Sid       = "AllowObservabilityData"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:DeleteObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::s3-${module.naming.id}-observability*",
+          "arn:aws:s3:::s3-${module.naming.id}-observability*/*"
         ]
       },
       {
@@ -287,6 +302,40 @@ resource "aws_vpc_endpoint" "sts" {
 
   tags = {
     Name = "vpce-${module.naming.id}-sts"
+  }
+}
+
+# EKS Interface Endpoint
+# Required for EKS API access from private subnets when EKS is deployed as internal-only service
+resource "aws_vpc_endpoint" "eks" {
+  count = var.enable_eks_endpoint ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.eks"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "vpce-${module.naming.id}-eks"
+  }
+}
+
+# EKS Auth Interface Endpoint
+# Required for EKS Pod Identity token exchange from private subnets
+resource "aws_vpc_endpoint" "eks_auth" {
+  count = var.enable_eks_auth_endpoint ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.eks-auth"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = aws_subnet.private[*].id
+  security_group_ids  = [aws_security_group.vpc_endpoints.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name = "vpce-${module.naming.id}-eks-auth"
   }
 }
 

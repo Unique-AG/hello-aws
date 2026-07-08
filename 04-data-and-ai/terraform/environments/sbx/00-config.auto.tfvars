@@ -27,6 +27,9 @@ elasticache_snapshot_retention_limit   = 1
 # Disable Grafana (not available in eu-central-2)
 enable_managed_grafana = false
 
+# S3 VPC-only policy (disable when deploying from outside VPC, re-enable from bastion)
+enable_s3_vpc_only_policy = false
+
 # VPC Endpoints
 enable_aurora_endpoint      = true
 enable_elasticache_endpoint = true

@@ -19,6 +19,13 @@ spec:
         releaseName: clusterissuer-route53-dns
         valueFiles:
           - $values/06-applications/sbx/values/cert-manager/cluster-issuer-route53.yaml
+    - chart: raw
+      repoURL: https://bedag.github.io/helm-charts
+      targetRevision: 2.0.0
+      helm:
+        releaseName: clusterissuer-internal-ca
+        valueFiles:
+          - $values/06-applications/sbx/values/cert-manager/cluster-issuer-internal-ca.yaml
   ignoreDifferences:
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration

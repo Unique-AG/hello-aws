@@ -21,6 +21,7 @@ variable "enable_ingress_nlb" {
 #######################################
 
 resource "aws_security_group" "ingress_nlb" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-ingress-nlb"

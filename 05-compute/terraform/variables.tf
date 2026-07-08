@@ -69,7 +69,7 @@ variable "semantic_version" {
 variable "eks_cluster_version" {
   description = "Kubernetes version for EKS cluster"
   type        = string
-  default     = "1.28"
+  default     = "1.35"
 }
 
 variable "eks_ebs_csi_driver_version" {
@@ -198,21 +198,15 @@ variable "ecr_pull_through_cache_upstream_urls" {
   description = "Map of registry prefix to upstream registry URL for pull-through cache"
   type        = map(string)
   default = {
-    "docker.io"      = "registry-1.docker.io"
-    "public.ecr.aws" = "public.ecr.aws"
-    "quay.io"        = "quay.io"
-    "gcr.io"         = "gcr.io"
-    "k8s.gcr.io"     = "k8s.gcr.io"
-    "ghcr.io"        = "ghcr.io"
+    "docker.io"       = "registry-1.docker.io"
+    "public.ecr.aws"  = "public.ecr.aws"
+    "quay.io"         = "quay.io"
+    "gcr.io"          = "gcr.io"
+    "k8s.gcr.io"      = "k8s.gcr.io"
+    "ghcr.io"         = "ghcr.io"
+    "registry.k8s.io" = "registry.k8s.io"
   }
   # Note: ACR URLs are dynamically added via locals based on acr_registry_url variable
-}
-
-# VPC Endpoints Configuration
-variable "enable_eks_endpoint" {
-  description = "Enable EKS Interface Endpoint (required for internal-only EKS deployments)"
-  type        = bool
-  default     = true
 }
 
 # Route 53 DNS Configuration
@@ -226,19 +220,3 @@ variable "acr_registry_url" {
   type        = string
   default     = ""
 }
-
-variable "acr_username" {
-  description = "Azure Container Registry username (access key username)"
-  type        = string
-  default     = ""
-  ephemeral   = true
-}
-
-variable "acr_password" {
-  description = "Azure Container Registry password (access key)"
-  type        = string
-  default     = ""
-  ephemeral   = true
-}
-
-

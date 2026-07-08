@@ -37,7 +37,7 @@ locals {
 
   region = coalesce(
     var.aws_region,
-    try(data.aws_region.current[0].name, "eu-central-2")
+    try(data.aws_region.current[0].id, "eu-central-2")
   )
 
   # Environment short codes

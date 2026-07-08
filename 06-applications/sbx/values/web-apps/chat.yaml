@@ -1,6 +1,8 @@
 # Chat web app configuration (AWS sbx)
 
 env:
+  FEATURE_FLAG_ENABLE_NEW_ANSWERS_UI_UN_14411: "true"
+  FEATURE_FLAG_ENABLE_THINKING_STEPS_UN_13848: "true"
   FEATURE_FLAG_NET_PROMOTER_SCORE_UI_UN_7747: "true"
   FEATURE_FLAG_NEW_TRANSLATION_UI_UN_7233: "true"
   FILE_TYPES_DOCUMENT_TRANSLATOR: "docx,xls,pptx"
@@ -10,4 +12,4 @@ env:
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/web-app-chat
-  tag: "2026.06.1"
+  tag: "2026.22.0"

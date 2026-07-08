@@ -11,6 +11,7 @@
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "psql_host" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.psql_host_secret_name
   description             = "PostgreSQL host endpoint"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -25,6 +26,7 @@ resource "aws_secretsmanager_secret_version" "psql_host" {
 }
 
 resource "aws_secretsmanager_secret" "psql_port" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.psql_port_secret_name
   description             = "PostgreSQL port"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -39,6 +41,7 @@ resource "aws_secretsmanager_secret_version" "psql_port" {
 }
 
 resource "aws_secretsmanager_secret" "psql_username" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.psql_username_secret_name
   description             = "PostgreSQL master username"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -57,12 +60,21 @@ resource "aws_secretsmanager_secret_version" "psql_username" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "psql_password" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.psql_password_secret_name
-  description             = "PostgreSQL master password"
+  description             = "PostgreSQL master password (write-only — never in Terraform state)"
   recovery_window_in_days = var.secrets_recovery_window_days
   kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
 
   tags = { Name = var.psql_password_secret_name, Purpose = "database-credentials" }
+}
+
+resource "aws_secretsmanager_secret_version" "psql_password" {
+  count     = var.set_aurora_master_password ? 1 : 0
+  secret_id = aws_secretsmanager_secret.psql_password.id
+
+  secret_string_wo         = var.aurora_master_password
+  secret_string_wo_version = 1 # Bump when rotating the password
 }
 
 # ---------------------------------------------------------------------------
@@ -70,6 +82,7 @@ resource "aws_secretsmanager_secret" "psql_password" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "redis_host" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.redis_host_secret_name
   description             = "Redis cluster endpoint"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -87,6 +100,7 @@ resource "aws_secretsmanager_secret_version" "redis_host" {
 }
 
 resource "aws_secretsmanager_secret" "redis_port" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.redis_port_secret_name
   description             = "Redis port"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -106,6 +120,7 @@ resource "aws_secretsmanager_secret_version" "redis_port" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "encryption_key_app_repository" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.encryption_key_app_repository_secret_name
   description             = "Encryption key for application repository"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -115,6 +130,7 @@ resource "aws_secretsmanager_secret" "encryption_key_app_repository" {
 }
 
 resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.encryption_key_node_chat_lxm_secret_name
   description             = "Encryption key for node chat LXM"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -124,6 +140,7 @@ resource "aws_secretsmanager_secret" "encryption_key_node_chat_lxm" {
 }
 
 resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.encryption_key_ingestion_secret_name
   description             = "Encryption key for ingestion service"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -137,6 +154,7 @@ resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "zitadel_db_user_password" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.zitadel_db_user_password_secret_name
   description             = "Zitadel database user password"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -146,6 +164,7 @@ resource "aws_secretsmanager_secret" "zitadel_db_user_password" {
 }
 
 resource "aws_secretsmanager_secret" "zitadel_master_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.zitadel_master_key_secret_name
   description             = "Zitadel master key"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -156,6 +175,7 @@ resource "aws_secretsmanager_secret" "zitadel_master_key" {
 
 # Zitadel PAT (placeholder — must be set manually after Zitadel deployment)
 resource "aws_secretsmanager_secret" "zitadel_pat" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.zitadel_pat_secret_name
   description             = "Zitadel Personal Access Token (PAT) - must be set manually"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -169,6 +189,7 @@ resource "aws_secretsmanager_secret" "zitadel_pat" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "rabbitmq_password_chat" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.rabbitmq_password_chat_secret_name
   description             = "RabbitMQ password for chat service"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -182,6 +203,7 @@ resource "aws_secretsmanager_secret" "rabbitmq_password_chat" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "psql_connection_string" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   for_each = var.postgresql_databases
 
   name                    = "psql-connection-string-${each.key}"
@@ -197,6 +219,7 @@ resource "aws_secretsmanager_secret" "psql_connection_string" {
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "litellm_proxy_master_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.litellm_proxy_master_key_secret_name
   description             = "LiteLLM proxy master key"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -206,6 +229,7 @@ resource "aws_secretsmanager_secret" "litellm_proxy_master_key" {
 }
 
 resource "aws_secretsmanager_secret" "litellm_salt_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.litellm_salt_key_secret_name
   description             = "LiteLLM salt key for hashing"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -216,6 +240,7 @@ resource "aws_secretsmanager_secret" "litellm_salt_key" {
 
 # OpenAI endpoint definitions — contains LiteLLM master key (seed script only, container here)
 resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.azure_openai_endpoint_definitions_secret_name
   description             = "OpenAI endpoint definitions pointing to LiteLLM proxy (Bedrock backend)"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -224,11 +249,36 @@ resource "aws_secretsmanager_secret" "azure_openai_endpoint_definitions" {
   tags = { Name = var.azure_openai_endpoint_definitions_secret_name, Purpose = "litellm" }
 }
 
+# Azure AI Foundry API key — populated by the Azure GHA workflow post-apply.
+resource "aws_secretsmanager_secret" "litellm_azure_foundry_api_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.litellm_azure_foundry_api_key_secret_name
+  description             = "Azure AI Foundry primary access key for LiteLLM azure provider"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_azure_foundry_api_key_secret_name, Purpose = "litellm" }
+}
+
+# Azure AI Foundry endpoint URL — populated by the Azure GHA workflow post-apply.
+# Foundry's custom subdomain has a random suffix so the endpoint can't be hardcoded;
+# LiteLLM reads it at runtime via os.environ/AZURE_FOUNDRY_ENDPOINT.
+resource "aws_secretsmanager_secret" "litellm_azure_foundry_endpoint" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.litellm_azure_foundry_endpoint_secret_name
+  description             = "Azure AI Foundry endpoint URL for LiteLLM azure provider"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_azure_foundry_endpoint_secret_name, Purpose = "litellm" }
+}
+
 # ---------------------------------------------------------------------------
 # S3 Bucket Config — infrastructure facts (Terraform-managed values)
 # ---------------------------------------------------------------------------
 
 resource "aws_secretsmanager_secret" "s3_application_data_bucket" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_application_data_bucket_secret_name
   description             = "S3 bucket name for application data"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -243,6 +293,7 @@ resource "aws_secretsmanager_secret_version" "s3_application_data_bucket" {
 }
 
 resource "aws_secretsmanager_secret" "s3_ai_data_bucket" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_ai_data_bucket_secret_name
   description             = "S3 bucket name for AI data"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -257,6 +308,7 @@ resource "aws_secretsmanager_secret_version" "s3_ai_data_bucket" {
 }
 
 resource "aws_secretsmanager_secret" "s3_application_data_bucket_arn" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_application_data_bucket_arn_secret_name
   description             = "S3 bucket ARN for application data"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -271,6 +323,7 @@ resource "aws_secretsmanager_secret_version" "s3_application_data_bucket_arn" {
 }
 
 resource "aws_secretsmanager_secret" "s3_ai_data_bucket_arn" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.s3_ai_data_bucket_arn_secret_name
   description             = "S3 bucket ARN for AI data"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -293,6 +346,7 @@ data "http" "rds_ca_bundle" {
 }
 
 resource "aws_secretsmanager_secret" "rds_ca_bundle" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.rds_ca_bundle_secret_name
   description             = "RDS CA certificate bundle for ${var.aws_region}"
   recovery_window_in_days = var.secrets_recovery_window_days
@@ -304,4 +358,56 @@ resource "aws_secretsmanager_secret" "rds_ca_bundle" {
 resource "aws_secretsmanager_secret_version" "rds_ca_bundle" {
   secret_id     = aws_secretsmanager_secret.rds_ca_bundle.id
   secret_string = data.http.rds_ca_bundle.response_body
+}
+
+# ---------------------------------------------------------------------------
+# Observability — generated credentials (seed script only, containers here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "slack_webhook_url" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = "alertmanager-slack-webhook-url"
+  description             = "Slack webhook URL for AlertManager notifications"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "alertmanager-slack-webhook-url", Purpose = "observability" }
+}
+
+resource "aws_secretsmanager_secret" "grafana_admin_password" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = "grafana-admin-password"
+  description             = "Grafana admin password for self-hosted instance"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "grafana-admin-password", Purpose = "observability" }
+}
+
+# ---------------------------------------------------------------------------
+# ArgoCD — GitHub App credentials (seed script only, container here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "argocd_github_app" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = "argocd-github-app"
+  description             = "ArgoCD GitHub App credentials (app ID, installation ID, private key)"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "argocd-github-app", Purpose = "argocd" }
+}
+
+# ---------------------------------------------------------------------------
+# Google Search — API token (seed script only, container here)
+# ---------------------------------------------------------------------------
+
+resource "aws_secretsmanager_secret" "google_search_api_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = "google-search-api-key"
+  description             = "Google Search API key"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = "google-search-api-key", Purpose = "search" }
 }

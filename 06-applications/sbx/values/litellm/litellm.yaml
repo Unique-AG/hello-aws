@@ -66,7 +66,7 @@ proxy_config:
       litellm_params:
         model: bedrock/eu.anthropic.claude-opus-4-6-v1
         aws_region_name: <AWS_REGION>
-        max_tokens: 10000
+        max_tokens: 20000
 
     - model_name: anthropic-claude-haiku-4-5
       litellm_params:
@@ -86,19 +86,104 @@ proxy_config:
         aws_region_name: <AWS_REGION>
         max_tokens: 4096
 
-    # OpenAI model name aliases (for chat service Azure SDK compatibility)
-    # Maps OpenAI model names to Bedrock Claude models via LiteLLM
-    - model_name: gpt-4o
+    - model_name: anthropic-claude-sonnet-4-6
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        model: bedrock/eu.anthropic.claude-sonnet-4-6
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
 
-    - model_name: gpt-4o-2024-11-20
+    # model_name must match the toolkit ID (qwen-3-235B-A22B), which differs
+    # from the Bedrock model ID (qwen.qwen3-235b-a22b-2507-v1:0)
+    - model_name: qwen-3-235B-A22B
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        model: bedrock/qwen.qwen3-235b-a22b-2507-v1:0
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
+
+    - model_name: amazon-titan-embed-text-v2
+      litellm_params:
+        model: bedrock/amazon.titan-embed-text-v2:0
+        aws_region_name: <AWS_REGION>
+
+    # MiniMax M2.5 via AWS Bedrock — not available in <AWS_REGION>; pinned to
+    # <BEDROCK_MINIMAX_REGION> (no EU CRI exists for MiniMax). Cross-region invocation
+    # leaves Switzerland; acceptable for hello-aws reference deployment only.
+    - model_name: minimax-m2-5
+      litellm_params:
+        model: bedrock/minimax.minimax-m2.5
+        aws_region_name: <BEDROCK_MINIMAX_REGION>
+        max_tokens: 8192
+
+    # Gemma-4-31B-IT self-hosted on a SageMaker real-time endpoint in
+    # ap-northeast-2. The endpoint serves an OpenAI-compatible chat schema
+    # (vLLM backend), so use the sagemaker_chat provider. This is a cross-region
+    # call from the <AWS_REGION> cluster (data leaves the EU) — sandbox/reference
+    # deployment only. Same AWS account; auth via the litellm Pod Identity role,
+    # which needs sagemaker:InvokeEndpoint + InvokeEndpointWithResponseStream on
+    # this endpoint (05-compute iam.tf) — apply that layer before this syncs.
+    # *_cost_per_token: rough amortized placeholder so this self-hosted model
+    # shows non-zero spend in spend logs / max_budget (LiteLLM has no price map
+    # for a self-hosted endpoint). Tune to real $/token if cost tracking matters.
+    #
+    # CONSTRAINTS of this single-g6.24xl deployment (verified against the live
+    # endpoint, 2026-06-02) — both otherwise cause HTTP 400 from the vLLM container:
+    #   1. max_model_len is only 2275 tokens (weights + KV barely fit 4x L4 /
+    #      96 GB), so max_tokens must stay well under 2275 to leave prompt room.
+    #   2. the JumpStart container was not started with --enable-auto-tool-choice
+    #      / --tool-call-parser, so any tool_choice/tools in the request is
+    #      rejected. Drop both via additional_drop_params until a g6e redeploy
+    #      can enable tool calling and a real context window.
+    - model_name: gemma-4-31b-it
+      litellm_params:
+        model: sagemaker_chat/gemma-4-31b
+        aws_region_name: ap-northeast-2
+        max_tokens: 1024
+        additional_drop_params: ["tool_choice", "tools"]
+        input_cost_per_token: 0.000001
+        output_cost_per_token: 0.000001
+
+    # Qwen3.6-35B-A3B (MoE) self-hosted on a SageMaker real-time endpoint in
+    # ap-northeast-2, same sagemaker_chat (vLLM, OpenAI-compatible) pattern as
+    # gemma above — cross-region from <AWS_REGION>, sandbox/reference only.
+    # Runs on ml.g6e.24xlarge with tensor_parallel=4 and a pinned 131072-token
+    # window (SM_VLLM_MAX_MODEL_LEN), so max_tokens can be generous. Tool calling
+    # IS enabled: the endpoint starts vLLM with --enable-auto-tool-choice
+    # --tool-call-parser qwen3_coder --reasoning-parser qwen3 (verified 2026-06-03,
+    # structured tool_calls returned), so tools/tool_choice are NOT dropped here.
+    # *_cost_per_token: amortized placeholder (no LiteLLM price map for a
+    # self-hosted endpoint). IAM: the litellm Pod Identity role's sagemaker invoke
+    # statement is scoped to endpoint/* in this region (05-compute iam.tf).
+    - model_name: qwen3-6-35b-a3b
+      litellm_params:
+        model: sagemaker_chat/qwen3-6-35b
+        aws_region_name: ap-northeast-2
+        max_tokens: 8192
+        input_cost_per_token: 0.000001
+        output_cost_per_token: 0.000001
+
+    # GPT-4o via Azure AI Foundry. api_base and api_key come from K8s env vars
+    # set by the `litellm` ExternalSecret (sourced from AWS Secrets Manager,
+    # populated by the Azure GHA workflow's push-to-aws-secrets job).
+    - model_name: gpt-4o
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: gpt-4o-2024-11-20
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: azure-gpt-4o
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
 
     - model_name: gpt-4-turbo
       litellm_params:
@@ -130,6 +215,7 @@ proxy_config:
     disable_error_logs: false
 
   litellm_settings:
+    modify_params: true
     drop_params: true
     turn_off_message_logging: false
     max_budget: 10000

@@ -1,0 +1,33 @@
+spec:
+  name: kube-prometheus-stack
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: observability-external-secrets
+        valueFiles:
+          - $values/06-applications/sbx/values/observability/external-secrets.yaml
+    - chart: kube-prometheus-stack
+      repoURL: https://prometheus-community.github.io/helm-charts
+      targetRevision: 72.3.0
+      helm:
+        releaseName: kube-prometheus-stack
+        valueFiles:
+          - $values/06-applications/sbx/values/observability/kube-prometheus-stack.yaml
+  # ExternalSecret resources populate their spec/data from AWS Secrets Manager,
+  # so the live state has fields the chart manifest doesn't and ArgoCD reports
+  # them as permanently OutOfSync. Suppress the diff so the app's top-level
+  # status reflects actual drift, not the ExternalSecrets pattern.
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jsonPointers:
+        - /spec/data
+        - /spec/dataFrom
+  syncOptions:
+    - ServerSideApply=true

@@ -2,13 +2,16 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/ingestors
-  tag: "2026.06.1"
+  tag: "2026.22.0"
 
 env:
   REDIS_PORT: "6380"
   REDIS_USE_TLS: "true"
 
 secretProvider: null
+
+podSecurityContext:
+  fsGroup: 1000
 
 routes:
   skipCrdCheck: true

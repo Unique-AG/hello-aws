@@ -9,6 +9,8 @@ routes:
       enabled: true
     probe:
       enabled: true
+prometheus:
+  enabled: false
 serviceAccount:
   enabled: true
   workloadIdentity:

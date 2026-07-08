@@ -24,6 +24,7 @@ data "aws_ec2_managed_prefix_list" "cloudfront" {
 # Security Group for ALB (allows CloudFront traffic)
 # This security group is attached during ALB creation
 resource "aws_security_group" "alb_cloudfront" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-cloudfront"
@@ -104,6 +105,7 @@ resource "aws_lb" "cloudfront" {
 # We use target_type = "ip" and resolve the NLB DNS to IP addresses
 # Traffic: CloudFront (HTTPS) → ALB (TLS terminated) → Ingress NLB (HTTP:80) → ingress controller
 resource "aws_lb_target_group" "ingress_nlb" {
+  #checkov:skip=CKV_AWS_378: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id_short}-ing-nlb-tg"
@@ -135,18 +137,38 @@ resource "aws_lb_target_group" "ingress_nlb" {
   }
 }
 
-# Resolve Ingress NLB DNS to IP addresses and register as targets
-# NLB DNS resolves to one IP per AZ - these are stable for NLBs
-data "dns_a_record_set" "ingress_nlb" {
+# Look up Ingress NLB network interfaces to get private IPs
+# NLBs create one ENI per subnet/AZ — filter by deterministic NLB name
+# Uses naming module output (known at plan time) instead of resource attribute
+# On first apply (NLB not yet created): returns empty → no target registrations
+# On second apply (NLB exists): finds ENIs → registers targets
+data "aws_network_interfaces" "ingress_nlb" {
   count = var.enable_ingress_nlb ? 1 : 0
-  host  = aws_lb.ingress_nlb[0].dns_name
+
+  filter {
+    name   = "description"
+    values = ["ELB net/${module.naming.id_short}-ingress-nlb/*"]
+  }
+
+  filter {
+    name   = "vpc-id"
+    values = [aws_vpc.main.id]
+  }
+
+  # Read ENIs only after the NLB exists, so its interfaces can be discovered.
+  depends_on = [aws_lb.ingress_nlb]
+}
+
+data "aws_network_interface" "ingress_nlb" {
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
+  id    = data.aws_network_interfaces.ingress_nlb[0].ids[count.index]
 }
 
 resource "aws_lb_target_group_attachment" "ingress_nlb" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
 
   target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
-  target_id        = each.value
+  target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
   port             = 80
 }
 
@@ -201,6 +223,7 @@ resource "aws_lb_listener" "cloudfront_https" {
 # CloudFront handles TLS termination, so HTTP is sufficient for VPC Origin
 resource "aws_lb_listener" "cloudfront_http" {
   #checkov:skip=CKV_AWS_2: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_103: see docs/security-baseline.md
   #trivy:ignore:AVD-AWS-0054 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
@@ -228,6 +251,7 @@ resource "aws_lb_listener" "cloudfront_http" {
 
 # Security Group for Public WebSocket ALB (allows CloudFront traffic only)
 resource "aws_security_group" "alb_websocket" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id}-alb-websocket"
@@ -266,6 +290,7 @@ resource "aws_security_group_rule" "alb_websocket_http_egress" {
 # Public ALB for WebSocket traffic
 resource "aws_lb" "websocket" {
   #checkov:skip=CKV_AWS_91: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_28: see docs/security-baseline.md
   #trivy:ignore:AVD-AWS-0053 see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
@@ -287,6 +312,7 @@ resource "aws_lb" "websocket" {
 
 # Target Group for WebSocket ALB → Ingress NLB
 resource "aws_lb_target_group" "websocket_ingress" {
+  #checkov:skip=CKV_AWS_378: see docs/security-baseline.md
   count = var.enable_ingress_nlb ? 1 : 0
 
   name        = "${module.naming.id_short}-ws-ing-tg"
@@ -315,10 +341,10 @@ resource "aws_lb_target_group" "websocket_ingress" {
 
 # Register Ingress NLB IPs as targets for WebSocket ALB
 resource "aws_lb_target_group_attachment" "websocket_ingress" {
-  for_each = var.enable_ingress_nlb ? toset(data.dns_a_record_set.ingress_nlb[0].addrs) : toset([])
+  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
 
   target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
-  target_id        = each.value
+  target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
   port             = 80
 }
 

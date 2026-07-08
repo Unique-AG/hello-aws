@@ -3,17 +3,25 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
-  tag: "2026.06.1"
+  tag: "2026.22.0"
 
 env:
   AWS_REGION: <AWS_REGION>
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
-  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "false"
-  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "false"
+  ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
+  ELASTICSEARCH_URL: https://elasticsearch-ingestion-es-http.unique.svc:9200
+  ELASTICSEARCH_USERNAME: elastic
+  FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "true"
+  FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "true"
   STORAGE_PROVIDER: s3
-  TRUSTED_DOMAINS: '["<TRUSTED_STORAGE_DOMAIN>"]'
+  TRUSTED_DOMAINS: '["*.amazonaws.com"]'
 
 envVars:
+  - name: ELASTICSEARCH_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: elasticsearch-ingestion-es-elastic-user
+        key: elastic
   - name: RABBITMQ_USERNAME
     valueFrom:
       secretKeyRef:
@@ -61,10 +69,15 @@ serviceAccount:
 extraEnvSecrets:
   - ingestion-secrets
 
-hooks:
-  migration:
-    command: cd /home/node/app/services/node-ingestion; npx prisma migrate deploy;
-    enabled: true
+# hooks.migration inherited from 06-applications/defaults/backend-services/ingestion.yaml
+# (previous identical override removed to avoid silent drift on future edits)
 
-volumeMounts: []
-volumes: []
+volumeMounts:
+  - name: elastic-certs
+    mountPath: /etc/ssl/elastic/ca.crt
+    readOnly: true
+    subPath: ca.crt
+volumes:
+  - name: elastic-certs
+    secret:
+      secretName: elasticsearch-ingestion-es-http-certs-public

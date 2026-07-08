@@ -7,20 +7,22 @@
 
 environment = "sbx"
 
-# EKS Cluster Configuration (sandbox — public access for development)
-eks_cluster_version              = "1.34"
-eks_endpoint_public_access       = true
-eks_endpoint_private_access      = true
-eks_endpoint_public_access_cidrs = ["0.0.0.0/0"]
-eks_cluster_log_retention_days   = 7
+# EKS Cluster Configuration
+# Private endpoint only — k8s API not internet-reachable. Developers reach the
+# cluster via SSM session → bastion (management_server) → kubectl. Variable
+# defaults (public=false, cidrs=[]) already enforce this; the previous
+# permissive overrides have been removed.
+eks_cluster_version            = "1.35"
+eks_endpoint_private_access    = true
+eks_cluster_log_retention_days = 7
 
 # EKS Node Group Configuration
 eks_node_groups = {
   steady = {
     instance_types  = ["m6i.2xlarge"]
-    desired_size    = 2
+    desired_size    = 4
     min_size        = 0
-    max_size        = 4
+    max_size        = 6
     max_unavailable = 2
     labels = {
       lifecycle   = "persistent"
@@ -43,10 +45,7 @@ eks_node_groups = {
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
-  "example.azurecr.io", # Your Azure Container Registry URL
-  "example",            # ACR short alias (extracted from URL)
   "quay.io",
+  "registry.k8s.io",
 ]
 
-# VPC Endpoints
-enable_eks_endpoint = true

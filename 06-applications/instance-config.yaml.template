@@ -26,6 +26,12 @@ aws:
     clusterName: <EKS_CLUSTER_NAME>    # terraform output -raw eks_cluster_name (compute layer)
   vpc:
     id: <VPC_ID>                       # terraform output -raw vpc_id (infrastructure layer)
+  efs:
+    doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
+  route53:
+    privateZoneId: <ROUTE53_PRIVATE_ZONE_ID>       # terraform output -raw route53_private_zone_id (infrastructure layer)
+  connectivity:
+    accountId: "<CONNECTIVITY_ACCOUNT_ID>"         # Connectivity/networking account ID for RAM sharing
   nlb:
     targetGroupHttpArn: <TARGET_GROUP_HTTP_ARN>    # terraform output -raw ingress_nlb_target_group_http_arn
     targetGroupHttpsArn: <TARGET_GROUP_HTTPS_ARN>  # terraform output -raw ingress_nlb_target_group_https_arn
@@ -33,6 +39,12 @@ aws:
     url: <REDIS_URL>                               # e.g. rediss://master.<cluster>.cache.amazonaws.com:6380/0
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"  # Application inference profile ID for Cohere Embed v4
+    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"                       # AWS region for MiniMax invocation (not in eu-central-2; e.g. eu-central-1)
+  prometheus:
+    workspaceId: "<AMP_WORKSPACE_ID>"                              # terraform output -raw amp_workspace_id (data-and-ai layer)
+    remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"                       # terraform output -raw amp_remote_write_url (data-and-ai layer)
+  observability:
+    s3BucketName: "<OBSERVABILITY_S3_BUCKET_NAME>"                 # terraform output -raw observability_s3_bucket_name (data-and-ai layer)
   ecr:
     primary:                            # ECR for Unique application images
       accountId: "000000000000"

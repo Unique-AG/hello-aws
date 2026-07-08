@@ -17,3 +17,18 @@ data "terraform_remote_state" "infrastructure" {
   }
 }
 
+# Remote state from data-and-ai layer
+# Reads data-and-ai layer outputs (Prometheus workspace, observability S3 bucket)
+data "terraform_remote_state" "data_and_ai" {
+  backend = "s3"
+
+  config = {
+    bucket       = coalesce(var.terraform_state_bucket, local.terraform_state_bucket)
+    key          = "data-and-ai/terraform.tfstate"
+    region       = var.aws_region
+    use_lockfile = true
+    encrypt      = true
+    kms_key_id   = coalesce(var.terraform_state_kms_key_id, local.terraform_state_kms_key_id)
+  }
+}
+

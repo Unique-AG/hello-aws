@@ -167,9 +167,26 @@ output "pod_identity_aws_lb_controller_role_arn" {
   value       = aws_iam_role.aws_lb_controller.arn
 }
 
-# VPC Endpoints
-output "eks_endpoint_id" {
-  description = "ID of the EKS Interface Endpoint"
-  value       = var.enable_eks_endpoint ? aws_vpc_endpoint.eks[0].id : null
+# Pod Identity Role: Prometheus
+output "pod_identity_prometheus_role_arn" {
+  description = "IAM role ARN for Prometheus remote-write to AMP"
+  value       = try(aws_iam_role.prometheus[0].arn, null)
 }
 
+# Pod Identity Role: Grafana Pod
+output "pod_identity_grafana_pod_role_arn" {
+  description = "IAM role ARN for self-hosted Grafana"
+  value       = try(aws_iam_role.grafana_pod[0].arn, null)
+}
+
+# Pod Identity Role: Loki
+output "pod_identity_loki_role_arn" {
+  description = "IAM role ARN for Loki S3 storage"
+  value       = try(aws_iam_role.loki[0].arn, null)
+}
+
+# Pod Identity Role: Tempo
+output "pod_identity_tempo_role_arn" {
+  description = "IAM role ARN for Tempo S3 storage"
+  value       = try(aws_iam_role.tempo[0].arn, null)
+}

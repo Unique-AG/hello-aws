@@ -1,0 +1,14 @@
+spec:
+  name: loki
+  autoSync: false
+  sources:
+    - repoURL: '<GITHUB_REPO_URL>'
+      targetRevision: <GIT_TARGET_REVISION>
+      ref: values
+    - chart: loki
+      repoURL: https://grafana.github.io/helm-charts
+      targetRevision: 6.29.0
+      helm:
+        releaseName: loki
+        valueFiles:
+          - $values/06-applications/sbx/values/observability/loki.yaml

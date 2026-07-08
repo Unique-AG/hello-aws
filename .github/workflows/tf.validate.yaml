@@ -1,0 +1,76 @@
+name: '[tf] Validate'
+on:
+  pull_request:
+    # Broad on purpose: any change to layer code, tfvars, the deploy workflow,
+    # the composite action, or the common tfvars triggers validate so the
+    # branch-protection ruleset always has a status check to gate on. Some
+    # paths (e.g. layer README updates) over-trigger; that's cheap noise vs
+    # missing-check stalls on PRs that legitimately need to merge.
+    paths:
+      - '0[1-5]-*/**'
+      - 'modules/**'
+      - 'scripts/**'
+      - 'common.auto.tfvars'
+      - '.github/workflows/**'
+      - '.github/actions/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - layer: bootstrap
+            dir: 01-bootstrap
+          - layer: governance
+            dir: 02-governance
+          - layer: infrastructure
+            dir: 03-infrastructure
+          - layer: data-and-ai
+            dir: 04-data-and-ai
+          - layer: compute
+            dir: 05-compute
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: '1.14.0'
+      - name: fmt
+        run: terraform -chdir=${{ matrix.dir }}/terraform fmt -check -recursive
+      - name: init
+        run: terraform -chdir=${{ matrix.dir }}/terraform init -backend=false
+      - name: validate
+        run: terraform -chdir=${{ matrix.dir }}/terraform validate -no-color
+      - name: tflint
+        uses: terraform-linters/setup-tflint@90f302c255ef959cbfb4bd10581afecdb7ece3e6 # v4.1.1
+        with:
+          tflint_version: v0.62.1
+      - run: |
+          tflint --init
+          tflint --chdir=${{ matrix.dir }}/terraform
+      - name: trivy
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ matrix.dir }}/terraform
+          scanners: misconfig
+          severity: HIGH,CRITICAL
+          trivyignores: .trivyignore
+          # Resolve naming-module vars so the AWS provider's default_tags map
+          # doesn't contain nulls — trivy 0.70.0's adaptDefaultTags panics on
+          # AsString of a null value otherwise. Use the tracked *.template
+          # (common.auto.tfvars itself is gitignored — real values live only on
+          # the deploy branch); its example values are sufficient for the scan.
+          tf-vars: common.auto.tfvars.template,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars
+      # bridgecrewio/checkov-action's last release (2022) ships checkov 2.0.930,
+      # which predates the split S3 resource pattern (separate versioning /
+      # encryption / logging resources). Install checkov 3.x directly so rules
+      # match docs/security-baseline.md.
+      - name: Install checkov
+        run: pipx install checkov==3.2.526
+      - name: checkov
+        run: checkov -d ${{ matrix.dir }}/terraform --framework terraform --quiet --compact

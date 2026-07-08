@@ -6,13 +6,16 @@ resource "random_string" "s3_suffix" {
 
 # S3 Bucket for Application Data
 resource "aws_s3_bucket" "application_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
-  tags = {
+  tags = merge(module.naming.tags, {
     Name    = "s3-${module.naming.id}-application-data-${random_string.s3_suffix.result}"
     Purpose = "application-data"
-  }
+  })
 }
 
 resource "aws_s3_bucket_versioning" "application_data" {
@@ -47,7 +50,7 @@ resource "aws_s3_bucket_public_access_block" "application_data" {
 # VPC-only access — denies data operations unless via S3 Gateway Endpoint
 # Management operations (GetBucketPolicy, etc.) are not denied to allow Terraform access
 data "aws_iam_policy_document" "application_data_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   statement {
     sid    = "DenyDataAccessExceptVpcEndpoint"
@@ -84,7 +87,7 @@ data "aws_iam_policy_document" "application_data_vpc_only" {
 }
 
 resource "aws_s3_bucket_policy" "application_data_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   bucket = aws_s3_bucket.application_data.id
   policy = data.aws_iam_policy_document.application_data_vpc_only[0].json
@@ -134,13 +137,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "application_data" {
 
 # S3 Bucket for AI/ML Data
 resource "aws_s3_bucket" "ai_data" {
+  #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
   bucket        = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
   force_destroy = var.s3_force_destroy
 
-  tags = {
+  tags = merge(module.naming.tags, {
     Name    = "s3-${module.naming.id}-ai-data-${random_string.s3_suffix.result}"
     Purpose = "ai-data"
-  }
+  })
 }
 
 resource "aws_s3_bucket_versioning" "ai_data" {
@@ -174,7 +180,7 @@ resource "aws_s3_bucket_public_access_block" "ai_data" {
 
 # VPC-only access — same policy as application_data bucket
 data "aws_iam_policy_document" "ai_data_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   statement {
     sid    = "DenyDataAccessExceptVpcEndpoint"
@@ -211,10 +217,50 @@ data "aws_iam_policy_document" "ai_data_vpc_only" {
 }
 
 resource "aws_s3_bucket_policy" "ai_data_vpc_only" {
-  count = local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
+  count = var.enable_s3_vpc_only_policy && local.infrastructure.s3_gateway_endpoint_id != null ? 1 : 0
 
   bucket = aws_s3_bucket.ai_data.id
   policy = data.aws_iam_policy_document.ai_data_vpc_only[0].json
 
   depends_on = [aws_s3_bucket_public_access_block.ai_data]
+}
+
+# Lifecycle — transition to cheaper storage classes
+resource "aws_s3_bucket_lifecycle_configuration" "ai_data" {
+  bucket = aws_s3_bucket.ai_data.id
+
+  rule {
+    id     = "transition-to-ia"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 30
+      storage_class = "STANDARD_IA"
+    }
+  }
+
+  rule {
+    id     = "transition-to-glacier"
+    status = "Enabled"
+
+    filter {}
+
+    transition {
+      days          = 90
+      storage_class = "GLACIER"
+    }
+  }
+
+  rule {
+    id     = "abort-incomplete-multipart"
+    status = "Enabled"
+
+    filter {}
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
 }

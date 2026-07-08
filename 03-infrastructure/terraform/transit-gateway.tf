@@ -56,7 +56,7 @@ resource "aws_iam_role" "connectivity_account" {
         Action = "sts:AssumeRole"
         Condition = {
           StringEquals = {
-            "aws:PrincipalOrgID" = data.aws_organizations_organization.current.id
+            "aws:PrincipalOrgID" = data.aws_organizations_organization.current[0].id
           }
           ArnLike = {
             "aws:PrincipalArn" = [

@@ -2,7 +2,7 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-app-repository
-  tag: "2026.06.1"
+  tag: "2026.22.0"
 
 routes:
   hostname: <DOMAIN_API>
