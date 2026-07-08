@@ -11,4 +11,4 @@ spec:
       helm:
         releaseName: storage-class-efs
         valueFiles:
-          - $values/06-applications/sbx/values/storage-class/efs.yaml
+          - $values/06-applications/sbx/value-overlays/storage-class/efs.yaml

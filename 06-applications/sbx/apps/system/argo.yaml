@@ -11,11 +11,11 @@ spec:
       helm:
         releaseName: argo
         valueFiles:
-          - $values/06-applications/sbx/values/argo/argo.yaml
+          - $values/06-applications/sbx/value-overlays/argo/argo.yaml
     - chart: argocd-apps
       repoURL: https://argoproj.github.io/argo-helm
       targetRevision: 2.0.2
       helm:
         releaseName: argo-appsets
         valueFiles:
-          - $values/06-applications/sbx/values/argo/argo-appsets.yaml
+          - $values/06-applications/sbx/value-overlays/argo/argo-appsets.yaml

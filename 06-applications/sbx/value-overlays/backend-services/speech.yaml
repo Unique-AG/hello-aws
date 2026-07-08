@@ -3,7 +3,6 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-speech
-  tag: "2026.22.0"
 
 replicaCount: 2
 

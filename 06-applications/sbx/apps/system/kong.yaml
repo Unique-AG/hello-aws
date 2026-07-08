@@ -11,42 +11,42 @@ spec:
       helm:
         releaseName: kong-plugins
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-plugins.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-plugins.yaml
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
       helm:
         releaseName: kong-gateway-environment
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-gateway-environment.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-gateway-environment.yaml
     - chart: ingress
       repoURL: https://charts.konghq.com
       targetRevision: 0.24.0
       helm:
         releaseName: kong
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-controller.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-controller.yaml
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
       helm:
         releaseName: kong-cluster-plugins
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-cluster-plugins.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-cluster-plugins.yaml
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
       helm:
         releaseName: kong-gateway
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-gateway.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-gateway.yaml
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
       helm:
         releaseName: kong-ingress
         valueFiles:
-          - $values/06-applications/sbx/values/kong/kong-ingress.yaml
+          - $values/06-applications/sbx/value-overlays/kong/kong-ingress.yaml
   ignoreDifferences:
     - group: ""
       kind: Secret

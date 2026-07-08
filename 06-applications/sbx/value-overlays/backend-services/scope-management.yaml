@@ -6,7 +6,6 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-scope-management
-  tag: "2026.22.0"
 
 extraRoutes:
   scim:

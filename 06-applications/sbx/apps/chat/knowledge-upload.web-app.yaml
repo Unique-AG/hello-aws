@@ -12,6 +12,8 @@ spec:
         releaseName: web-app-knowledge-upload
         valueFiles:
           - $values/06-applications/defaults/web-apps/knowledge-upload.yaml
-          - $values/06-applications/sbx/values/web-apps/_all.yaml
-          - $values/06-applications/sbx/values/web-apps/knowledge-upload.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/web-apps/_all.yaml
+          - $values/06-applications/sbx/value-overlays/web-apps/knowledge-upload.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

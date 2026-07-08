@@ -11,4 +11,4 @@ spec:
       helm:
         releaseName: reloader
         valueFiles:
-          - $values/06-applications/sbx/values/reloader/reloader.yaml
+          - $values/06-applications/sbx/value-overlays/reloader/reloader.yaml

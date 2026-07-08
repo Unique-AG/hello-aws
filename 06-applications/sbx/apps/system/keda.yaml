@@ -13,7 +13,7 @@ spec:
       helm:
         releaseName: keda
         valueFiles:
-          - $values/06-applications/sbx/values/keda/keda.yaml
+          - $values/06-applications/sbx/value-overlays/keda/keda.yaml
   ignoreDifferences:
     - group: admissionregistration.k8s.io
       kind: ValidatingWebhookConfiguration

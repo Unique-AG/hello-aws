@@ -30,5 +30,7 @@ spec:
         releaseName: ingestor
         valueFiles:
           - $values/06-applications/defaults/ai-services/ingestor.yaml
-          - $values/06-applications/sbx/values/ai-services/ingestor.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/ai-services/ingestor.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

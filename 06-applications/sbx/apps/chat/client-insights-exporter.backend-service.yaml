@@ -12,6 +12,8 @@ spec:
         releaseName: client-insights-exporter
         valueFiles:
           - $values/06-applications/defaults/backend-services/client-insights-exporter.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/client-insights-exporter.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/client-insights-exporter.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

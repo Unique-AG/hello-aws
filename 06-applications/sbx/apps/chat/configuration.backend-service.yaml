@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-configuration
         valueFiles:
           - $values/06-applications/defaults/backend-services/configuration.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/configuration.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/configuration.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

@@ -97,7 +97,7 @@ All parameters in `<env>/instance-config.yaml`:
     ├── charts/
     │   ├── backend-service/          # Local Helm chart for backend services
     │   └── web-app/                  # Local Helm chart for web apps
-    └── values/
+    └── value-overlays/
         ├── _common.yaml              # Shared values (ECR registry)
         ├── argo/                     # ArgoCD + ApplicationSet values
         ├── cert-manager/             # cert-manager + ClusterIssuer
@@ -171,7 +171,7 @@ client-insights-exporter
 ## LiteLLM — Bedrock Model Configuration
 
 LiteLLM proxies all LLM and embedding traffic through AWS Bedrock. Models are configured
-in `values/litellm/litellm.yaml` under `proxy_config.model_list`.
+in `value-overlays/litellm/litellm.yaml` under `proxy_config.model_list`.
 
 **Chat/completion models** use EU cross-region inference profiles (`eu.*` prefix) directly:
 ```yaml
@@ -242,10 +242,10 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
          helm:
            releaseName: my-service
            valueFiles:
-             - $values/06-applications/sbx/values/my-service/values.yaml
+             - $values/06-applications/sbx/value-overlays/my-service/values.yaml
    ```
 
-2. **Create values file** in `sbx/values/my-service/values.yaml`
+2. **Create values file** in `sbx/value-overlays/my-service/values.yaml`
 
 3. If needed, add **default values** in `defaults/` (environment-independent config)
 

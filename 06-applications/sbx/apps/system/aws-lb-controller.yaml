@@ -11,4 +11,4 @@ spec:
       helm:
         releaseName: aws-load-balancer-controller
         valueFiles:
-          - $values/06-applications/sbx/values/aws-lb-controller/aws-lb-controller.yaml
+          - $values/06-applications/sbx/value-overlays/aws-lb-controller/aws-lb-controller.yaml

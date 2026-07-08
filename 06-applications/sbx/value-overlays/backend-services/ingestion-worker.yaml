@@ -3,7 +3,6 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion-worker
-  tag: "2026.22.0"
 
 env:
   LLM_PROVIDER: bedrock

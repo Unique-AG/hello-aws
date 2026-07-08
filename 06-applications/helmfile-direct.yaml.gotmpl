@@ -1,6 +1,12 @@
 # Direct deploy helmfile — bypasses ArgoCD
 # Deploys all 06-applications charts directly via helm.
 #
+# DEV/DEBUG ESCAPE HATCH — NOT a release path. Unique release image tags are
+# pinned in the ArgoCD Application specs (sbx/apps/*.yaml -> helm.valuesObject.
+# image.tag), which only ArgoCD reads. A direct deploy here uses each chart's
+# DEFAULT image tag, NOT the release version. Use the ArgoCD path for releases;
+# use this only for local iteration/debugging.
+#
 # Prerequisites:
 #   1. Run configure-instance.sh to replace placeholders
 #   2. Create the namespace:  kubectl create namespace unique
@@ -14,7 +20,7 @@
 #   helmfile -e sbx -f helmfile-direct.yaml.gotmpl -l name=cert-manager sync  # single app
 #
 # NOTE: rabbitmq-chat (directory-based app) is not managed by this helmfile.
-#   Apply it manually:  kubectl apply -f sbx/values/rabbitmq/
+#   Apply it manually:  kubectl apply -f sbx/value-overlays/rabbitmq/
 
 environments:
   sbx:
@@ -70,7 +76,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/storage-class/gp3.yaml
+      - {{ .Values.env }}/value-overlays/storage-class/gp3.yaml
 
   # ── cert-manager ───────────────────────────
   - name: cert-manager
@@ -80,7 +86,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/cert-manager/cert-manager.yaml
+      - {{ .Values.env }}/value-overlays/cert-manager/cert-manager.yaml
 
   - name: clusterissuer-route53-dns
     namespace: unique
@@ -92,7 +98,7 @@ releases:
       tier: system
       parent: cert-manager
     values:
-      - {{ .Values.env }}/values/cert-manager/cluster-issuer-route53.yaml
+      - {{ .Values.env }}/value-overlays/cert-manager/cluster-issuer-route53.yaml
 
   # ── external-secrets ───────────────────────
   - name: external-secrets
@@ -102,7 +108,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/external-secrets/external-secrets.yaml
+      - {{ .Values.env }}/value-overlays/external-secrets/external-secrets.yaml
 
   - name: cluster-secret-store
     namespace: unique
@@ -114,7 +120,7 @@ releases:
       tier: system
       parent: external-secrets
     values:
-      - {{ .Values.env }}/values/external-secrets/cluster-secret-store.yaml
+      - {{ .Values.env }}/value-overlays/external-secrets/cluster-secret-store.yaml
 
   - name: application-secrets
     namespace: unique
@@ -126,7 +132,7 @@ releases:
       tier: system
       parent: external-secrets
     values:
-      - {{ .Values.env }}/values/external-secrets/application-secrets.yaml
+      - {{ .Values.env }}/value-overlays/external-secrets/application-secrets.yaml
 
   # ── reloader ───────────────────────────────
   - name: reloader
@@ -136,7 +142,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/reloader/reloader.yaml
+      - {{ .Values.env }}/value-overlays/reloader/reloader.yaml
 
   # ── aws-lb-controller ─────────────────────
   - name: aws-load-balancer-controller
@@ -146,7 +152,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/aws-lb-controller/aws-lb-controller.yaml
+      - {{ .Values.env }}/value-overlays/aws-lb-controller/aws-lb-controller.yaml
 
   # ── keda ───────────────────────────────────
   - name: keda
@@ -156,7 +162,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/keda/keda.yaml
+      - {{ .Values.env }}/value-overlays/keda/keda.yaml
 
   # ── eck-operator ───────────────────────────
   - name: eck-operator
@@ -178,7 +184,7 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/elasticsearch/elasticsearch.yaml
+      - {{ .Values.env }}/value-overlays/elasticsearch/elasticsearch.yaml
 
   # ── rabbitmq-operator ──────────────────────
   - name: rabbitmq-cluster-operator
@@ -197,7 +203,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/gateway-api-crds.yaml
+      - {{ .Values.env }}/value-overlays/kong/gateway-api-crds.yaml
 
   - name: kong-plugins
     namespace: unique
@@ -207,7 +213,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-plugins.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-plugins.yaml
 
   - name: kong-gateway-environment
     namespace: unique
@@ -217,7 +223,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-gateway-environment.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-gateway-environment.yaml
 
   - name: kong
     namespace: unique
@@ -229,7 +235,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-controller.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-controller.yaml
 
   - name: kong-cluster-plugins
     namespace: unique
@@ -241,7 +247,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-cluster-plugins.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-cluster-plugins.yaml
 
   - name: kong-gateway
     namespace: unique
@@ -253,7 +259,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-gateway.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-gateway.yaml
 
   - name: kong-ingress
     namespace: unique
@@ -265,7 +271,7 @@ releases:
       tier: system
       parent: kong
     values:
-      - {{ .Values.env }}/values/kong/kong-ingress.yaml
+      - {{ .Values.env }}/value-overlays/kong/kong-ingress.yaml
 
   # ── kube-prometheus-stack ──────────────────
   - name: kube-prometheus-stack
@@ -276,7 +282,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/kube-prometheus-stack.yaml
+      - {{ .Values.env }}/value-overlays/observability/kube-prometheus-stack.yaml
 
   # ── loki ─────────────────────────────────
   - name: loki
@@ -287,7 +293,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/loki.yaml
+      - {{ .Values.env }}/value-overlays/observability/loki.yaml
 
   # ── alloy ────────────────────────────────
   - name: alloy-config
@@ -298,7 +304,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/alloy-config-cm.yaml
+      - {{ .Values.env }}/value-overlays/observability/alloy-config-cm.yaml
 
   - name: alloy
     namespace: unique
@@ -310,7 +316,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/alloy.yaml
+      - {{ .Values.env }}/value-overlays/observability/alloy.yaml
 
   # ── tempo ────────────────────────────────
   - name: tempo
@@ -321,7 +327,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/tempo.yaml
+      - {{ .Values.env }}/value-overlays/observability/tempo.yaml
 
   # ── observability-secrets ────────────────
   - name: observability-secrets
@@ -334,7 +340,7 @@ releases:
       tier: system
       group: observability
     values:
-      - {{ .Values.env }}/values/observability/external-secrets.yaml
+      - {{ .Values.env }}/value-overlays/observability/external-secrets.yaml
 
   # ── zitadel ────────────────────────────────
   - name: zitadel
@@ -346,8 +352,8 @@ releases:
     labels:
       tier: system
     values:
-      - {{ .Values.env }}/values/zitadel/zitadel.yaml
-      - {{ .Values.env }}/values/zitadel/zitadel-extra-manifests.yaml
+      - {{ .Values.env }}/value-overlays/zitadel/zitadel.yaml
+      - {{ .Values.env }}/value-overlays/zitadel/zitadel-extra-manifests.yaml
       - zitadel:
           secretConfig:
             FirstInstance:
@@ -402,7 +408,7 @@ releases:
       tier: chat
       group: data
     values:
-      - {{ .Values.env }}/values/litellm/litellm-db-init.yaml
+      - {{ .Values.env }}/value-overlays/litellm/litellm-db-init.yaml
 
   - name: litellm
     namespace: unique
@@ -414,7 +420,7 @@ releases:
       tier: chat
       group: data
     values:
-      - {{ .Values.env }}/values/litellm/litellm.yaml
+      - {{ .Values.env }}/value-overlays/litellm/litellm.yaml
 
   # ── data: docling-models-pvc ───────────────
   - name: docling-models-pvc
@@ -451,7 +457,7 @@ releases:
       group: ai-services
     values:
       - defaults/ai-services/assistants-core.yaml
-      - {{ .Values.env }}/values/ai-services/assistants-core.yaml
+      - {{ .Values.env }}/value-overlays/ai-services/assistants-core.yaml
 
   - name: ingestor
     namespace: unique
@@ -465,7 +471,7 @@ releases:
       group: ai-services
     values:
       - defaults/ai-services/ingestor.yaml
-      - {{ .Values.env }}/values/ai-services/ingestor.yaml
+      - {{ .Values.env }}/value-overlays/ai-services/ingestor.yaml
 
   # ── backend-services ───────────────────────
   - name: backend-service-scope-management
@@ -479,8 +485,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/scope-management.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/scope-management.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/scope-management.yaml
 
   - name: backend-service-chat
     namespace: unique
@@ -493,8 +499,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/chat.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/chat.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/chat.yaml
 
   - name: backend-service-ingestion
     namespace: unique
@@ -507,8 +513,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/ingestion.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/ingestion.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/ingestion.yaml
 
   - name: backend-service-ingestion-worker
     namespace: unique
@@ -521,8 +527,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/ingestion-worker.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/ingestion-worker.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/ingestion-worker.yaml
       - env:
           INGESTION_QUEUE: queue
         keda:
@@ -552,8 +558,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/ingestion-worker.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/ingestion-worker.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/ingestion-worker.yaml
       - env:
           INGESTION_QUEUE: chat_queue
         keda:
@@ -583,8 +589,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/configuration.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/configuration.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/configuration.yaml
 
   - name: backend-service-app-repository
     namespace: unique
@@ -597,8 +603,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/app-repository.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/app-repository.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/app-repository.yaml
 
   - name: backend-service-event-socket
     namespace: unique
@@ -611,8 +617,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/event-socket.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/event-socket.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/event-socket.yaml
 
   - name: backend-service-speech
     namespace: unique
@@ -625,8 +631,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/speech.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/speech.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/speech.yaml
 
   - name: backend-service-webhook-scheduler
     namespace: unique
@@ -639,8 +645,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/webhook-scheduler.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/webhook-scheduler.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/webhook-scheduler.yaml
 
   - name: backend-service-webhook-worker
     namespace: unique
@@ -653,8 +659,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/webhook-worker.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/webhook-worker.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/webhook-worker.yaml
 
   - name: client-insights-exporter
     namespace: unique
@@ -667,8 +673,8 @@ releases:
       group: backend-services
     values:
       - defaults/backend-services/client-insights-exporter.yaml
-      - {{ .Values.env }}/values/backend-services/_all.yaml
-      - {{ .Values.env }}/values/backend-services/client-insights-exporter.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/_all.yaml
+      - {{ .Values.env }}/value-overlays/backend-services/client-insights-exporter.yaml
 
   # ── web-apps ───────────────────────────────
   - name: web-app-chat
@@ -682,8 +688,8 @@ releases:
       group: web-apps
     values:
       - defaults/web-apps/chat.yaml
-      - {{ .Values.env }}/values/web-apps/_all.yaml
-      - {{ .Values.env }}/values/web-apps/chat.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/_all.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/chat.yaml
 
   - name: web-app-admin
     namespace: unique
@@ -696,8 +702,8 @@ releases:
       group: web-apps
     values:
       - defaults/web-apps/admin.yaml
-      - {{ .Values.env }}/values/web-apps/_all.yaml
-      - {{ .Values.env }}/values/web-apps/admin.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/_all.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/admin.yaml
 
   - name: web-app-knowledge-upload
     namespace: unique
@@ -710,8 +716,8 @@ releases:
       group: web-apps
     values:
       - defaults/web-apps/knowledge-upload.yaml
-      - {{ .Values.env }}/values/web-apps/_all.yaml
-      - {{ .Values.env }}/values/web-apps/knowledge-upload.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/_all.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/knowledge-upload.yaml
 
   - name: web-app-theme
     namespace: unique
@@ -724,5 +730,5 @@ releases:
       group: web-apps
     values:
       - defaults/web-apps/theme.yaml
-      - {{ .Values.env }}/values/web-apps/_all.yaml
-      - {{ .Values.env }}/values/web-apps/theme.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/_all.yaml
+      - {{ .Values.env }}/value-overlays/web-apps/theme.yaml

@@ -12,4 +12,3 @@ env:
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/web-app-chat
-  tag: "2026.22.0"

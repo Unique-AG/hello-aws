@@ -11,4 +11,4 @@ spec:
       helm:
         releaseName: storage-class-gp3
         valueFiles:
-          - $values/06-applications/sbx/values/storage-class/gp3.yaml
+          - $values/06-applications/sbx/value-overlays/storage-class/gp3.yaml

@@ -11,11 +11,11 @@ spec:
       helm:
         releaseName: litellm-db-init
         valueFiles:
-          - $values/06-applications/sbx/values/litellm/litellm-db-init.yaml
+          - $values/06-applications/sbx/value-overlays/litellm/litellm-db-init.yaml
     - chart: litellm
       repoURL: ghcr.io/unique-ag/helm-charts
       targetRevision: 1.72.2
       helm:
         releaseName: litellm
         valueFiles:
-          - $values/06-applications/sbx/values/litellm/litellm.yaml
+          - $values/06-applications/sbx/value-overlays/litellm/litellm.yaml

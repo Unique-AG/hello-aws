@@ -11,4 +11,4 @@ spec:
       helm:
         releaseName: loki
         valueFiles:
-          - $values/06-applications/sbx/values/observability/loki.yaml
+          - $values/06-applications/sbx/value-overlays/observability/loki.yaml

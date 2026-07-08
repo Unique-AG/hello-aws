@@ -3,7 +3,6 @@
 
 image:
   repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
-  tag: "2026.22.0"
 
 env:
   AWS_REGION: <AWS_REGION>

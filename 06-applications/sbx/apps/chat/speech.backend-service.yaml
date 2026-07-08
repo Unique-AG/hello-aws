@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-speech
         valueFiles:
           - $values/06-applications/defaults/backend-services/speech.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/speech.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/speech.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

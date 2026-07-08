@@ -12,6 +12,8 @@ spec:
         releaseName: backend-service-event-socket
         valueFiles:
           - $values/06-applications/defaults/backend-services/event-socket.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/event-socket.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/event-socket.yaml
+        valuesObject:
+          image:
+            tag: "2026.22.0"

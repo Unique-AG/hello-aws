@@ -11,8 +11,8 @@ spec:
       helm:
         releaseName: zitadel
         valueFiles:
-          - $values/06-applications/sbx/values/zitadel/zitadel.yaml
-          - $values/06-applications/sbx/values/zitadel/zitadel-extra-manifests.yaml
+          - $values/06-applications/sbx/value-overlays/zitadel/zitadel.yaml
+          - $values/06-applications/sbx/value-overlays/zitadel/zitadel-extra-manifests.yaml
         valuesObject:
           zitadel:
             secretConfig:
