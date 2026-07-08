@@ -16,7 +16,9 @@ export default defineConfig({
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Always serial: the suite runs against one shared tenant with a single test
+  // user, so parallel workers would race the same session/spaces.
+  workers: 1,
   timeout: 2 * 60 * 1000,
   reporter: process.env.CI
     ? [['html', { open: 'never' }], ['list']]

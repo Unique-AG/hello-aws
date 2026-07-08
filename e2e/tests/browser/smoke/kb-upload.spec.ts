@@ -1,19 +1,18 @@
 import { test, expect } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { config } from '../../../config';
-import { getServiceUserToken } from '../../../auth/token';
+import { getBrowserUserToken } from '../../../auth/token';
 import { createFolder, deleteScope } from '../../../lib/ingestion';
 
 const SEED = fileURLToPath(new URL('../../../resources/exampleText.txt', import.meta.url));
 
 /**
- * UI file upload into a fresh KB folder.
- * NOTE: the folder is created via API then opened in the UI; the upload control
- * + success-toast selectors may need adjustment on the first live run. If the
- * browser user can't see an API-created scope, create the folder in the UI too.
+ * UI file upload into a fresh KB folder. The folder is created with the browser
+ * user's own token (from the saved session) so that user can see/open it in the
+ * UI — creating it as the service user causes a 403 in the browser.
  */
 test('@smoke browser — upload a file in Knowledge Base', async ({ page }) => {
-  const token = await getServiceUserToken();
+  const token = getBrowserUserToken();
   const scopeId = await createFolder(token, `smoke-kb-${Date.now()}`);
   try {
     await page.goto(`${config.knowledgeUploadAppURL}/${scopeId}`);

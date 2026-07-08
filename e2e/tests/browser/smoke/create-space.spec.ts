@@ -18,8 +18,14 @@ test('@smoke browser — create a Space V2', async ({ page }) => {
 
   const createButton = page.getByRole('button', { name: /create( space)?/i }).last();
   const [resp] = await Promise.all([
+    // Match the CreateAssistant mutation specifically — the form fires several
+    // /chat/graphql POSTs, so filter on the operation in the request body.
     page.waitForResponse(
-      (r) => r.url().includes('/chat/graphql') && r.request().method() === 'POST' && r.status() === 200,
+      (r) =>
+        r.url().includes('/chat/graphql') &&
+        r.request().method() === 'POST' &&
+        r.ok() &&
+        /createAssistant/i.test(r.request().postData() ?? ''),
       { timeout: 30_000 },
     ),
     createButton.click(),

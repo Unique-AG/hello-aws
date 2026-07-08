@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { config } from '../config';
 import { postForm } from '../lib/http';
 
@@ -37,3 +38,21 @@ export function decodeJwt(token: string): Record<string, any> {
 export const getUserIdFromToken = (t: string): string => decodeJwt(t).sub;
 export const getCompanyIdFromToken = (t: string): string =>
   decodeJwt(t)['urn:zitadel:iam:user:resourceowner:id'];
+
+/**
+ * Extract the logged-in browser user's OIDC access token from the saved
+ * storageState, so API calls (e.g. folder create) are owned by that user and
+ * remain visible in the UI. Requires the `setup` project to have run.
+ */
+export function getBrowserUserToken(authFile = '.auth/user.json'): string {
+  const state = JSON.parse(readFileSync(authFile, 'utf8'));
+  for (const origin of state.origins ?? []) {
+    for (const item of origin.localStorage ?? []) {
+      if (typeof item?.name === 'string' && item.name.includes('oidc.user:')) {
+        const parsed = JSON.parse(item.value);
+        if (parsed?.access_token) return parsed.access_token as string;
+      }
+    }
+  }
+  throw new Error(`No oidc.user access_token found in ${authFile} — did the setup/login step run?`);
+}

@@ -19,7 +19,22 @@ setup('Authenticate single user @watchdog @smoke', async ({ page }) => {
   // Zitadel hosted login: username → Next → password → Next.
   await page.getByPlaceholder('username').fill(config.user.username);
   await page.getByRole('button', { name: 'Next' }).click();
-  await page.getByLabel('Password').fill(config.user.password);
+
+  // Fail loudly + fast if the loginname isn't recognised (wrong user/org).
+  const notFound = page.getByText('User could not be found');
+  const passwordField = page.locator('input[type="password"]');
+  await expect(
+    passwordField.or(notFound).first(),
+    'password field should appear after entering the loginname',
+  ).toBeVisible({ timeout: 15_000 });
+  if (await notFound.isVisible().catch(() => false)) {
+    throw new Error(
+      `Zitadel rejected loginname "${config.user.username}" (User could not be found). ` +
+        `TEST_USER must be an existing loginname in the Unique organization.`,
+    );
+  }
+
+  await passwordField.fill(config.user.password);
   await page.getByRole('button', { name: 'Next' }).click();
 
   // Optional: skip 2FA setup prompt.
@@ -43,6 +58,15 @@ setup('Authenticate single user @watchdog @smoke', async ({ page }) => {
   const spacesNav = page.getByRole('link', { name: 'Spaces', exact: true });
   const exploreSpaces = page.getByRole('button', { name: 'Explore Spaces', exact: true });
   await expect(chatInput.or(spacesNav).or(exploreSpaces).first()).toBeVisible({ timeout: 30_000 });
+
+  // First-login in-app Terms & Conditions modal (distinct from the Zitadel one):
+  // accept it so it persists server-side and never blocks the chat UI.
+  const tcAgree = page.getByRole('checkbox', { name: /I have read and I agree to the Terms/i });
+  if (await tcAgree.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    await tcAgree.check();
+    await page.getByRole('button', { name: 'Agree' }).click();
+    await expect(tcAgree).toBeHidden({ timeout: 10_000 });
+  }
 
   await page.context().storageState({ path: AUTH_FILE });
 });
