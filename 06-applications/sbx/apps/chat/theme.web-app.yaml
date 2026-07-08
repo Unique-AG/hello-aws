@@ -16,4 +16,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/web-apps/theme.yaml
         valuesObject:
           image:
-            tag: "2026.22.0"
+            tag: "2026.24.0"
