@@ -2,9 +2,6 @@ spec:
   name: kong
   autoSync: false
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
-      ref: values
     - chart: kong-plugins
       repoURL: ghcr.io/unique-ag/helm-charts
       targetRevision: 1.2.1

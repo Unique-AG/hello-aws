@@ -4,9 +4,6 @@ spec:
   syncOptions:
     - ServerSideApply=true
   sources:
-    - repoURL: '<GITHUB_REPO_URL>'
-      targetRevision: <GIT_TARGET_REVISION>
-      ref: values
     - chart: keda
       repoURL: https://kedacore.github.io/charts
       targetRevision: 2.19.0

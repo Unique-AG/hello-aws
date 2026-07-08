@@ -23,8 +23,19 @@ applicationsets:
     templatePatch: |
       spec:
         {{- if hasKey .spec "sources" }}
+        {{- $usesValues := false }}
+        {{- range .spec.sources }}
+        {{- if .helm }}{{- range .helm.valueFiles }}{{- if hasPrefix "$values" . }}{{- $usesValues = true }}{{- end }}{{- end }}{{- end }}
+        {{- end }}
         sources:
-          {{- .spec.sources | toYaml | nindent 4 }}
+          {{- if $usesValues }}
+          - ref: values
+            repoURL: <GITHUB_REPO_URL>
+            targetRevision: <GIT_TARGET_REVISION>
+          {{- end }}
+          {{- range .spec.sources }}
+          - {{ toYaml . | nindent 6 | trim }}
+          {{- end }}
         {{- else }}
         source:
           {{- .spec.source | toYaml | nindent 4 }}
@@ -74,8 +85,19 @@ applicationsets:
     templatePatch: |
       spec:
         {{- if hasKey .spec "sources" }}
+        {{- $usesValues := false }}
+        {{- range .spec.sources }}
+        {{- if .helm }}{{- range .helm.valueFiles }}{{- if hasPrefix "$values" . }}{{- $usesValues = true }}{{- end }}{{- end }}{{- end }}
+        {{- end }}
         sources:
-          {{- .spec.sources | toYaml | nindent 4 }}
+          {{- if $usesValues }}
+          - ref: values
+            repoURL: <GITHUB_REPO_URL>
+            targetRevision: <GIT_TARGET_REVISION>
+          {{- end }}
+          {{- range .spec.sources }}
+          - {{ toYaml . | nindent 6 | trim }}
+          {{- end }}
         {{- else }}
         source:
           {{- .spec.source | toYaml | nindent 4 }}
