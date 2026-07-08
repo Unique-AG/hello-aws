@@ -20,6 +20,9 @@ jobs:
   watchdog:
     name: 🐕‍🦺 AWS Watchdog (browser + API)
     runs-on: ubuntu-latest
+    # Secrets/vars live in this gated Environment (add required reviewers +
+    # restrict to the default branch in repo settings → Environments).
+    environment: e2e-aws
     timeout-minutes: 15
     defaults:
       run:

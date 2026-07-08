@@ -18,6 +18,9 @@ jobs:
   smoke:
     name: 💨 AWS Smoke (browser + API)
     runs-on: ubuntu-latest
+    # Secrets/vars live in this gated Environment (add required reviewers +
+    # restrict to the default branch in repo settings → Environments).
+    environment: e2e-aws
     timeout-minutes: 25
     defaults:
       run:
