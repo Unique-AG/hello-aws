@@ -25,7 +25,9 @@ export default defineConfig({
     : [['list']],
   use: {
     baseURL: config.baseURL,
-    trace: 'on-first-retry',
+    // Traces embed full network requests (Authorization: Bearer …) and the OIDC
+    // session; never capture them — artifacts are public on this repo.
+    trace: 'off',
     screenshot: 'only-on-failure',
     viewport: { width: 1920, height: 1080 },
   },
