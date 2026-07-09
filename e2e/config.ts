@@ -37,12 +37,12 @@ const IDENTITY_DOMAIN = optional('IDENTITY_DOMAIN', `id.${BASE_DOMAIN}`);
 const APP = `https://${BASE_DOMAIN}`;
 const API = `https://${API_DOMAIN}`;
 
-export const config = {
-  // Free-form label for reports/logs; not load-bearing.
-  testEnv: optional('TEST_ENV', 'AWS'),
+// Where the browser OIDC session is persisted (written by the setup project,
+// read by the browser project + getBrowserUserToken).
+export const AUTH_FILE = '.auth/user.json';
 
+export const config = {
   // ── App (browser) URLs ──────────────────────────────────────────────
-  baseURL: optional('CHAT_APP_URL', `${APP}/chat`),
   chatAppURL: optional('CHAT_APP_URL', `${APP}/chat`),
   knowledgeUploadAppURL: optional('KNOWLEDGE_UPLOAD_APP_URL', `${APP}/knowledge-upload`),
   adminAppURL: optional('ADMIN_APP_URL', `${APP}/admin`),
@@ -50,7 +50,6 @@ export const config = {
   // ── Gateway (API) URLs ──────────────────────────────────────────────
   // NOTE: paths are explicit (not the monorepo's uat1/us1 "legacy vs gen2"
   // heuristic) — AWS uses the /chat + /ingestion form, verified live.
-  scopeManagementApiURL: optional('SCOPE_MANAGEMENT_BACKEND_API_URL', `${API}/scope-management/graphql`),
   chatApiURL: optional('CHAT_BACKEND_API_URL', `${API}/chat/graphql`),
   ingestionApiURL: optional('INGESTION_BACKEND_API_URL', `${API}/ingestion/graphql`),
   appsApiURL: optional('APPS_BACKEND_API_URL', `${API}/apps/graphql`),

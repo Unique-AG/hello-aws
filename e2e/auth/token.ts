@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { config } from '../config';
+import { config, AUTH_FILE } from '../config';
 import { postForm } from '../lib/http';
 
 /**
@@ -44,7 +44,7 @@ export const getCompanyIdFromToken = (t: string): string =>
  * storageState, so API calls (e.g. folder create) are owned by that user and
  * remain visible in the UI. Requires the `setup` project to have run.
  */
-export function getBrowserUserToken(authFile = '.auth/user.json'): string {
+export function getBrowserUserToken(authFile = AUTH_FILE): string {
   const state = JSON.parse(readFileSync(authFile, 'utf8'));
   for (const origin of state.origins ?? []) {
     for (const item of origin.localStorage ?? []) {

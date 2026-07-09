@@ -1,8 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 import fs from 'node:fs';
-import { config } from '../config';
-
-const AUTH_FILE = '.auth/user.json';
+import { config, AUTH_FILE } from '../config';
+import { appChromeReady } from '../lib/ui';
 
 /**
  * Interactive OIDC login against the Zitadel hosted form, then persist the
@@ -54,10 +53,7 @@ setup('Authenticate single user @watchdog @smoke', async ({ page }) => {
   const appHost = new URL(config.chatAppURL).hostname;
   await page.waitForURL((url) => url.hostname === appHost, { timeout: 30_000 });
 
-  const chatInput = page.getByTestId('chat-text-field');
-  const spacesNav = page.getByRole('link', { name: 'Spaces', exact: true });
-  const exploreSpaces = page.getByRole('button', { name: 'Explore Spaces', exact: true });
-  await expect(chatInput.or(spacesNav).or(exploreSpaces).first()).toBeVisible({ timeout: 30_000 });
+  await expect(appChromeReady(page)).toBeVisible({ timeout: 30_000 });
 
   // First-login in-app Terms & Conditions modal (distinct from the Zitadel one):
   // accept it so it persists server-side and never blocks the chat UI.

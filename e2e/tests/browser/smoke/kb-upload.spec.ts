@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { fileURLToPath } from 'node:url';
 import { config } from '../../../config';
 import { getBrowserUserToken } from '../../../auth/token';
 import { createFolder, deleteScope } from '../../../lib/ingestion';
+import { seedFile } from '../../../lib/resources';
 
-const SEED = fileURLToPath(new URL('../../../resources/exampleText.txt', import.meta.url));
+const SEED = seedFile('exampleText.txt');
 
 /**
  * UI file upload into a fresh KB folder. The folder is created with the browser

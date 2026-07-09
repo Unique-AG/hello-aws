@@ -1,5 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
-import { config } from './config';
+import { AUTH_FILE } from './config';
 
 /**
  * Two surfaces, two tiers:
@@ -24,7 +24,7 @@ export default defineConfig({
     ? [['html', { open: 'never' }], ['list']]
     : [['list']],
   use: {
-    baseURL: config.baseURL,
+    // Tests navigate with absolute URLs (config.chatAppURL etc.), so no baseURL.
     // Traces embed full network requests (Authorization: Bearer …) and the OIDC
     // session; never capture them — artifacts are public on this repo.
     trace: 'off',
@@ -40,7 +40,7 @@ export default defineConfig({
     {
       name: 'browser',
       testDir: './tests/browser',
-      use: { ...devices['Desktop Chrome'], storageState: '.auth/user.json' },
+      use: { ...devices['Desktop Chrome'], storageState: AUTH_FILE },
       dependencies: ['setup'],
     },
     {

@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { getServiceUserToken } from '../../../auth/token';
 import { createFolder, uploadFileToKB, waitForIngestionFinished, getFirstChunk, deleteScope } from '../../../lib/ingestion';
+import { seedFile } from '../../../lib/resources';
 
-const SEED = fileURLToPath(new URL('../../../resources/exampleText.txt', import.meta.url));
+const SEED = seedFile('exampleText.txt');
 
 test('@watchdog API ingestion — upload a .txt and verify chunk content', async () => {
   const token = await getServiceUserToken();
