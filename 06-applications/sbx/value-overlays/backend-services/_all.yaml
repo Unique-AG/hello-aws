@@ -60,6 +60,9 @@ env:
   FEATURE_FLAG_NEW_SOURCE_REFERENCES_UN_10906: "true"
   FEATURE_FLAG_AGENTIC_TABLE_REFERENCE_SIDEBAR_COMPONENTS_UN_16483: "true"
   FEATURE_FLAG_AGENTIC_TABLE_NEW_FILES_DROPDOWN_UN_12713: "false"
+  # Enables the Feature Flags management UI in Admin. The frontend gates the
+  # "Feature Flags" settings-panel item on this flag (+ admin access).
+  FEATURE_FLAG_ENABLE_FEATURE_FLAG_MANAGEMENT_UN_18150: "true"
 
 routes:
   hostname: <DOMAIN_API>
