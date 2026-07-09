@@ -42,15 +42,20 @@ only if your DNS differs.
 
 ## Run in CI (your fork)
 
-Two workflows under `.github/workflows/`:
+Two workflows under `.github/workflows/`, both gated behind the `e2e-aws`
+GitHub Environment:
 
-- `playwright-aws-mission-critical.yaml` — watchdog (browser + API), scheduled.
-- `playwright-aws-smoke.yaml` — smoke (browser + API), dispatch + weekday morning.
+- `e2e-watchdog.yaml` — watchdog (browser + API), scheduled.
+- `e2e-smoke.yaml` — smoke (browser + API), dispatch + weekday morning.
 
-Set these as **repo secrets**: `PASSWORD`, `SERVICE_USER_CLIENT_SECRET`
-(and, if you use it, `SLACK_WORKFLOW_BUILDER_WEBHOOK_URL`).
-Set as **repo variables**: `BASE_DOMAIN`, `TEST_ORGANISATION`, `TEST_USER`,
-`ZITADEL_UNIQUE_APP_PROJECT_ID`, `SERVICE_USER_CLIENT_ID`.
+Provide **all** of these as **Environment secrets** on `e2e-aws` (nothing is a
+plaintext variable): `BASE_DOMAIN`, `TEST_ORGANISATION`, `TEST_USER`,
+`ZITADEL_UNIQUE_APP_PROJECT_ID`, `SERVICE_USER_CLIENT_ID`, `PASSWORD`,
+`SERVICE_USER_CLIENT_SECRET` (plus optional `E2E_SLACK_WEBHOOK_URL`).
+
+In the Unique-AG org these are managed as code in the private `infrastructure`
+repo (GitHub Terraform provider) and stored as ciphertext — see that repo's
+`providers/github/unique-ag`. Forkers set their own Environment secrets.
 
 ## Relationship to the internal QA suite
 

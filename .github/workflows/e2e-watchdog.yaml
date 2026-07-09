@@ -29,13 +29,14 @@ jobs:
         working-directory: e2e
     env:
       CI: "true"
-      BASE_DOMAIN: ${{ vars.BASE_DOMAIN || 'hello.aws.unique.dev' }}
       TEST_ENV: AWS
-      TEST_ORGANISATION: ${{ vars.TEST_ORGANISATION }}
-      TEST_USER: ${{ vars.TEST_USER }}
+      # All tenant-identifying values are Environment secrets (not plaintext vars).
+      BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
+      TEST_ORGANISATION: ${{ secrets.TEST_ORGANISATION }}
+      TEST_USER: ${{ secrets.TEST_USER }}
       PASSWORD: ${{ secrets.PASSWORD }}
-      ZITADEL_UNIQUE_APP_PROJECT_ID: ${{ vars.ZITADEL_UNIQUE_APP_PROJECT_ID }}
-      SERVICE_USER_CLIENT_ID: ${{ vars.SERVICE_USER_CLIENT_ID }}
+      ZITADEL_UNIQUE_APP_PROJECT_ID: ${{ secrets.ZITADEL_UNIQUE_APP_PROJECT_ID }}
+      SERVICE_USER_CLIENT_ID: ${{ secrets.SERVICE_USER_CLIENT_ID }}
       SERVICE_USER_CLIENT_SECRET: ${{ secrets.SERVICE_USER_CLIENT_SECRET }}
       SLACK_WEBHOOK_URL: ${{ secrets.E2E_SLACK_WEBHOOK_URL }}
     steps:
