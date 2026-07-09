@@ -49,9 +49,9 @@ GitHub Environment:
 - `e2e-smoke.yaml` — smoke (browser + API), dispatch + weekday morning.
 
 Provide **all** of these as **Environment secrets** on `e2e-aws` (nothing is a
-plaintext variable): `BASE_DOMAIN`, `TEST_ORGANISATION`, `TEST_USER`,
-`ZITADEL_UNIQUE_APP_PROJECT_ID`, `SERVICE_USER_CLIENT_ID`, `PASSWORD`,
-`SERVICE_USER_CLIENT_SECRET` (plus optional `E2E_SLACK_WEBHOOK_URL`).
+plaintext variable): `BASE_DOMAIN`, `TEST_USER`, `ZITADEL_UNIQUE_APP_PROJECT_ID`,
+`SERVICE_USER_CLIENT_ID`, `PASSWORD`, `SERVICE_USER_CLIENT_SECRET` (plus optional
+`E2E_SLACK_WEBHOOK_URL`).
 
 In the Unique-AG org these are managed as code in the private `infrastructure`
 repo (GitHub Terraform provider) and stored as ciphertext — see that repo's

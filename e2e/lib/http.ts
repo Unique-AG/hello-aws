@@ -32,10 +32,14 @@ export async function gql<T = any>(
   variables: Record<string, unknown> = {},
   { retries = 3 }: { retries?: number } = {},
 ): Promise<T> {
+  // Retry only transient failures (network errors, HTTP 5xx). Deterministic
+  // failures — GraphQL `errors` and HTTP 4xx (auth/validation) — throw
+  // immediately so tests fail loudly and fast, not after 3 pointless backoffs.
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
+    let res: Response;
     try {
-      const res = await fetch(url, {
+      res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,16 +48,30 @@ export async function gql<T = any>(
         },
         body: JSON.stringify({ query, variables }),
       });
-      if (!res.ok) throw new Error(`GraphQL ${url} HTTP ${res.status}: ${await res.text()}`);
+    } catch (err) {
+      lastErr = err; // network-level error → transient
+      if (attempt < retries) {
+        await sleep(1000 * 2 ** attempt);
+        continue;
+      }
+      throw err;
+    }
+
+    if (res.ok) {
       const json = await res.json();
       if (json.errors?.length) {
         throw new Error(`GraphQL ${url} errors: ${JSON.stringify(json.errors)}`);
       }
       return json.data as T;
-    } catch (err) {
-      lastErr = err;
-      if (attempt < retries) await sleep(1000 * 2 ** attempt);
     }
+
+    const body = await res.text();
+    if (res.status >= 500 && attempt < retries) {
+      lastErr = new Error(`GraphQL ${url} HTTP ${res.status}: ${body}`); // server error → transient
+      await sleep(1000 * 2 ** attempt);
+      continue;
+    }
+    throw new Error(`GraphQL ${url} HTTP ${res.status}: ${body}`);
   }
   throw lastErr;
 }

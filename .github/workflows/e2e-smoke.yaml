@@ -5,9 +5,11 @@ name: "e2e · AWS Smoke"
 permissions:
   contents: read
 
+# Shared across watchdog + smoke: one test user on one tenant must never run
+# two suites at once (they'd race the same session/spaces).
 concurrency:
-  group: ${{ github.workflow }}
-  cancel-in-progress: true
+  group: e2e-aws-suite
+  cancel-in-progress: false
 
 on:
   workflow_dispatch:
@@ -30,7 +32,6 @@ jobs:
       TEST_ENV: AWS
       # All tenant-identifying values are Environment secrets (not plaintext vars).
       BASE_DOMAIN: ${{ secrets.BASE_DOMAIN }}
-      TEST_ORGANISATION: ${{ secrets.TEST_ORGANISATION }}
       TEST_USER: ${{ secrets.TEST_USER }}
       PASSWORD: ${{ secrets.PASSWORD }}
       ZITADEL_UNIQUE_APP_PROJECT_ID: ${{ secrets.ZITADEL_UNIQUE_APP_PROJECT_ID }}

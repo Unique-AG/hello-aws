@@ -66,7 +66,14 @@ export async function contentById(token: string, contentId: string): Promise<any
 
 export async function waitForIngestionFinished(token: string, contentId: string, timeoutMs: number): Promise<any> {
   return pollUntil(
-    () => contentById(token, contentId),
+    async () => {
+      const c = await contentById(token, contentId);
+      // Fail fast on a terminal failure state instead of spinning to timeout.
+      if (c && /FAIL|ERROR/i.test(String(c.ingestionState ?? ''))) {
+        throw new Error(`Ingestion failed for ${contentId}: state=${c.ingestionState}`);
+      }
+      return c;
+    },
     (c) => c?.ingestionState === 'FINISHED',
     { timeoutMs, label: `content ${contentId} ingestionState=FINISHED` },
   );
@@ -92,7 +99,7 @@ export async function deleteScope(token: string, scopeId: string): Promise<void>
     token,
     `mutation DeleteScope($scopeId: String!) { deleteScope(scopeId: $scopeId) { id } }`,
     { scopeId },
-  ).catch(() => {
-    /* best-effort cleanup */
+  ).catch((e) => {
+    console.warn(`deleteScope(${scopeId}) cleanup failed: ${e}`);
   });
 }

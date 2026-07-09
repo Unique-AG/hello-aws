@@ -28,8 +28,9 @@ function optional(name: string, fallback: string): string {
 
 // Base domain of the deployment, e.g. "your-tenant.example.com".
 // Sibling hosts default to api.<base> and id.<base> (the hello-aws domain
-// scheme: domain.{base,api,identity}); override if your DNS differs.
-const BASE_DOMAIN = required('BASE_DOMAIN');
+// scheme: domain.{base,api,identity}). Optional: if you set every *_URL /
+// *_DOMAIN explicitly (split DNS), you don't need BASE_DOMAIN at all.
+const BASE_DOMAIN = optional('BASE_DOMAIN', '');
 const API_DOMAIN = optional('API_DOMAIN', `api.${BASE_DOMAIN}`);
 const IDENTITY_DOMAIN = optional('IDENTITY_DOMAIN', `id.${BASE_DOMAIN}`);
 
@@ -39,9 +40,6 @@ const API = `https://${API_DOMAIN}`;
 export const config = {
   // Free-form label for reports/logs; not load-bearing.
   testEnv: optional('TEST_ENV', 'AWS'),
-
-  // The dedicated testing organisation/tenant slug the tests operate in.
-  testOrganisation: required('TEST_ORGANISATION'),
 
   // ── App (browser) URLs ──────────────────────────────────────────────
   baseURL: optional('CHAT_APP_URL', `${APP}/chat`),

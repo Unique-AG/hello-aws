@@ -16,11 +16,15 @@ test('@watchdog browser — simple chat returns an answer', async ({ page }) => 
 
   const answer = page.getByTestId('answer-1');
   await expect(answer).toBeVisible({ timeout: 60_000 });
-  // Liveness: a non-empty answer streamed in and it isn't an error. (Asserting
-  // the exact token "4" is too brittle for non-deterministic LLM output.)
+  // Wait for the streamed answer to settle: non-empty and unchanged for ~1s.
+  // (Asserting the exact token "4" is too brittle for non-deterministic LLM output.)
   await expect(async () => {
-    const text = (await answer.innerText()).trim();
-    expect(text.length, 'assistant answer should be non-empty').toBeGreaterThan(0);
+    const first = (await answer.innerText()).trim();
+    expect(first.length, 'assistant answer should be non-empty').toBeGreaterThan(0);
+    await page.waitForTimeout(1000);
+    const second = (await answer.innerText()).trim();
+    expect(second, 'answer should stop streaming').toBe(first);
   }).toPass({ timeout: 60_000 });
+  // Assert on the settled answer, so an error that streams in late still fails.
   await expect(answer).not.toContainText(/unexpected error/i);
 });
