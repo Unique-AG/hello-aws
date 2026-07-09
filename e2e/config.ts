@@ -26,7 +26,7 @@ function optional(name: string, fallback: string): string {
   return v && v.trim() !== '' ? v : fallback;
 }
 
-// Base domain of the deployment, e.g. "hello.aws.unique.dev".
+// Base domain of the deployment, e.g. "your-tenant.example.com".
 // Sibling hosts default to api.<base> and id.<base> (the hello-aws domain
 // scheme: domain.{base,api,identity}); override if your DNS differs.
 const BASE_DOMAIN = required('BASE_DOMAIN');

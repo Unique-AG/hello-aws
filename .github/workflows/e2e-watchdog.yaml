@@ -60,4 +60,4 @@ jobs:
           webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: webhook-trigger
           payload: |
-            text: "🐕‍🦺 AWS watchdog failed on ${{ env.BASE_DOMAIN }} — https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            text: "🐕‍🦺 AWS watchdog failed (${{ github.repository }}) — https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

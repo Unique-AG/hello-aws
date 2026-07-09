@@ -58,4 +58,4 @@ jobs:
           webhook: ${{ env.SLACK_WEBHOOK_URL }}
           webhook-type: webhook-trigger
           payload: |
-            text: "💨 AWS smoke failed on ${{ env.BASE_DOMAIN }} — https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+            text: "💨 AWS smoke failed (${{ github.repository }}) — https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
