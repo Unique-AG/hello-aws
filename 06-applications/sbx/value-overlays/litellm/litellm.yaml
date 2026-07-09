@@ -140,6 +140,18 @@ proxy_config:
         api_key: os.environ/AZURE_FOUNDRY_API_KEY
         api_version: "2024-10-21"
 
+    # GPT-5 via Azure AI Foundry (same endpoint/key as gpt-4o). model_name must
+    # match the platform's `litellm:openai-gpt-5` identifier so spaces selecting
+    # GPT-5 resolve here. NOTE: confirm the Azure deployment name (`gpt-5`) and
+    # the api_version against the actual Foundry GPT-5 deployment — GPT-5 needs a
+    # 2025-era api_version, not the 2024-10-21 the gpt-4o entries use.
+    - model_name: openai-gpt-5
+      litellm_params:
+        model: azure/gpt-5
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2025-04-01-preview"
+
     - model_name: gpt-4-turbo
       litellm_params:
         model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
