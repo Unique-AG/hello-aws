@@ -13,4 +13,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/backend-services/app-repository.yaml
         valuesObject:
           image:
-            tag: "2026.24.0"
+            tag: "2026.28.1"
