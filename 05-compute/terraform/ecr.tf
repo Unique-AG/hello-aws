@@ -226,3 +226,30 @@ resource "aws_ecr_pull_through_cache_rule" "main" {
   depends_on = [aws_secretsmanager_secret_policy.acr_credentials]
 }
 
+# Guard against silently-dropped cache rules.
+#
+# The for_each above keeps only registries that are keys of
+# local.ecr_pull_through_cache_upstream_urls; anything else is discarded with no
+# error at plan or apply time. The usual cause is an ACR entry in
+# ecr_pull_through_cache_upstream_registries that no longer matches
+# acr_registry_url (or the alias derived from it) -- e.g. the environment tfvars
+# were configured for a fork but the repository-root common.auto.tfvars still
+# carries the template's example value. The symptom is an EKS cluster that
+# cannot pull application images, long after apply reported success.
+check "ecr_pull_through_cache_registries_resolvable" {
+  assert {
+    condition = length(setsubtract(
+      toset(local.ecr_pull_through_cache_registries),
+      toset(keys(local.ecr_pull_through_cache_upstream_urls))
+    )) == 0
+    error_message = format(
+      "No upstream registry URL is known for pull-through cache prefix(es): %s. Add them to ecr_pull_through_cache_upstream_urls, or (for ACR) make sure they match acr_registry_url = %q and its alias %q.",
+      join(", ", tolist(setsubtract(
+        toset(local.ecr_pull_through_cache_registries),
+        toset(keys(local.ecr_pull_through_cache_upstream_urls))
+      ))),
+      var.acr_registry_url,
+      local.acr_alias
+    )
+  }
+}

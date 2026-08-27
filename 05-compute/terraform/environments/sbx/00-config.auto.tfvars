@@ -45,10 +45,16 @@ eks_node_groups = {
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
-  # ACR upstream for Unique application images. These are placeholders that
-  # scripts/configure-instance.sh rewrites from instance-config.yaml
-  # (aws.ecr.primary.prefix) -- do not delete them when de-configuring, or a
-  # fresh clone has no way to restore its ACR pull-through cache.
+  # ACR upstream for Unique application images: the full registry hostname and
+  # its short alias, both of which must exactly match `acr_registry_url` (and
+  # the alias derived from it) in the repository-root common.auto.tfvars --
+  # entries that do not match are silently dropped by the `contains(...)`
+  # filter in ../../ecr.tf, leaving the cluster unable to pull app images.
+  #
+  # 06-applications/scripts/configure-instance.sh rewrites both these entries
+  # and `acr_registry_url` from instance-config.yaml (aws.ecr.primary.prefix).
+  # Do not delete them when de-configuring: a fresh clone would then have no
+  # way to restore its ACR pull-through cache.
   "example.azurecr.io",
   "example",
   "quay.io",

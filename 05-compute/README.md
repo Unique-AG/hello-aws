@@ -79,6 +79,7 @@ Pull-through cache reduces external registry dependencies and egress costs. For 
 - **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret.
 - **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
+- **Must match exactly**: the ACR entries in `ecr_pull_through_cache_upstream_registries` (the full `<registry>.azurecr.io` hostname and its short alias) must equal `acr_registry_url` and the alias derived from it. Entries with no known upstream URL are dropped without error, so a mismatch shows up only as unpullable application images; the `check` block in `ecr.tf` raises a warning when this happens. `06-applications/scripts/configure-instance.sh` rewrites the registry list and the root `common.auto.tfvars` `acr_registry_url` together to keep them in step.
 
 ### Ingress NLB, ALBs, and CloudFront VPC Origin (Infrastructure Layer)
 
