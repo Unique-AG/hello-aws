@@ -41,10 +41,12 @@ env:
       secretKeyRef:
         name: systemzitadel
         key: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+  # Only the setup job consumes FirstInstance, but the chart renders a single
+  # `env:` list into the setup job, the init job and the server Deployment.
   - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: systemzitadel
+        name: zitadel-bootstrap
         key: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
 zitadel:
   dbSslCaCrtSecret: zitadel-certs
@@ -75,11 +77,23 @@ zitadel:
         Name: Cluster IAM
         Human:
           Username: root@cluster-iam.localhost
-          # Password is NOT set here. It is supplied at setup time via
-          # ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD (see env: above), sourced
-          # from the systemzitadel ExternalSecret. Zitadel env vars override
-          # the config tree, and env: reaches the setup job -- the same
+          # Password is NOT set here. It comes from the zitadel-bootstrap
+          # ExternalSecret via ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD (see
+          # env: above); Zitadel env vars override the config tree, the same
           # mechanism the database credentials already use.
+          #
+          # Do not drop that env entry, and never let it resolve to an empty
+          # string: Zitadel's setup defaults ship a well-known literal for this
+          # field, and viper treats an empty env var as unset, so either case
+          # silently bootstraps the IAM_OWNER admin with a password anyone can
+          # look up.
+          # The value must also satisfy the default PasswordComplexityPolicy
+          # (>=8 chars, lower + upper + number + symbol) or setup fails.
+          #
+          # Spelled out because it is what makes the Secrets Manager value
+          # single-use: the operator must change it at first login, after
+          # which the stored value no longer matches the account.
+          PasswordChangeRequired: true
   configmapConfig:
     ExternalDomain: <DOMAIN_IDENTITY>
     ExternalPort: 443

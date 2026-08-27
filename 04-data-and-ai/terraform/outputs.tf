@@ -136,6 +136,7 @@ output "secret_arns" {
     encryption_key_ingestion          = aws_secretsmanager_secret.encryption_key_ingestion.arn
     zitadel_db_user_password          = aws_secretsmanager_secret.zitadel_db_user_password.arn
     zitadel_master_key                = aws_secretsmanager_secret.zitadel_master_key.arn
+    zitadel_firstinstance_password    = aws_secretsmanager_secret.zitadel_firstinstance_password.arn
     zitadel_pat                       = aws_secretsmanager_secret.zitadel_pat.arn
     rabbitmq_password_chat            = aws_secretsmanager_secret.rabbitmq_password_chat.arn
     litellm_proxy_master_key          = aws_secretsmanager_secret.litellm_proxy_master_key.arn

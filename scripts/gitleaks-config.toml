@@ -142,8 +142,12 @@ title = "Hello AWS Secret Detection"
   regex = '''(?i)password[=:][\s"']*(admin|root|password|123456|qwerty)'''
   tags = ["password", "hardcoded"]
   [rules.allowlist]
-    paths = [
-      '''zitadel\.yaml$''',  # Zitadel default master key placeholder (overridden via ExternalSecrets)
+    # Scoped to the one disclosed literal rather than the whole file: the value
+    # is gone from HEAD but still in history, and a path allowlist would keep
+    # this rule disarmed for zitadel.yaml forever.
+    regexTarget = "line"
+    regexes = [
+      '''RootPassword1!''',  # Zitadel FirstInstance bootstrap password, removed in favour of ExternalSecrets
     ]
 
 [[rules]]
@@ -160,7 +164,7 @@ title = "Hello AWS Secret Detection"
       "topology.kubernetes.io/zone",  # Kubernetes topology spread constraint
       "scalability",                   # Kubernetes node selector label
       "lifecycle",                     # Kubernetes node selector label
-      "RootPassword1!",               # Zitadel default master key placeholder
+      "RootPassword1!",               # Zitadel FirstInstance bootstrap password (history only)
     ]
 
 [[rules]]
