@@ -76,7 +76,8 @@ ECR provides **secure container image storage** with automated vulnerability sca
 Pull-through cache reduces external registry dependencies and egress costs. For authenticated registries (Docker Hub, GHCR), creating pull-through cache rules with credentials is the recommended approach — it avoids rate limits and provides reliable, cached access to upstream images.
 
 - **Supported Upstream Registries**: Docker Hub, ECR Public, Quay.io, GCR, GHCR, Azure Container Registry (ACR). Enabled registries are configured via `ecr_pull_through_cache_upstream_registries`.
-- **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret.
+- **ACR Credentials**: Terraform creates the secret *container* only — `aws_secretsmanager_secret.acr_credentials`, named `ecr-pullthroughcache/<registry-url>` — and never the value, so the credentials never enter Terraform state or a plan file. The value is a JSON object with `username` and `password`, written by `scripts/deploy-with-acr.sh` (which reads them from 1Password) or by the secret-seeding script. A resource policy grants the ECR service-linked role access to the secret.
+- **Rotating ACR credentials**: re-run `./scripts/deploy-with-acr.sh compute <env>`, or write the value directly. Either way `put-secret-value` adds a new version against the same ARN, so the pull-through cache rules keep resolving and **no Terraform change is needed**.
 - **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
 

@@ -362,14 +362,31 @@ Each layer has comprehensive documentation covering design rationale, security p
 The compute layer (05-compute) configures an ECR pull-through cache that mirrors container images from Unique AI's Azure Container Registry (ACR). This allows your EKS cluster to pull application images without direct internet access to the ACR.
 
 To deploy the compute layer, you need ACR credentials:
-1. Contact [Unique AI](https://unique.ch) to obtain your ACR registry URL, username, and password
-2. Set the credentials as environment variables before running `deploy.sh`:
+
+1. Contact [Unique AI](https://unique.ch) to obtain your ACR registry URL, username, and password.
+2. Set the registry URL in `common.auto.tfvars`:
+   ```hcl
+   acr_registry_url = "<your-registry>.azurecr.io"
+   ```
+3. Deploy the compute layer. Terraform creates the Secrets Manager secret that the
+   pull-through cache rules authenticate with, named
+   `ecr-pullthroughcache/<your-registry>.azurecr.io`:
    ```bash
-   export TF_VAR_acr_registry_url="<your-registry>.azurecr.io"
-   export TF_VAR_acr_username="<your-username>"
-   export TF_VAR_acr_password="<your-password>"
    ./scripts/deploy.sh compute sbx
    ```
+4. Write the credentials into that secret. Terraform creates the container but never the
+   value, so the credentials stay out of Terraform state and plan files:
+   ```bash
+   aws secretsmanager put-secret-value \
+     --secret-id "ecr-pullthroughcache/<your-registry>.azurecr.io" \
+     --secret-string '{"username":"<your-username>","password":"<your-password>"}'
+   ```
+
+Steps 3 and 4 are wrapped by `./scripts/deploy-with-acr.sh compute sbx`, which reads the
+credentials from 1Password instead of taking them on the command line.
+
+**Rotating the credentials** is step 4 on its own. `put-secret-value` adds a new version
+against the same ARN, so the cache rules keep resolving and no Terraform run is needed.
 
 ## Security
 
