@@ -7,8 +7,8 @@ applicationsets:
     preserveResourcesOnDeletion: true
     generators:
       - git:
-          repoURL: <GITHUB_REPO_URL>
-          revision: <GIT_TARGET_REVISION>
+          repoURL: https://github.com/unique-ag/hello-aws
+          revision: deploy
           files:
             - path: "06-applications/sbx/apps/system/*.yaml"
     template:
@@ -30,8 +30,8 @@ applicationsets:
         sources:
           {{- if $usesValues }}
           - ref: values
-            repoURL: <GITHUB_REPO_URL>
-            targetRevision: <GIT_TARGET_REVISION>
+            repoURL: https://github.com/unique-ag/hello-aws
+            targetRevision: deploy
           {{- end }}
           {{- range .spec.sources }}
           - {{ toYaml . | nindent 6 | trim }}
@@ -69,8 +69,8 @@ applicationsets:
     preserveResourcesOnDeletion: true
     generators:
       - git:
-          repoURL: <GITHUB_REPO_URL>
-          revision: <GIT_TARGET_REVISION>
+          repoURL: https://github.com/unique-ag/hello-aws
+          revision: deploy
           files:
             - path: "06-applications/sbx/apps/chat/*.yaml"
     template:
@@ -92,8 +92,8 @@ applicationsets:
         sources:
           {{- if $usesValues }}
           - ref: values
-            repoURL: <GITHUB_REPO_URL>
-            targetRevision: <GIT_TARGET_REVISION>
+            repoURL: https://github.com/unique-ag/hello-aws
+            targetRevision: deploy
           {{- end }}
           {{- range .spec.sources }}
           - {{ toYaml . | nindent 6 | trim }}

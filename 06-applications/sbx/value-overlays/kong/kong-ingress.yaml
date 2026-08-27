@@ -1,5 +1,5 @@
 # Kong Ingress Resources for AWS EKS
-# Updated for AWS environment with <DNS_ZONE> domain
+# Updated for AWS environment with aws.unique.dev domain
 resources:
   - apiVersion: networking.k8s.io/v1
     kind: Ingress
@@ -13,7 +13,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: <DOMAIN_BASE>
+        - host: hello.aws.unique.dev
           http:
             paths:
               - backend:
@@ -25,7 +25,7 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - <DOMAIN_BASE>
+            - hello.aws.unique.dev
           secretName: kong-tls
 
   - apiVersion: networking.k8s.io/v1
@@ -40,7 +40,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: <DOMAIN_API>
+        - host: api.hello.aws.unique.dev
           http:
             paths:
               - backend:
@@ -52,7 +52,7 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - <DOMAIN_API>
+            - api.hello.aws.unique.dev
           secretName: kong-api-tls
 
   - apiVersion: networking.k8s.io/v1
@@ -67,7 +67,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: <DOMAIN_IDENTITY>
+        - host: id.hello.aws.unique.dev
           http:
             paths:
               - backend:
@@ -79,7 +79,7 @@ resources:
                 pathType: Prefix
       tls:
         - hosts:
-            - <DOMAIN_IDENTITY>
+            - id.hello.aws.unique.dev
           secretName: kong-zitadel-tls
 
   - apiVersion: networking.k8s.io/v1
@@ -93,7 +93,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: <DOMAIN_BASE>
+        - host: hello.aws.unique.dev
           http:
             paths:
               - backend:
@@ -115,7 +115,7 @@ resources:
     spec:
       ingressClassName: kong
       rules:
-        - host: <DOMAIN_BASE>
+        - host: hello.aws.unique.dev
           http:
             paths:
               - backend:

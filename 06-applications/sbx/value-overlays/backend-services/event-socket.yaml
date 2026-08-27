@@ -1,12 +1,12 @@
 # Event Socket backend service configuration (AWS sbx)
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-event-socket
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-event-socket
 
 routes:
   gateway:
     namespace: unique
-  hostname: <DOMAIN_API>
+  hostname: api.hello.aws.unique.dev
   pathPrefix: /event-socket
   paths:
     versioned:

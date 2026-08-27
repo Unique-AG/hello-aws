@@ -45,6 +45,8 @@ eks_node_groups = {
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
+  "uniquecr.azurecr.io",
+  "uniquecr",
   "quay.io",
   "registry.k8s.io",
 ]

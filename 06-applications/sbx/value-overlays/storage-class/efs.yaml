@@ -9,7 +9,7 @@ resources:
     provisioner: efs.csi.aws.com
     parameters:
       provisioningMode: efs-ap
-      fileSystemId: <EFS_DOCLING_MODELS_ID>
+      fileSystemId: fs-070ce1b868e568369
       directoryPerms: "755"
       uid: "1000"
       gid: "1000"

@@ -2,10 +2,10 @@
 # Uses S3 for storage and LiteLLM for embeddings
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-ingestion
 
 env:
-  AWS_REGION: <AWS_REGION>
+  AWS_REGION: eu-central-2
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
   ELASTICSEARCH_URL: https://elasticsearch-ingestion-es-http.unique.svc:9200
