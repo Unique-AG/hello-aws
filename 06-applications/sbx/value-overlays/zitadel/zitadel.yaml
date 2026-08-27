@@ -41,6 +41,11 @@ env:
       secretKeyRef:
         name: systemzitadel
         key: ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD
+  - name: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: systemzitadel
+        key: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
 zitadel:
   dbSslCaCrtSecret: zitadel-certs
   masterkeySecretName: systemzitadel
@@ -70,7 +75,11 @@ zitadel:
         Name: Cluster IAM
         Human:
           Username: root@cluster-iam.localhost
-          Password: "RootPassword1!"
+          # Password is NOT set here. It is supplied at setup time via
+          # ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD (see env: above), sourced
+          # from the systemzitadel ExternalSecret. Zitadel env vars override
+          # the config tree, and env: reaches the setup job -- the same
+          # mechanism the database credentials already use.
   configmapConfig:
     ExternalDomain: <DOMAIN_IDENTITY>
     ExternalPort: 443

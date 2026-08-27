@@ -35,6 +35,9 @@ extraManifests:
       - secretKey: masterkey
         remoteRef:
           key: zitadel-master-key
+      - secretKey: ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD
+        remoteRef:
+          key: zitadel-firstinstance-password
 
 # AWS RDS CA Certificate - pulled from Secrets Manager
 # The certificate is stored in Secrets Manager by Terraform (04-data-and-ai layer)
