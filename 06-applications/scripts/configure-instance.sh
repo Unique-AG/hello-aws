@@ -271,6 +271,10 @@ replace_all() {
 
 # Replace a string in all tfvars files under the project's terraform layer
 # environment directories (e.g., 03-infrastructure/terraform/environments/sbx/)
+# plus the repository-root common.auto.tfvars, which carries cross-layer values
+# such as acr_registry_url. The root file must be covered too: the ECR
+# pull-through cache entries in 05-compute only take effect when they match
+# acr_registry_url exactly, so the two have to be rewritten in lockstep.
 PROJECT_ROOT="$(cd "$BASE_DIR/.." && pwd)"
 replace_all_tfvars() {
   local old="$1"
@@ -288,7 +292,12 @@ replace_all_tfvars() {
     if grep -qF "$old" "$file"; then
       do_sed "s|${old_escaped}|${new_escaped}|g" "$file"
     fi
-  done < <(find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0)
+  done < <(
+    find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0
+    if [[ -f "$PROJECT_ROOT/common.auto.tfvars" ]]; then
+      printf '%s\0' "$PROJECT_ROOT/common.auto.tfvars"
+    fi
+  )
 }
 
 # ------------------------------------------------------------------
