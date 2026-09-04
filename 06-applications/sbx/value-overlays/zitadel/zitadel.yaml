@@ -5,7 +5,22 @@ chownImage:
   tag: "3.19"
 image:
   repository: ghcr.io/zitadel/zitadel
-  tag: v2.71.13
+  # Chart 9.34.1's own appVersion. v3 is skipped: no chart ever shipped a v3
+  # appVersion, and its setup migration is broken on newer PostgreSQL.
+  tag: v4.13.1
+
+# v4 ships a separate login UI; this deployment keeps the built-in login.
+login:
+  enabled: false
+
+# New in chart 9.x. The kubectl tag has no default and must be set.
+tools:
+  kubectl:
+    image:
+      tag: "1.35.1"
+  wait4x:
+    image:
+      tag: "3.6"
 nodeSelector:
   scalability: steady
   lifecycle: persistent
