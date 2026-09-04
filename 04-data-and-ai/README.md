@@ -136,7 +136,7 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 | PostgreSQL | `psql-password`, `psql-connection-string-{db}` | Seed script |
 | Redis | `redis-host`, `redis-port` | Terraform |
 | Encryption keys | `encryption-key-app-repository`, `encryption-key-node-chat-lxm`, `encryption-key-ingestion` | Seed script |
-| Zitadel | `zitadel-db-user-password`, `zitadel-master-key`, `manual-zitadel-scope-mgmt-pat` | Seed script |
+| Zitadel | `zitadel-db-user-password`, `zitadel-master-key`, `zitadel-firstinstance-password`, `manual-zitadel-scope-mgmt-pat` | Seed script |
 | RabbitMQ | `rabbitmq-password-chat` | Seed script |
 | LiteLLM | `litellm-proxy-master-key`, `litellm-salt-key`, `azure-openai-endpoint-definitions` | Seed script |
 | S3 config | `s3-application-data-bucket`, `s3-ai-data-bucket`, `s3-*-bucket-arn`, `s3-endpoint`, `s3-region` | Terraform |
