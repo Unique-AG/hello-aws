@@ -379,6 +379,7 @@ To deploy the compute layer, you need ACR credentials:
    ```bash
    aws secretsmanager put-secret-value \
      --secret-id "ecr-pullthroughcache/<your-registry>.azurecr.io" \
+     --region eu-central-2 \
      --secret-string '{"username":"<your-username>","password":"<your-password>"}'
    ```
 
