@@ -1,0 +1,72 @@
+#!/bin/bash
+set -euo pipefail
+
+#######################################
+# Pre-push hook
+#######################################
+#
+# Scans the branch history for secrets, then format-checks every Terraform
+# layer. Enable with: ./scripts/install-hooks.sh
+#######################################
+
+# Resolve from git: correct from .githooks/ and in a linked worktree.
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+echo -e "${BLUE}🚀 Running pre-push checks...${NC}"
+
+#######################################
+# 1. Secrets in the branch history
+#######################################
+SECRET_SCAN="${REPO_ROOT}/scripts/scan-secrets.sh"
+
+if ! command -v gitleaks &>/dev/null; then
+  echo -e "${YELLOW}⚠️  gitleaks not found, skipping secret scan (CI still enforces it)${NC}"
+elif [[ ! -x "$SECRET_SCAN" ]]; then
+  echo -e "${YELLOW}⚠️  scripts/scan-secrets.sh not found, skipping secret scan${NC}"
+elif ! ( cd "$REPO_ROOT" && "$SECRET_SCAN" --all ); then
+  echo -e "${YELLOW}💡 To bypass (emergency only): git push --no-verify${NC}"
+  exit 1
+fi
+
+#######################################
+# 2. Terraform formatting
+#######################################
+# Format only; CI validates the layers on the pull request.
+if ! command -v terraform &>/dev/null; then
+  echo -e "${YELLOW}⚠️  terraform not found, skipping format check${NC}"
+  exit 0
+fi
+
+FMT_FAILED=false
+CHECKED=0
+
+for layer_terraform in "${REPO_ROOT}"/[0-9][0-9]-*/terraform; do
+  [[ -d "$layer_terraform" ]] || continue
+  layer_dir=$(basename "$(dirname "$layer_terraform")")
+  CHECKED=$((CHECKED + 1))
+  if terraform -chdir="$layer_terraform" fmt -check -recursive >/dev/null 2>&1; then
+    echo -e "${GREEN}✅ ${layer_dir} is formatted${NC}"
+  else
+    echo -e "${RED}❌ ${layer_dir} is not formatted:${NC}"
+    terraform -chdir="$layer_terraform" fmt -check -recursive 2>&1 | sed 's/^/    /' || true
+    FMT_FAILED=true
+  fi
+done
+
+if [[ "$CHECKED" -eq 0 ]]; then
+  echo -e "${YELLOW}⚠️  No Terraform layers found to check${NC}"
+elif [[ "$FMT_FAILED" == true ]]; then
+  echo -e "${RED}❌ Pre-push checks failed${NC}"
+  echo -e "${YELLOW}💡 Fix with: terraform -chdir=<layer>/terraform fmt -recursive${NC}"
+  exit 1
+else
+  echo -e "${GREEN}✅ All pre-push checks passed (${CHECKED} layers)${NC}"
+fi
+
+exit 0
