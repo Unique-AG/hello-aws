@@ -1,8 +1,6 @@
-# Watches SandboxClaims and builds Sandbox pods from the SandboxTemplate that
-# sbx-templates ships. 0.4.6-rc.1 or newer is required: the 0.4.5 CRD has no
-# `service` field on SandboxTemplate and silently prunes it.
-# Lives in the system group so its CRDs exist before the conduct group
-# renders SandboxTemplate and SandboxWarmPool objects.
+# Builds Sandbox pods from the SandboxTemplate sbx-templates ships. 0.4.6-rc.1
+# or newer: the 0.4.5 CRD lacks SandboxTemplate.service and prunes it. In the
+# system group so its CRDs precede the conduct group.
 spec:
   name: agent-sandbox-controller
   autoSync: false

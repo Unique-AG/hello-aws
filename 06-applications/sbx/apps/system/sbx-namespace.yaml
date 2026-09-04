@@ -1,4 +1,5 @@
-# The sbx namespace and the RuntimeClass every Sandbox pod requests.
+# The sbx namespace and the RuntimeClass every Sandbox pod requests. In the
+# system group so both exist before the conduct group syncs into sbx.
 spec:
   name: sbx-namespace
   autoSync: false

@@ -1,19 +1,15 @@
-# sbx-gateway — the egress proxy for Conduct sandboxes. The sandbox runtime
-# hardcodes HTTP(S)_PROXY at sbx-gateway.sbx.svc.cluster.local:3128 and the
-# sandbox NetworkPolicy permits egress only through it, so without this
-# service sandboxes have no outbound path.
+# sbx-gateway — the egress proxy Conduct sandboxes are forced through at
+# sbx-gateway.sbx.svc:3128; without it they have no outbound path.
 
 image:
-  # Split explicitly: the chart defaults image.registry to the ACR host, which
-  # would otherwise be prefixed onto the path below.
+  # Split explicitly: the chart defaults registry to the ACR host.
   registry: <ECR_REGISTRY_PRIMARY>
   repository: unique/sbx-gateway
-  # Pull by tag through the cache; the chart's stamped digest names the ACR
-  # path and would not resolve against ECR.
+  # By tag: the chart's digest names the ACR path, not the ECR one.
   useDigest: false
   tag: "2026.37.0"
 
-# Nodes authenticate to ECR by IAM; there is no ACR pull secret in-cluster.
+# Nodes authenticate to ECR by IAM.
 imagePullSecrets: []
 
 replicaCount: 2
@@ -22,21 +18,18 @@ nodeSelector:
   scalability: steady
   lifecycle: persistent
 
-# 2026.37.0 flipped this chart's PDB default to minAvailable: 1, which leaves
-# zero voluntary disruptions and blocks node drains. minAvailable must be
-# nulled explicitly: the chart refuses to render with both fields set.
+# 2026.37.0 flipped the PDB default to minAvailable: 1, which blocks node
+# drains. Nulling it is required; the chart rejects both fields set.
 pdb:
   minAvailable: null
   maxUnavailable: 1
 
-# The chart generates its own CA into this Secret; sbx-templates mounts it into
-# every sandbox as a trusted root. Rotate by deleting the Secret and re-syncing.
+# Chart-generated CA; sbx-templates mounts it. Rotate by deleting the Secret.
 mitmCa:
   enabled: true
   secretName: egress-mitm-ca
   validityDays: 3650
 
-# Both backends live in the unique namespace in this deployment.
 internalServices:
   dependencies:
     chat:
