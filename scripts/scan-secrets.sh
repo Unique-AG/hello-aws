@@ -110,69 +110,76 @@ echo -e "${GREEN}✅ gitleaks ${GITLEAKS_VERSION} found${NC}"
 RESULTS_FILE=$(mktemp)
 trap 'rm -f "$RESULTS_FILE"' EXIT
 
-# Run gitleaks based on scan mode
-echo -e "${BLUE}🔐 Running gitleaks scan...${NC}"
+# gitleaks exits 0 when clean, 1 when it FINDS leaks, and >1 on a real error.
+# Capture the code instead of branching on truthiness: the previous form
+# treated "leaks found" as "scan failed" and printed a vague warning instead
+# of the findings.
+GITLEAKS_RC=0
+
+BASELINE_ARGS=()
+if [[ -f "$SCRIPT_DIR/gitleaks-baseline.json" ]]; then
+  BASELINE_ARGS=(--baseline-path "$SCRIPT_DIR/gitleaks-baseline.json")
+fi
+
+COMMON_ARGS=(
+  --no-banner
+  --redact
+  --report-format json
+  --report-path "$RESULTS_FILE"
+  --config "$SCRIPT_DIR/gitleaks-config.toml"
+  ${BASELINE_ARGS[@]+"${BASELINE_ARGS[@]}"}
+)
 
 case "$SCAN_MODE" in
   "all")
-    # Scan current branch history only (exclude backup branches)
+    # Name the ref directly. `--branches=<name>` gets an implied trailing "/*"
+    # when the pattern contains no glob character, so `--branches=main`
+    # expands to refs/heads/main/* -- which matches nothing, scans 0 commits,
+    # and reports the repository clean no matter what it contains.
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-    if gitleaks detect --verbose --redact --report-format json --report-path "$RESULTS_FILE" --config "$SCRIPT_DIR/gitleaks-config.toml" --log-opts="--first-parent --branches=$CURRENT_BRANCH" 2>/dev/null; then
-      SCAN_SUCCESS=true
-    else
-      SCAN_SUCCESS=false
-    fi
+    gitleaks git "${COMMON_ARGS[@]}" --log-opts="--first-parent $CURRENT_BRANCH" || GITLEAKS_RC=$?
     ;;
 
   "staged")
-    # Scan only staged changes
-    STAGED_FILES=$(git diff --cached --name-only)
-    if [[ -n "$STAGED_FILES" ]] && echo "$STAGED_FILES" | gitleaks detect --verbose --redact --report-format json --report-path "$RESULTS_FILE" --config "$SCRIPT_DIR/gitleaks-config.toml" --no-git 2>/dev/null; then
-      SCAN_SUCCESS=true
-    else
-      SCAN_SUCCESS=true  # No staged files or no secrets found
-    fi
+    # Scan the staged diff with its paths intact. Piping file NAMES into
+    # `gitleaks --no-git` scanned the list of filenames, not the content, so
+    # staged secrets were never read.
+    gitleaks git --staged "${COMMON_ARGS[@]}" || GITLEAKS_RC=$?
     ;;
 
   "commit")
-    # Scan specific commit
-    if gitleaks detect --verbose --redact --report-format json --report-path "$RESULTS_FILE" --config "$SCRIPT_DIR/gitleaks-config.toml" --log-opts="$COMMIT_HASH^..$COMMIT_HASH" 2>/dev/null; then
-      SCAN_SUCCESS=true
-    else
-      SCAN_SUCCESS=false
-    fi
+    gitleaks git "${COMMON_ARGS[@]}" --log-opts="$COMMIT_HASH^..$COMMIT_HASH" || GITLEAKS_RC=$?
     ;;
 esac
 
 # Process results
-if [[ "$SCAN_SUCCESS" == true ]]; then
-  # Check if any secrets were found
-  SECRET_COUNT=$(jq 'length' "$RESULTS_FILE" 2>/dev/null || echo "0")
+if [[ "$GITLEAKS_RC" -gt 1 ]]; then
+  echo -e "${RED}❌ Scan failed to run (gitleaks exit ${GITLEAKS_RC})${NC}"
+  echo -e "${YELLOW}   The repository was NOT scanned -- do not treat this as clean.${NC}"
+  exit 1
+fi
 
-  if [[ "$SECRET_COUNT" -eq 0 ]]; then
-    echo -e "${GREEN}✅ No secrets found!${NC}"
-    echo -e "${GREEN}   Repository appears to be clean.${NC}"
-  else
-    echo -e "${RED}❌ Secrets detected!${NC}"
-    echo -e "${RED}   Found ${SECRET_COUNT} potential secrets${NC}"
-    echo ""
+SECRET_COUNT=$(jq 'length' "$RESULTS_FILE" 2>/dev/null || echo "0")
 
-    # Display detailed results
-    echo -e "${PURPLE}📋 Secret Details:${NC}"
-    jq -r '.[] | "🔴 \(.Description) in \(.File) at line \(.StartLine)\n   Rule: \(.RuleID)\n   Commit: \(.Commit)\n"' "$RESULTS_FILE" 2>/dev/null || echo "   Unable to parse results"
-
-    echo ""
-    echo -e "${YELLOW}⚠️  Action Required:${NC}"
-    echo -e "${YELLOW}   1. Review the secrets above${NC}"
-    echo -e "${YELLOW}   2. Remove or replace sensitive data${NC}"
-    echo -e "${YELLOW}   3. Consider rotating any exposed credentials${NC}"
-    echo -e "${YELLOW}   4. Amend commits if secrets were committed${NC}"
-
-    exit 1
-  fi
+if [[ "$SECRET_COUNT" -eq 0 ]]; then
+  echo -e "${GREEN}✅ No secrets found!${NC}"
+  echo -e "${GREEN}   Repository appears to be clean.${NC}"
 else
-  echo -e "${YELLOW}⚠️  Scan completed with warnings${NC}"
-  echo -e "${YELLOW}   Check the output above for any issues${NC}"
+  echo -e "${RED}❌ Secrets detected!${NC}"
+  echo -e "${RED}   Found ${SECRET_COUNT} potential secrets${NC}"
+  echo ""
+
+  # Display detailed results
+  echo -e "${PURPLE}📋 Secret Details:${NC}"
+  jq -r '.[] | "🔴 \(.Description) in \(.File) at line \(.StartLine)\n   Rule: \(.RuleID)\n   Commit: \(.Commit)\n"' "$RESULTS_FILE" 2>/dev/null || echo "   Unable to parse results"
+
+  echo ""
+  echo -e "${YELLOW}⚠️  Action Required:${NC}"
+  echo -e "${YELLOW}   1. Review the secrets above${NC}"
+  echo -e "${YELLOW}   2. Remove or replace sensitive data${NC}"
+  echo -e "${YELLOW}   3. Consider rotating any exposed credentials${NC}"
+  echo -e "${YELLOW}   4. Amend commits if secrets were committed${NC}"
+
   exit 1
 fi
 
