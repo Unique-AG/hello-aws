@@ -449,7 +449,7 @@ releases:
   - name: assistants-core
     namespace: unique
     chart: unique-ag/ai-service
-    version: 2.1.1
+    version: 3.0.0
     needs:
       - application-secrets
     labels:
@@ -462,7 +462,7 @@ releases:
   - name: ingestor
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - docling-models-pvc
       - application-secrets
@@ -477,7 +477,7 @@ releases:
   - name: backend-service-scope-management
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -491,7 +491,7 @@ releases:
   - name: backend-service-chat
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -505,7 +505,7 @@ releases:
   - name: backend-service-ingestion
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -519,7 +519,7 @@ releases:
   - name: backend-service-ingestion-worker
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -550,7 +550,7 @@ releases:
   - name: backend-service-ingestion-worker-chat
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -581,7 +581,7 @@ releases:
   - name: backend-service-configuration
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -595,7 +595,7 @@ releases:
   - name: backend-service-app-repository
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -609,7 +609,7 @@ releases:
   - name: backend-service-event-socket
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -623,7 +623,7 @@ releases:
   - name: backend-service-speech
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -637,7 +637,7 @@ releases:
   - name: backend-service-webhook-scheduler
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -651,7 +651,7 @@ releases:
   - name: backend-service-webhook-worker
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -665,7 +665,7 @@ releases:
   - name: client-insights-exporter
     namespace: unique
     chart: unique-ag/backend-service
-    version: 10.3.0
+    version: 10.5.1
     needs:
       - application-secrets
     labels:
@@ -680,7 +680,7 @@ releases:
   - name: web-app-chat
     namespace: unique
     chart: unique-ag/web-app
-    version: 5.0.0
+    version: 5.3.0
     needs:
       - application-secrets
     labels:
@@ -694,7 +694,7 @@ releases:
   - name: web-app-admin
     namespace: unique
     chart: unique-ag/web-app
-    version: 5.0.0
+    version: 5.3.0
     needs:
       - application-secrets
     labels:
@@ -708,7 +708,7 @@ releases:
   - name: web-app-knowledge-upload
     namespace: unique
     chart: unique-ag/web-app
-    version: 5.0.0
+    version: 5.3.0
     needs:
       - application-secrets
     labels:
@@ -722,7 +722,7 @@ releases:
   - name: web-app-theme
     namespace: unique
     chart: unique-ag/web-app
-    version: 5.0.0
+    version: 5.3.0
     needs:
       - application-secrets
     labels:
