@@ -122,3 +122,67 @@ applicationsets:
             {{- .spec.syncOptions | toYaml | nindent 6 }}
             {{- end }}
         {{- end }}
+
+  conduct:
+    additionalAnnotations:
+      argocd.argoproj.io/sync-wave: "2"
+    namespace: unique
+    goTemplate: true
+    preserveResourcesOnDeletion: true
+    generators:
+      - git:
+          repoURL: <GITHUB_REPO_URL>
+          revision: <GIT_TARGET_REVISION>
+          files:
+            - path: "06-applications/sbx/apps/conduct/*.yaml"
+    template:
+      metadata:
+        name: '{{ .spec.name }}'
+        namespace: unique
+      spec:
+        project: default
+        destination:
+          server: https://kubernetes.default.svc
+          # sbx: the runtime addresses sbx-gateway.sbx.svc and mounts
+          # egress-mitm-ca from its own namespace.
+          namespace: sbx
+    templatePatch: |
+      spec:
+        {{- if hasKey .spec "sources" }}
+        {{- $usesValues := false }}
+        {{- range .spec.sources }}
+        {{- if .helm }}{{- range .helm.valueFiles }}{{- if hasPrefix "$values" . }}{{- $usesValues = true }}{{- end }}{{- end }}{{- end }}
+        {{- end }}
+        sources:
+          {{- if $usesValues }}
+          - ref: values
+            repoURL: <GITHUB_REPO_URL>
+            targetRevision: <GIT_TARGET_REVISION>
+          {{- end }}
+          {{- range .spec.sources }}
+          - {{ toYaml . | nindent 6 | trim }}
+          {{- end }}
+        {{- else }}
+        source:
+          {{- .spec.source | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if hasKey .spec "additionalValues" }}
+        {{- .spec.additionalValues | toYaml | nindent 2 }}
+        {{- end }}
+        {{- if hasKey .spec "ignoreDifferences" }}
+        ignoreDifferences:
+          {{- .spec.ignoreDifferences | toYaml | nindent 4 }}
+        {{- end }}
+        {{- if or .spec.autoSync (hasKey .spec "syncOptions") }}
+        syncPolicy:
+          {{- if .spec.autoSync }}
+          automated:
+            prune: true
+            selfHeal: true
+          {{- end }}
+          syncOptions:
+            - CreateNamespace=true
+            {{- if hasKey .spec "syncOptions" }}
+            {{- .spec.syncOptions | toYaml | nindent 6 }}
+            {{- end }}
+        {{- end }}

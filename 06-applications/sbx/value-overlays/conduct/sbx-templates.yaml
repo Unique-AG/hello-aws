@@ -1,0 +1,86 @@
+# sbx-templates — the SandboxTemplate plus its NetworkPolicy. Requires the
+# agent-sandbox controller, the kata-vm-isolation RuntimeClass, sbx-gateway
+# and VPC CNI NetworkPolicy enforcement; all four ship in this repository.
+
+image:
+  # Split explicitly: the chart defaults registry to the ACR host.
+  registry: <ECR_REGISTRY_PRIMARY>
+  repository: unique/unique-polyagent-001
+  # By tag: the chart's digest names the ACR path, not the ECR one.
+  useDigest: false
+  tag: "2026.37.0"
+
+sandboxTemplate:
+  enabled: true
+  name: unique-polyagent-001
+  # Headless Service per sandbox; needs controller >= 0.4.6-rc.1.
+  service: true
+  runtimeClassName: kata-vm-isolation
+  # Nodes authenticate to ECR by IAM; the chart's default secret is absent here.
+  imagePullSecrets: []
+  # The CA sbx-gateway generates, so the sandbox trusts the proxy.
+  egressProxyCA:
+    enabled: true
+    secretName: egress-mitm-ca
+    secretKey: tls.crt
+    mountPath: /etc/ssl/egress-mitm
+    fileName: ca-cert.pem
+    optional: true
+  # Never enable: ships unredacted customer data to the log store.
+  allowInsecureLogging: false
+  insecureVerboseLogging: {}
+
+  # VPC CNI here, not Cilium: the chart's CiliumNetworkPolicy hard-fails on the
+  # missing CRD, so use the controller-managed standard NetworkPolicy.
+  networkPolicyManagement: Managed
+  ciliumNetworkPolicy:
+    enabled: false
+  # Chart defaults target `system`; the platform runs in `unique` here.
+  networkPolicy:
+    ingress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app: sandbox-router
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: unique
+        ports:
+          - protocol: TCP
+            port: 8888
+    egress:
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: sbx-gateway
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: sbx
+        ports:
+          - protocol: TCP
+            port: 3128
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: litellm
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: unique
+        ports:
+          - protocol: TCP
+            port: 4000
+      # DNS, or the proxy hostname cannot resolve.
+      - to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
+            podSelector:
+              matchLabels:
+                k8s-app: kube-dns
+        ports:
+          - protocol: UDP
+            port: 53
+          - protocol: TCP
+            port: 53
+
+nodeSelector: {}
