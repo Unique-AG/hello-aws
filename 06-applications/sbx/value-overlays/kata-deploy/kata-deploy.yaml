@@ -1,0 +1,36 @@
+# kata-deploy places containerd-shim-kata-v2 on the sandbox nodes and registers
+# the runtime handler Conduct's RuntimeClass points at.
+#
+# Only the `remote` shim is installed. Peer-pods runs each sandbox in its own
+# EC2 instance, so the worker needs one Go binary (shim-v2-go) rather than the
+# eight components a local hypervisor shim pulls in -- no qemu, kernel or
+# rootfs images. Nested virtualisation is unavailable on anything short of a
+# metal instance anyway, which is why the remote path is the only option here.
+shims:
+  disableAll: true
+  remote:
+    enabled: true
+
+# Confined to the sandbox pool. The DaemonSet is not privileged and runs with a
+# read-only root, but it still host-mounts /etc/containerd, /opt/kata and the
+# systemd socket, and restarts the CRI runtime -- it has no business on nodes
+# running the platform.
+nodeSelector:
+  workload: sandbox
+
+tolerations:
+  - key: workload
+    value: sandbox
+    effect: NoSchedule
+
+# daemonset, not job. Job mode avoids a standing privileged component, but its
+# dispatcher only runs on install and upgrade, so a node the autoscaler adds
+# later would come up without the shim until someone re-ran Helm. This pool
+# scales from zero, so the DaemonSet's automatic coverage is worth the
+# always-on pod.
+deploymentMode: daemonset
+
+# Detects TEE hardware (TDX, SEV-SNP). The guest runs in a separate EC2
+# instance under peer-pods, so no host capability needs discovering.
+node-feature-discovery:
+  enabled: false
