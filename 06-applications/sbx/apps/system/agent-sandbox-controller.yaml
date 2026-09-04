@@ -1,0 +1,14 @@
+# Watches SandboxClaims and builds Sandbox pods from the SandboxTemplate that
+# sbx-templates ships. 0.4.6-rc.1 or newer is required: the 0.4.5 CRD has no
+# `service` field on SandboxTemplate and silently prunes it.
+# Lives in the system group so its CRDs exist before the conduct group
+# renders SandboxTemplate and SandboxWarmPool objects.
+spec:
+  name: agent-sandbox-controller
+  autoSync: false
+  sources:
+    - repoURL: oci://ghcr.io/unique-ag/helm-charts/agent-sandbox-controller
+      chart: "."
+      targetRevision: sha256:2eca7f113777f44129562cdcfaaac2d2132496c8b338d0ae5e0b0c62fdc9f11e
+      helm:
+        releaseName: agent-sandbox-controller

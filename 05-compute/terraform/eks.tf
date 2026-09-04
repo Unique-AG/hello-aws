@@ -478,6 +478,14 @@ resource "aws_eks_addon" "vpc_cni" {
   addon_name                  = "vpc-cni"
   resolve_conflicts_on_update = "OVERWRITE"
 
+  # NetworkPolicy enforcement is off by default. Without it the API server
+  # accepts NetworkPolicy objects and silently never enforces them, which for
+  # the Conduct sandboxes means agent-authored code gets unrestricted VPC
+  # egress instead of being confined to the sbx-gateway proxy.
+  configuration_values = jsonencode({
+    enableNetworkPolicy = "true"
+  })
+
   depends_on = [aws_eks_node_group.pool]
 }
 

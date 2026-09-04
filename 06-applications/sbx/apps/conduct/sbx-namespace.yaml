@@ -1,0 +1,26 @@
+# The sbx namespace and the RuntimeClass every Sandbox pod requests.
+spec:
+  name: sbx-namespace
+  autoSync: false
+  sources:
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: sbx-namespace
+        valuesObject:
+          resources:
+            - apiVersion: v1
+              kind: Namespace
+              metadata:
+                name: sbx
+                labels:
+                  kubernetes.io/metadata.name: sbx
+            # kata-vm-isolation resolves to runc for now, so sandboxes are
+            # ordinary containers confined by NetworkPolicy, not a VM boundary.
+            # Repoint the handler once cloud-api-adaptor peer-pods are in place.
+            - apiVersion: node.k8s.io/v1
+              kind: RuntimeClass
+              metadata:
+                name: kata-vm-isolation
+              handler: runc

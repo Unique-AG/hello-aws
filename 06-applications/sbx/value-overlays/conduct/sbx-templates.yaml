@@ -1,0 +1,107 @@
+# sbx-templates — the SandboxTemplate plus its NetworkPolicy.
+#
+# Prerequisites, all satisfied in this repository:
+#   - agent-sandbox-controller >= 0.4.6-rc.1 (apps/conduct/agent-sandbox-controller.yaml).
+#     The 0.4.5 CRD has no `service` field and would silently prune it.
+#   - RuntimeClass kata-vm-isolation (apps/conduct/sbx-namespace.yaml). It
+#     resolves to handler runc, so isolation here is namespace, cgroup and
+#     NetworkPolicy only -- there is no VM boundary yet.
+#   - sbx-gateway in ns sbx (apps/conduct/sbx-gateway.yaml): the runtime
+#     hardcodes HTTP(S)_PROXY at sbx-gateway.sbx.svc:3128.
+#   - VPC CNI NetworkPolicy enforcement (05-compute/terraform/eks.tf). Without
+#     it the policies below are admitted and never enforced.
+
+image:
+  # Split explicitly: the chart defaults image.registry to the ACR host, which
+  # would otherwise be prefixed onto the path below.
+  registry: <ECR_REGISTRY_PRIMARY>
+  repository: unique/unique-polyagent-001
+  # By tag, not digest: the chart's stamped digest names the ACR path and would
+  # not resolve against ECR.
+  useDigest: false
+  tag: "2026.37.0"
+
+sandboxTemplate:
+  enabled: true
+  name: unique-polyagent-001
+  # Headless Service per sandbox; needs controller >= 0.4.6-rc.1.
+  service: true
+  runtimeClassName: kata-vm-isolation
+  # Nodes authenticate to ECR by IAM, so the chart's default pull secret would
+  # reference a Secret that does not exist here.
+  imagePullSecrets: []
+  # The CA sbx-gateway's chart generates, mounted so the sandbox trusts the
+  # proxy it is forced through.
+  egressProxyCA:
+    enabled: true
+    secretName: egress-mitm-ca
+    secretKey: tls.crt
+    mountPath: /etc/ssl/egress-mitm
+    fileName: ca-cert.pem
+    optional: true
+  # Never enable: ships unredacted customer data to the log store.
+  allowInsecureLogging: false
+  insecureVerboseLogging: {}
+
+  # This cluster runs the VPC CNI, not Cilium, so the chart's default
+  # CiliumNetworkPolicy path is unusable -- its CRD does not exist and the
+  # chart hard-fails on it. Use the controller-managed standard NetworkPolicy
+  # instead, which is upstream's preferred path when L7 DNS filtering is not
+  # required. VPC CNI NetworkPolicy enforcement is enabled in
+  # 05-compute/terraform/eks.tf; without that these rules would be admitted
+  # and never applied.
+  networkPolicyManagement: Managed
+  ciliumNetworkPolicy:
+    enabled: false
+  # The chart's defaults target namespace `system`; this deployment runs the
+  # platform in `unique`. Egress is proxy-only plus DNS: the runtime hardcodes
+  # HTTP(S)_PROXY at sbx-gateway.sbx.svc:3128, and litellm is reached directly.
+  networkPolicy:
+    ingress:
+      - from:
+          - podSelector:
+              matchLabels:
+                app: sandbox-router
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: unique
+        ports:
+          - protocol: TCP
+            port: 8888
+    egress:
+      # The MITM egress proxy every sandbox is forced through.
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: sbx-gateway
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: sbx
+        ports:
+          - protocol: TCP
+            port: 3128
+      - to:
+          - podSelector:
+              matchLabels:
+                app.kubernetes.io/name: litellm
+            namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: unique
+        ports:
+          - protocol: TCP
+            port: 4000
+      # Name resolution, without which the proxy hostname cannot be resolved.
+      - to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
+            podSelector:
+              matchLabels:
+                k8s-app: kube-dns
+        ports:
+          - protocol: UDP
+            port: 53
+          - protocol: TCP
+            port: 53
+
+nodeSelector: {}

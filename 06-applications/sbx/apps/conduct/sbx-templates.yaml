@@ -1,0 +1,19 @@
+# The SandboxTemplate the agent-sandbox controller instantiates per agent run.
+# This is the piece that turns Conduct on: assistants-core asks the controller
+# for a Sandbox and the controller builds pods from this template.
+spec:
+  name: sbx-templates
+  autoSync: false
+  # ArgoCD dry-run-validates every task before any wave executes, so an absent
+  # agent-sandbox CRD would fail the whole sync instead of just this app.
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: uniquecr.azurecr.io
+      chart: helm/sbx-templates
+      targetRevision: "2026.37.0"
+      helm:
+        releaseName: sbx-templates
+        skipSchemaValidation: true
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/sbx-templates.yaml
