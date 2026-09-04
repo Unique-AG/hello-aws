@@ -4,30 +4,16 @@
 title = "Hello AWS Secret Detection"
 
 [allowlist]
-  description = "Allowlisted files and paths"
-  files = [
-    '''^scripts/.*''',                        # All scripts (deployment, validation, etc.)
-    '''^.*\.example$''',                      # Example files
-    '''^.*\.template$''',                     # Template files
-    '''^\.gitignore$''',                      # Git ignore file
-    '''.*zitadel-extra-manifests\.yaml$''',   # Contains legitimate CA certificates
-    '''.*terraform\.tfstate\.backup''',       # Terraform state backups
-    '''gitleaks-config\.toml''',              # Gitleaks config file itself
-    '''scripts/gitleaks-config\.toml''',      # Gitleaks config file itself
-  ]
-  regexes = [
-    '''-----BEGIN [A-Z ]*PRIVATE KEY-----''',  # Private key patterns in config
-    '''-----BEGIN CERTIFICATE-----''',         # Certificate patterns in config
-    '''-----BEGIN PGP PRIVATE KEY BLOCK-----''', # PGP key patterns in config
-  ]
+  description = """
+  Minimal exclusions by design. This file is the only globally excluded path:
+  its body contains the rule regexes themselves, so it matches its own key
+  rules. Nothing else is excluded -- .github/, docs/ and scripts/ are all
+  scanned. Generated directories (node_modules, .terraform, dist, build,
+  vendor) need no entry: every scan entry point runs in git-history mode, so
+  only committed content is ever read, and those directories are gitignored.
+  """
   paths = [
-    '''node_modules''',
-    '''\.terraform''',
-    '''\.git''',
-    '''vendor''',
-    '''dist''',
-    '''build''',
-    '''docs''',                               # Documentation directory
+    '''^scripts/gitleaks-config\.toml$''',
   ]
 
 [[rules]]
@@ -53,30 +39,18 @@ title = "Hello AWS Secret Detection"
   description = "Private Key"
   regex = '''-----BEGIN [A-Z ]*PRIVATE KEY-----'''
   tags = ["key", "private"]
-  [rules.allowlist]
-    paths = [
-      '''gitleaks-config\.toml''',
-    ]
 
 [[rules]]
   id = "certificate"
   description = "Certificate"
   regex = '''-----BEGIN CERTIFICATE-----'''
   tags = ["certificate"]
-  [rules.allowlist]
-    paths = [
-      '''gitleaks-config\.toml''',
-    ]
 
 [[rules]]
   id = "ssh-private-key"
   description = "SSH Private Key"
   regex = '''-----BEGIN OPENSSH PRIVATE KEY-----'''
   tags = ["ssh", "key", "private"]
-  [rules.allowlist]
-    paths = [
-      '''gitleaks-config\.toml''',
-    ]
 
 [[rules]]
   id = "rsa-private-key"
@@ -125,10 +99,6 @@ title = "Hello AWS Secret Detection"
   description = "Database Password"
   regex = '''(?i)(database.*password|db.*password|redis.*password)[=:][\s"']*([^;\s]{8,})'''
   tags = ["database", "password"]
-  [rules.allowlist]
-    paths = [
-      '''gitleaks-config\.toml''',
-    ]
 
 [[rules]]
   id = "jwt-token"
@@ -141,14 +111,6 @@ title = "Hello AWS Secret Detection"
   description = "Hardcoded Password"
   regex = '''(?i)password[=:][\s"']*(admin|root|password|123456|qwerty)'''
   tags = ["password", "hardcoded"]
-  [rules.allowlist]
-    # Scoped to the one disclosed literal rather than the whole file: the value
-    # is gone from HEAD but still in history, and a path allowlist would keep
-    # this rule disarmed for zitadel.yaml forever.
-    regexTarget = "line"
-    regexes = [
-      '''RootPassword1!''',  # Zitadel FirstInstance bootstrap password, removed in favour of ExternalSecrets
-    ]
 
 [[rules]]
   id = "terraform-secret"
@@ -157,14 +119,18 @@ title = "Hello AWS Secret Detection"
   secretGroup = 2
   tags = ["terraform", "secret"]
   [rules.allowlist]
-    paths = [
-      '''\.md$''',                   # Placeholder values in documentation
+    # Matched against the captured value, so these exclude a SHAPE of value
+    # rather than a file: a value that is exactly a variable expansion cannot
+    # be a hardcoded secret, and a Terraform state object path is not one.
+    regexes = [
+      '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',  # e.g. "$ACR_PASSWORD"
+      '''\.tfstate$''',                        # e.g. "${LAYER_SHORT}/terraform.tfstate"
     ]
     stopwords = [
-      "topology.kubernetes.io/zone",  # Kubernetes topology spread constraint
+      "topology.kubernetes.io/zone",   # Kubernetes topology spread constraint
       "scalability",                   # Kubernetes node selector label
       "lifecycle",                     # Kubernetes node selector label
-      "RootPassword1!",               # Zitadel FirstInstance bootstrap password (history only)
+      "manual-zitadel-scope-mgmt-pat", # a Secrets Manager secret NAME, not a value
     ]
 
 [[rules]]
