@@ -562,10 +562,7 @@ resource "aws_eks_node_group" "pool" {
     max_unavailable = each.value.max_unavailable
   }
 
-  labels = {
-    lifecycle   = each.value.labels.lifecycle
-    scalability = each.value.labels.scalability
-  }
+  labels = each.value.labels
 
   dynamic "taint" {
     for_each = each.value.taints
