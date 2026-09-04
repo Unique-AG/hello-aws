@@ -39,6 +39,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Secrets Manager is regional and the CLI talks to the configured endpoint, not
+# the region embedded in the secret ARN -- a mismatched default region fails the
+# write after Terraform has already created the cache rules. Explicit env vars
+# win, then the active profile's region, then the deployment default.
+AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo "eu-central-2")}}"
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -138,6 +144,7 @@ ACR_SECRET_JSON=$(jq -n --arg u "$ACR_USERNAME" --arg p "$ACR_PASSWORD" '{userna
 aws secretsmanager put-secret-value \
   --secret-id "$ACR_SECRET_ARN" \
   --secret-string "$ACR_SECRET_JSON" \
+  --region "$AWS_REGION" \
   --output text --query 'VersionId' >/dev/null
 
 echo -e "${GREEN}ACR credentials written to ${ACR_SECRET_ARN}${NC}"
