@@ -10,3 +10,5 @@ spec:
       targetRevision: sha256:2eca7f113777f44129562cdcfaaac2d2132496c8b338d0ae5e0b0c62fdc9f11e
       helm:
         releaseName: agent-sandbox-controller
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/agent-sandbox-controller.yaml
