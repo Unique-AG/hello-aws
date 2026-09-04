@@ -4,14 +4,7 @@
 title = "Hello AWS Secret Detection"
 
 [allowlist]
-  description = """
-  Minimal exclusions by design. This file is the only globally excluded path:
-  its body contains the rule regexes themselves, so it matches its own key
-  rules. Nothing else is excluded -- .github/, docs/ and scripts/ are all
-  scanned. Generated directories (node_modules, .terraform, dist, build,
-  vendor) need no entry: every scan entry point runs in git-history mode, so
-  only committed content is ever read, and those directories are gitignored.
-  """
+  description = "Only this config file is globally excluded: its body contains the rule patterns and so matches itself."
   paths = [
     '''^scripts/gitleaks-config\.toml$''',
   ]

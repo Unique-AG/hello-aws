@@ -110,10 +110,7 @@ echo -e "${GREEN}✅ gitleaks ${GITLEAKS_VERSION} found${NC}"
 RESULTS_FILE=$(mktemp)
 trap 'rm -f "$RESULTS_FILE"' EXIT
 
-# gitleaks exits 0 when clean, 1 when it FINDS leaks, and >1 on a real error.
-# Capture the code instead of branching on truthiness: the previous form
-# treated "leaks found" as "scan failed" and printed a vague warning instead
-# of the findings.
+# gitleaks exits 0 clean, 1 when it reports findings, >1 on an execution error.
 GITLEAKS_RC=0
 
 BASELINE_ARGS=()
@@ -132,18 +129,13 @@ COMMON_ARGS=(
 
 case "$SCAN_MODE" in
   "all")
-    # Name the ref directly. `--branches=<name>` gets an implied trailing "/*"
-    # when the pattern contains no glob character, so `--branches=main`
-    # expands to refs/heads/main/* -- which matches nothing, scans 0 commits,
-    # and reports the repository clean no matter what it contains.
+    # Name the ref directly: a --branches pattern gets an implied "/*".
     CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
     gitleaks git "${COMMON_ARGS[@]}" --log-opts="--first-parent $CURRENT_BRANCH" || GITLEAKS_RC=$?
     ;;
 
   "staged")
-    # Scan the staged diff with its paths intact. Piping file NAMES into
-    # `gitleaks --no-git` scanned the list of filenames, not the content, so
-    # staged secrets were never read.
+    # --staged keeps each hunk's path, so the config's path rules apply.
     gitleaks git --staged "${COMMON_ARGS[@]}" || GITLEAKS_RC=$?
     ;;
 
