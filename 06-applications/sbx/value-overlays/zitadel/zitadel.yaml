@@ -5,7 +5,9 @@ chownImage:
   tag: "3.19"
 image:
   repository: ghcr.io/zitadel/zitadel
-  tag: v2.71.13
+  # Pinned ahead of chart 8.13.1's appVersion (v2.67.2) to match the release.
+  # No chart ever shipped a v3 appVersion; upstream went 8.x (v2) -> 9.x (v4).
+  tag: v3.4.15
 nodeSelector:
   scalability: steady
   lifecycle: persistent
