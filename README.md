@@ -448,11 +448,18 @@ This repository includes a [gitleaks](https://github.com/gitleaks/gitleaks) conf
 
 **Installation**: `brew install gitleaks`
 
-The scan runs automatically as a pre-commit hook when Git hooks are configured. To set up the hooks, copy or symlink from `scripts/hooks/`:
+### Git Hooks
+
+The hooks live in `.githooks/` so every clone runs the same ones. Enable them once per clone:
 ```bash
-cp scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+./scripts/install-hooks.sh
 ```
+
+This points `core.hooksPath` at `.githooks/`. `pre-commit` scans staged changes for secrets and format-checks any modified Terraform layer; `pre-push` scans the branch history and format-checks every layer. Both skip gracefully if `gitleaks` or `terraform` is not installed, and CI enforces the secret scan regardless.
+
+The setting is local to your clone and is not itself version controlled, so re-run the script after cloning. `./scripts/install-hooks.sh --uninstall` reverts to `.git/hooks`.
+
+Full Terraform validation (`scripts/validate.sh`) is not run by the hooks: it requires `common.auto.tfvars`, which is gitignored and absent from a fresh clone. CI validates every layer on the pull request instead.
 
 ## Contributing
 
