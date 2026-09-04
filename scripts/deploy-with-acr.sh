@@ -39,10 +39,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Secrets Manager is regional and the CLI talks to the configured endpoint, not
-# the region embedded in the secret ARN -- a mismatched default region fails the
-# write after Terraform has already created the cache rules. Explicit env vars
-# win, then the active profile's region, then the deployment default.
+# Secrets Manager resolves the endpoint from the CLI configuration, not from the
+# secret ARN's region. Explicit env vars win, then the profile, then the default.
 AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo "eu-central-2")}}"
 
 # Colors
