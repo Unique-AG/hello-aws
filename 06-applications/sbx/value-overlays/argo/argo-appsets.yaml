@@ -143,10 +143,8 @@ applicationsets:
         project: default
         destination:
           server: https://kubernetes.default.svc
-          # sbx, not unique: the sandbox runtime addresses the proxy at
-          # sbx-gateway.sbx.svc:3128 and mounts egress-mitm-ca from its own
-          # namespace. The ApplicationSet and Application objects still live
-          # alongside ArgoCD in unique.
+          # sbx: the runtime addresses sbx-gateway.sbx.svc and mounts
+          # egress-mitm-ca from its own namespace.
           namespace: sbx
     templatePatch: |
       spec:
