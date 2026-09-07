@@ -597,16 +597,16 @@ resource "aws_eks_node_group" "pool" {
 #######################################
 # Conduct Pod VM Security Group
 #######################################
-# A peer pod runs on its own ENI outside the pod network, so the NetworkPolicy
-# that confines sandboxes today does not apply to it. Reusing the node security
-# group would therefore hand sandbox code all-TCP reach into the VPC -- Aurora
-# included -- and 443 straight out. This group grants only what the sandbox is
-# meant to have: DNS, and the egress proxy it is configured to use.
+# A pod VM is a VPC instance with its own ENI, and the node group's ENIs carry
+# all-TCP reach into the VPC. Pod traffic itself is tunnelled to the worker node
+# (TUNNEL_TYPE defaults to vxlan), so the sandbox NetworkPolicy still governs the
+# workload and this group only has to carry the tunnel, the adaptor's control
+# channel, and the guest's own image pull.
 
 resource "aws_security_group" "peer_pods" {
   #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   name        = "${module.naming.id}-peer-pods"
-  description = "Conduct sandbox pod VMs. Egress confined to DNS and the sbx-gateway proxy."
+  description = "Conduct sandbox pod VMs. Pod network tunnel, adaptor control channel, ECR pulls."
   vpc_id      = local.infrastructure.vpc_id
 
   tags = {
@@ -614,8 +614,6 @@ resource "aws_security_group" "peer_pods" {
   }
 }
 
-# The adaptor reaches the kata-agent inside the pod VM over the forwarder port,
-# and the VM answers. Restricted to the nodes that run the adaptor.
 resource "aws_vpc_security_group_ingress_rule" "peer_pods_from_nodes" {
   security_group_id            = aws_security_group.peer_pods.id
   description                  = "agent-protocol-forwarder from the sandbox nodes"
@@ -625,20 +623,49 @@ resource "aws_vpc_security_group_ingress_rule" "peer_pods_from_nodes" {
   referenced_security_group_id = aws_security_group.eks_nodes.id
 }
 
-# Sandbox HTTP(S) egress is proxied. The proxy is a pod, reachable on the node
-# security group, so this is the only route out.
-resource "aws_vpc_security_group_egress_rule" "peer_pods_to_gateway" {
+# The pod network itself. Both ends originate traffic, so the tunnel needs a
+# rule in each direction on each group -- statefulness does not cover it.
+resource "aws_vpc_security_group_ingress_rule" "peer_pods_vxlan_from_nodes" {
   security_group_id            = aws_security_group.peer_pods.id
-  description                  = "sbx-gateway egress proxy"
-  from_port                    = 3128
-  to_port                      = 3128
-  ip_protocol                  = "tcp"
+  description                  = "VXLAN pod network from the sandbox nodes"
+  from_port                    = 4789
+  to_port                      = 4789
+  ip_protocol                  = "udp"
   referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+resource "aws_vpc_security_group_egress_rule" "peer_pods_vxlan_to_nodes" {
+  security_group_id            = aws_security_group.peer_pods.id
+  description                  = "VXLAN pod network to the sandbox nodes"
+  from_port                    = 4789
+  to_port                      = 4789
+  ip_protocol                  = "udp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+# The guest pulls its own image: the remote hypervisor shares no rootfs from the
+# host. ECR reachability, and the DNS to resolve it.
+resource "aws_vpc_security_group_egress_rule" "peer_pods_to_endpoints" {
+  security_group_id            = aws_security_group.peer_pods.id
+  description                  = "ECR API and registry via the interface endpoints"
+  from_port                    = 443
+  to_port                      = 443
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = local.infrastructure.vpc_endpoints_security_group_id
+}
+
+resource "aws_vpc_security_group_egress_rule" "peer_pods_to_s3" {
+  security_group_id = aws_security_group.peer_pods.id
+  description       = "ECR image layers via the S3 gateway endpoint"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  prefix_list_id    = data.aws_ec2_managed_prefix_list.s3.id
 }
 
 resource "aws_vpc_security_group_egress_rule" "peer_pods_dns_udp" {
   security_group_id = aws_security_group.peer_pods.id
-  description       = "DNS, without which the proxy hostname cannot resolve"
+  description       = "DNS to the VPC resolver"
   from_port         = 53
   to_port           = 53
   ip_protocol       = "udp"
@@ -654,12 +681,22 @@ resource "aws_vpc_security_group_egress_rule" "peer_pods_dns_tcp" {
   cidr_ipv4         = local.infrastructure.vpc_cidr_block
 }
 
-# The forwarder's return path to the adaptor.
-resource "aws_vpc_security_group_egress_rule" "peer_pods_to_nodes_forwarder" {
-  security_group_id            = aws_security_group.peer_pods.id
-  description                  = "return path to the adaptor"
-  from_port                    = 15150
-  to_port                      = 15150
-  ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.eks_nodes.id
+# The node side of the tunnel. Node egress already covers all TCP to the VPC,
+# which is how the adaptor reaches 15150; UDP is not in that rule.
+resource "aws_vpc_security_group_ingress_rule" "eks_nodes_vxlan_from_peer_pods" {
+  security_group_id            = aws_security_group.eks_nodes.id
+  description                  = "VXLAN pod network from the sandbox pod VMs"
+  from_port                    = 4789
+  to_port                      = 4789
+  ip_protocol                  = "udp"
+  referenced_security_group_id = aws_security_group.peer_pods.id
+}
+
+resource "aws_vpc_security_group_egress_rule" "eks_nodes_vxlan_to_peer_pods" {
+  security_group_id            = aws_security_group.eks_nodes.id
+  description                  = "VXLAN pod network to the sandbox pod VMs"
+  from_port                    = 4789
+  to_port                      = 4789
+  ip_protocol                  = "udp"
+  referenced_security_group_id = aws_security_group.peer_pods.id
 }

@@ -81,6 +81,8 @@ secrets:
 image:
   name: quay.io/confidential-containers/cloud-api-adaptor
   tag: "61b1aba91df646a663e60ab6b55c6a7dc93cd167"
+  # Vendored addition: tags at this registry are mutable.
+  digest: "sha256:43d7e37f6c063c110ba1890e43ab43918393d18de85e833c87e264aa20647d20"
 
 # Cloud provider: libvirt, aws, azure, byom, gcp, ibmcloud, vsphere
 provider: libvirt
@@ -105,12 +107,10 @@ limit: "10"
 
 # DaemonSet configuration
 daemonset:
-  # Vendored addition. Upstream hardcodes nodeSelector to
-  # node.kubernetes.io/worker, a label EKS refuses to set because the
-  # kubernetes.io prefix is reserved, and offers no tolerations field -- so the
-  # DaemonSet could not be placed on a tainted pool at all.
-  nodeSelector:
-    node.kubernetes.io/worker: ""
+  # Vendored addition: upstream hardcodes node.kubernetes.io/worker, a label EKS
+  # will not set, and offers no tolerations field. Empty by default -- Helm
+  # merges maps, so a default key here would survive any overlay.
+  nodeSelector: {}
   tolerations: []
   # Update strategy controls how the CAA DaemonSet performs rolling updates
   updateStrategy:

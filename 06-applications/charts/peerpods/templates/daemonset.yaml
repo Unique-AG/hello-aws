@@ -38,7 +38,7 @@ spec:
 {{- end }}
         - configMapRef:
             name: peer-pods-cm
-        image: {{ .Values.image.name | default "quay.io/confidential-containers/cloud-api-adaptor" }}:{{ .Values.image.tag | default "latest" }}
+        image: {{ .Values.image.name | default "quay.io/confidential-containers/cloud-api-adaptor" }}:{{ .Values.image.tag | default "latest" }}{{ with .Values.image.digest }}@{{ . }}{{ end }}
         imagePullPolicy: Always
         name: cloud-api-adaptor-con
         securityContext:

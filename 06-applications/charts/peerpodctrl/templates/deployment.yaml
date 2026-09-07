@@ -78,7 +78,7 @@ spec:
         - --metrics-bind-address=0.0.0.0:8080
 {{- end }}
         - --leader-elect
-        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}{{ with .Values.image.digest }}@{{ . }}{{ end }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
         env:
         - name: PEERPODS_NAMESPACE

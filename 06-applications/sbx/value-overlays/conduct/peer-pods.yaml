@@ -7,8 +7,8 @@ providerConfigs:
   aws:
     AWS_REGION: "<AWS_REGION>"
     AWS_SUBNET_ID: "<SANDBOX_SUBNET_ID>"
-    # The pod VM group, not the node group: a peer pod sits outside the pod
-    # network, so the sandbox NetworkPolicy no longer applies to it.
+    # The pod VM group, not the node group: the VM's own ENI needs only the
+    # pod-network tunnel, the adaptor channel and its image pull.
     AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
     # Required, and deliberately left as a token: built out of band from the
     # upstream podvm image-builder, and validate-instance.sh must fail until it
