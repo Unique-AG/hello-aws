@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: peerpods-webhook
+    control-plane: controller-manager
+  name: {{ .Values.namePrefix }}controller-manager
+  namespace: {{ .Values.namespaceOverride | default .Release.Namespace }}
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: manager
+        command:
+        - /manager
+        args:
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=:8443
+        image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        env:
+        - name: TARGET_RUNTIMECLASS
+          value: {{ .Values.webhook.targetRuntimeClass }}
+        - name: POD_VM_EXTENDED_RESOURCE
+          value: {{ .Values.webhook.podVMExtendedResource }}
+{{- if .Values.tlsMinVersion }}
+        - name: TLS_MIN_VERSION
+          value: {{ .Values.tlsMinVersion }}
+{{- end }}
+{{- if .Values.tlsCipherSuites }}
+        - name: TLS_CIPHER_SUITES
+          value: {{ .Values.tlsCipherSuites }}
+{{- end }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          tcpSocket:
+            port: 9443
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+{{- toYaml .Values.resources | nindent 10 }}
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      serviceAccountName: {{ .Values.namePrefix }}controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert

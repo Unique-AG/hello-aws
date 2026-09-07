@@ -1,5 +1,5 @@
-# cloud-api-adaptor for AWS. Credentials come from EKS Pod Identity, bound to
-# this chart's `cloud-api-adaptor` service account in 05-compute/terraform/iam.tf.
+# cloud-api-adaptor for AWS. Credentials come from EKS Pod Identity, bound in
+# 05-compute/terraform/iam.tf for both this chart's service accounts.
 
 provider: aws
 
@@ -7,33 +7,42 @@ providerConfigs:
   aws:
     AWS_REGION: "<AWS_REGION>"
     AWS_SUBNET_ID: "<SANDBOX_SUBNET_ID>"
-    AWS_SG_IDS: "<EKS_NODE_SECURITY_GROUP_ID>"
-    # Required, and deliberately empty: built out of band from the upstream
-    # podvm image-builder, with no published AMI to point at. Fill it in here
-    # before syncing this application; until then CAA will not start.
-    PODVM_AMI_ID: ""
+    # The pod VM group, not the node group: a peer pod sits outside the pod
+    # network, so the sandbox NetworkPolicy no longer applies to it.
+    AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
+    # Required, and deliberately left as a token: built out of band from the
+    # upstream podvm image-builder, and validate-instance.sh must fail until it
+    # is supplied.
+    PODVM_AMI_ID: "<PODVM_AMI_ID>"
     PODVM_INSTANCE_TYPE: "m6a.large"
-    # The tag the pod VM IAM policy conditions on, for both launch and
-    # termination. Changing it without changing that policy breaks both.
+    # The tag the IAM policy conditions on for both launch and termination.
     TAGS: "PeerPod=true"
-    # Non-confidential pod VMs: the boundary here is the VM, not memory
-    # encryption. Enabling CVM requires SEV-SNP capable instance types.
+    # The boundary here is the VM, not memory encryption; CVM needs SEV-SNP
+    # capable instance types.
     DISABLECVM: "true"
     PEERPODS_LIMIT_PER_NODE: "10"
 
-# kata-deploy is installed separately at 4.1.0 with only the remote shim, so the
-# chart's bundled 4.0.0 copy must stay off or the two would fight over
-# containerd config.
+daemonset:
+  # Upstream hardcodes node.kubernetes.io/worker, which EKS will not set.
+  nodeSelector:
+    workload: sandbox
+  tolerations:
+    - key: workload
+      value: sandbox
+      effect: NoSchedule
+
+# Installed separately at 4.1.0 with only the remote shim; the chart's bundled
+# 4.0.0 copy would contend over containerd configuration.
 kata-deploy:
   enabled: false
 
 # Reclaims pod VMs whose sandbox went away, so a failed teardown does not leak
-# EC2 instances.
+# EC2 instances. Has its own service account, hence the second association.
 resourceCtrl:
   enabled: true
 
-daemonset:
-  # Pod Identity binds by namespace and service account, so no annotation is
-  # needed here; the agent addon injects the credentials.
-  serviceAccount:
-    annotations: {}
+# Off: a cluster-wide MutatingWebhookConfiguration with failurePolicy Fail on
+# every pod CREATE outside kube-system. Nothing here needs its extended-resource
+# mutation, and an unschedulable webhook would stop all pod creation.
+webhook:
+  enabled: false

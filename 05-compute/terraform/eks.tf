@@ -593,3 +593,72 @@ resource "aws_eks_node_group" "pool" {
   }
 }
 
+
+#######################################
+# Conduct Pod VM Security Group
+#######################################
+# A peer pod runs on its own ENI outside the pod network, so the NetworkPolicy
+# that confines sandboxes today does not apply to it. Reusing the node security
+# group would therefore hand sandbox code all-TCP reach into the VPC -- Aurora
+# included -- and 443 straight out. This group grants only what the sandbox is
+# meant to have: DNS, and the egress proxy it is configured to use.
+
+resource "aws_security_group" "peer_pods" {
+  name        = "${module.naming.id}-peer-pods"
+  description = "Conduct sandbox pod VMs. Egress confined to DNS and the sbx-gateway proxy."
+  vpc_id      = local.infrastructure.vpc_id
+
+  tags = {
+    Name = "${module.naming.id}-peer-pods-sg"
+  }
+}
+
+# The adaptor reaches the kata-agent inside the pod VM over the forwarder port,
+# and the VM answers. Restricted to the nodes that run the adaptor.
+resource "aws_vpc_security_group_ingress_rule" "peer_pods_from_nodes" {
+  security_group_id            = aws_security_group.peer_pods.id
+  description                  = "agent-protocol-forwarder from the sandbox nodes"
+  from_port                    = 15150
+  to_port                      = 15150
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+# Sandbox HTTP(S) egress is proxied. The proxy is a pod, reachable on the node
+# security group, so this is the only route out.
+resource "aws_vpc_security_group_egress_rule" "peer_pods_to_gateway" {
+  security_group_id            = aws_security_group.peer_pods.id
+  description                  = "sbx-gateway egress proxy"
+  from_port                    = 3128
+  to_port                      = 3128
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}
+
+resource "aws_vpc_security_group_egress_rule" "peer_pods_dns_udp" {
+  security_group_id = aws_security_group.peer_pods.id
+  description       = "DNS, without which the proxy hostname cannot resolve"
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "udp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+resource "aws_vpc_security_group_egress_rule" "peer_pods_dns_tcp" {
+  security_group_id = aws_security_group.peer_pods.id
+  description       = "DNS over TCP"
+  from_port         = 53
+  to_port           = 53
+  ip_protocol       = "tcp"
+  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+}
+
+# The forwarder's return path to the adaptor.
+resource "aws_vpc_security_group_egress_rule" "peer_pods_to_nodes_forwarder" {
+  security_group_id            = aws_security_group.peer_pods.id
+  description                  = "return path to the adaptor"
+  from_port                    = 15150
+  to_port                      = 15150
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = aws_security_group.eks_nodes.id
+}

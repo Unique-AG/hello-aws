@@ -57,3 +57,9 @@ locals {
   )
 }
 
+locals {
+  # The pod VMs land in one private subnet, named in the peer-pods IAM policy so
+  # RunInstances is confined to it. First of the private subnets by default; the
+  # sandbox pool spans all AZs, so pod-VM traffic may cross an AZ.
+  peer_pods_subnet_id = local.infrastructure.private_subnet_ids[0]
+}

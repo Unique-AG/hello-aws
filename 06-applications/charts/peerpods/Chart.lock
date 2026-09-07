@@ -1,0 +1,9 @@
+dependencies:
+- name: peerpodctrl
+  repository: file://../peerpodctrl
+  version: 0.4.0
+- name: peerpods-webhook
+  repository: file://../peerpods-webhook
+  version: 0.4.0
+digest: sha256:45b832a7da791cc7d22b4f0dc06dea2496522f2a175cdcac8c25748dc17b933e
+generated: "2026-09-07T11:35:28.081392+02:00"

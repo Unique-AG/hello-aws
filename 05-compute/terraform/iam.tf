@@ -920,7 +920,7 @@ resource "aws_eks_pod_identity_association" "tempo" {
 # Peer Pods (cloud-api-adaptor) Role
 #######################################
 # cloud-api-adaptor launches one EC2 instance per Conduct sandbox. Bound by Pod
-# Identity rather than added to the node role: the node role is shared by every
+# Identity rather than added to the node role: that role is shared by every
 # pool, so EC2 launch rights there would be reachable from any pod via IMDS,
 # including the sandboxes themselves.
 
@@ -934,31 +934,30 @@ resource "aws_iam_role" "peer_pods" {
 }
 
 data "aws_iam_policy_document" "peer_pods" {
-  # Read-only lookups the adaptor makes while resolving image, subnet and type.
   statement {
     sid    = "DescribeForPodVMPlacement"
     effect = "Allow"
     actions = [
       "ec2:DescribeImages",
       "ec2:DescribeInstances",
-      "ec2:DescribeInstanceStatus",
       "ec2:DescribeInstanceTypes",
-      "ec2:DescribeSubnets",
-      "ec2:DescribeSecurityGroups",
-      "ec2:DescribeVpcs",
-      "ec2:DescribeNetworkInterfaces",
+      "ec2:DescribeVolumes",
     ]
     resources = ["*"]
   }
 
-  # Launch is unavoidably on "*" -- RunInstances creates the resource it names --
-  # so it is conditioned on the PeerPod tag, which the adaptor sets in the
-  # RunInstances TagSpecifications and therefore arrives as a request tag.
+  # EC2 authorizes RunInstances once per resource it creates, and a request tag
+  # is only in context for the resources the caller actually tags. The adaptor
+  # tags the instance only, and always sends BlockDeviceMappings, so a blanket
+  # tag condition would deny the untagged volume and with it every launch.
+  # Tagged resources therefore carry the condition; the rest are named by ARN.
   statement {
-    sid       = "RunPodVM"
-    effect    = "Allow"
-    actions   = ["ec2:RunInstances"]
-    resources = ["*"]
+    sid     = "RunPodVMTaggedResources"
+    effect  = "Allow"
+    actions = ["ec2:RunInstances"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+    ]
     condition {
       test     = "StringEquals"
       variable = "aws:RequestTag/PeerPod"
@@ -966,19 +965,21 @@ data "aws_iam_policy_document" "peer_pods" {
     }
   }
 
-  # Deliberately not tag-conditioned: the adaptor's TagSpecifications cover the
-  # instance only, so the interface RunInstances creates carries no request tag
-  # and a condition here would deny every launch. Creating an interface confers
-  # nothing on its own; attaching one is not granted.
   statement {
-    sid       = "CreatePodVMInterface"
-    effect    = "Allow"
-    actions   = ["ec2:CreateNetworkInterface"]
-    resources = ["*"]
+    sid     = "RunPodVMSupportingResources"
+    effect  = "Allow"
+    actions = ["ec2:RunInstances"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}::image/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:volume/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:subnet/${local.peer_pods_subnet_id}",
+      aws_security_group.peer_pods.arn,
+    ]
   }
 
-  # Tagging only as part of a create, so the adaptor cannot relabel instances it
-  # does not own to bring them into scope of the statements above.
+  # Tagging only as part of a create, so the adaptor cannot relabel an instance
+  # it does not own to bring it into scope of the statements above.
   statement {
     sid       = "TagOnCreateOnly"
     effect    = "Allow"
@@ -987,12 +988,12 @@ data "aws_iam_policy_document" "peer_pods" {
     condition {
       test     = "StringEquals"
       variable = "ec2:CreateAction"
-      values   = ["RunInstances", "CreateNetworkInterface"]
+      values   = ["RunInstances"]
     }
   }
 
-  # Termination restricted to instances the adaptor tagged on the way up. This
-  # is what keeps a compromised adaptor from stopping cluster nodes.
+  # Termination limited to instances the adaptor tagged on the way up. This is
+  # what stops a compromised adaptor stopping cluster nodes.
   statement {
     sid       = "TerminatePodVMOnly"
     effect    = "Allow"
@@ -1006,15 +1007,25 @@ data "aws_iam_policy_document" "peer_pods" {
   }
 }
 
-resource "aws_iam_role_policy" "peer_pods" {
-  name   = "${module.naming.id}-peer-pods"
+resource "aws_iam_role_policy" "peer_pods_ec2" {
+  name   = "peer-pods-ec2-launch"
   role   = aws_iam_role.peer_pods.id
   policy = data.aws_iam_policy_document.peer_pods.json
 }
 
+# Two associations: the adaptor and peerpod-ctrl are separate Deployments with
+# separate service accounts, and peerpod-ctrl calls TerminateInstances itself to
+# reclaim pod VMs whose sandbox went away.
 resource "aws_eks_pod_identity_association" "peer_pods" {
   cluster_name    = aws_eks_cluster.main.name
   namespace       = "sbx"
   service_account = "cloud-api-adaptor"
+  role_arn        = aws_iam_role.peer_pods.arn
+}
+
+resource "aws_eks_pod_identity_association" "peer_pods_ctrl" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "sbx"
+  service_account = "peerpodctrl-controller-manager"
   role_arn        = aws_iam_role.peer_pods.arn
 }
