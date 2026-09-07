@@ -9,7 +9,7 @@ env:
   CHAT_APP_URL: https://<DOMAIN_BASE>/chat
   CHAT_BACKEND_API_URL: https://<DOMAIN_API>/chat
   CONTENT_SECURITY_POLICY_VALUE: "default-src 'self'; img-src https: blob: data: *.s3.<AWS_REGION>.amazonaws.com; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' blob: *.<DOMAIN_BASE> wss://*.<DOMAIN_BASE> *.s3.<AWS_REGION>.amazonaws.com; media-src 'self' *.s3.<AWS_REGION>.amazonaws.com; frame-ancestors 'self'; frame-src 'self' https://*.<DOMAIN_BASE>;"
-  FEATURE_FLAG_USER_API_KEY_GENERATION_UN_11416: "true"
+  USER_API_KEY_GENERATION_ENABLED: "true"
   FEATURE_FLAG_ENABLE_SPACE_LANDING_PAGE_UN_9930: "true"
   FEATURE_FLAG_ABOUT_SPACE_SECTION_UN_10270: "true"
   FEATURE_FLAG_ENABLE_SPACES_2_0_UN_11203: "true"

@@ -1,0 +1,14 @@
+# The MITM egress proxy every Conduct sandbox is forced through. Pulled from
+# ACR with the uniquecr OCI repository credential.
+spec:
+  name: sbx-gateway
+  autoSync: false
+  sources:
+    - repoURL: uniquecr.azurecr.io
+      chart: helm/sbx-gateway
+      targetRevision: "2026.37.0"
+      helm:
+        releaseName: sbx-gateway
+        skipSchemaValidation: true
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/sbx-gateway.yaml

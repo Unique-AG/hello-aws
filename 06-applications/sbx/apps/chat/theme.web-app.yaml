@@ -4,7 +4,7 @@ spec:
   sources:
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: web-app
-      targetRevision: 5.1.0
+      targetRevision: 5.3.0
       helm:
         releaseName: web-app-theme
         valueFiles:
@@ -13,4 +13,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/web-apps/theme.yaml
         valuesObject:
           image:
-            tag: "2026.34.5"
+            tag: "2026.37.0"

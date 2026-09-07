@@ -22,7 +22,7 @@ spec:
                     storage: 30Gi
     - chart: backend-service
       repoURL: ghcr.io/unique-ag/helm-charts
-      targetRevision: 10.3.0
+      targetRevision: 10.5.1
       helm:
         releaseName: ingestor
         valueFiles:
@@ -30,4 +30,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/ai-services/ingestor.yaml
         valuesObject:
           image:
-            tag: "2026.34.5"
+            tag: "2026.37.0"
