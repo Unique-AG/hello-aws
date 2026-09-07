@@ -1,0 +1,27 @@
+# kata-deploy places containerd-shim-kata-v2 on the sandbox nodes and registers
+# the runtime handler Conduct's RuntimeClass points at.
+#
+# Only the `remote` shim: peer-pods needs one binary (shim-v2-go), and nested
+# virtualisation is unavailable below a metal instance anyway.
+shims:
+  disableAll: true
+  remote:
+    enabled: true
+
+# Confined to the sandbox pool: it host-mounts /etc/containerd and /opt/kata
+# and restarts the CRI runtime.
+nodeSelector:
+  workload: sandbox
+
+tolerations:
+  - key: workload
+    value: sandbox
+    effect: NoSchedule
+
+# daemonset, not job: job mode's dispatcher runs only on install and upgrade,
+# so autoscaled nodes would come up without the shim.
+deploymentMode: daemonset
+
+# Detects TEE hardware; the guest runs in a separate instance, so it is moot.
+node-feature-discovery:
+  enabled: false

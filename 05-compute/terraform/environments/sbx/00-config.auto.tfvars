@@ -40,6 +40,30 @@ eks_node_groups = {
       scalability = "rapid"
     }
   }
+
+  # Conduct sandbox hosts. The sandbox workload itself runs in a per-sandbox
+  # peer-pod EC2 instance, so these nodes only carry the kata shim and the
+  # adaptor -- they do not need to be large.
+  #
+  # Tainted so nothing but sandbox components lands here. Deliberately no
+  # startup taint: EKS reconciles managed node group taints, so one removed by
+  # kata-deploy would simply be re-applied. The scheduling race is closed on
+  # the RuntimeClass instead, which selects the node label kata-deploy sets
+  # once the shim is in place.
+  sandbox = {
+    instance_types = ["m6i.large"]
+    desired_size   = 1
+    min_size       = 0
+    max_size       = 3
+    labels = {
+      lifecycle   = "ephemeral"
+      scalability = "rapid"
+      workload    = "sandbox"
+    }
+    taints = [
+      { key = "workload", value = "sandbox", effect = "NO_SCHEDULE" }
+    ]
+  }
 }
 
 # ECR Pull-Through Cache

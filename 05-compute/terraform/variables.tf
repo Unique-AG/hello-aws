@@ -125,10 +125,8 @@ variable "eks_node_groups" {
     min_size        = optional(number, 0)
     max_size        = optional(number, 3)
     max_unavailable = optional(number, 1)
-    labels = optional(object({
-      lifecycle   = string
-      scalability = string
-    }), { lifecycle = "ephemeral", scalability = "rapid" })
+    # A map so pools carry their own labels; the node group forwards them whole.
+    labels = optional(map(string), { lifecycle = "ephemeral", scalability = "rapid" })
     taints = optional(list(object({
       key    = string
       value  = string

@@ -1,0 +1,13 @@
+# Installs the Kata shim on the sandbox node pool so Conduct sandboxes can run
+# in peer-pod VMs. Chart and image come from the upstream public registry.
+spec:
+  name: kata-deploy
+  autoSync: false
+  sources:
+    - repoURL: ghcr.io/kata-containers/kata-deploy-charts
+      chart: kata-deploy
+      targetRevision: 4.1.0
+      helm:
+        releaseName: kata-deploy
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/kata-deploy/kata-deploy.yaml
