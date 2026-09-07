@@ -1,6 +1,4 @@
-# The chart's router NetworkPolicy defaults its sandbox egress to the release
-# namespace. Sandboxes run in sbx, so without this the router cannot reach them
-# once NetworkPolicy enforcement is on.
+# The chart defaults router egress to the release namespace; sandboxes run in sbx.
 router:
   networkPolicy:
     egress:
@@ -11,7 +9,7 @@ router:
       allowedSources:
         - podSelector:
             matchLabels:
-              app.kubernetes.io/name: assistants-core
+              app.kubernetes.io/instance: assistants-core
           namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: unique
