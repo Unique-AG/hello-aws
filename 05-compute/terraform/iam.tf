@@ -919,10 +919,8 @@ resource "aws_eks_pod_identity_association" "tempo" {
 #######################################
 # Peer Pods (cloud-api-adaptor) Role
 #######################################
-# cloud-api-adaptor launches one EC2 instance per Conduct sandbox. Bound by Pod
-# Identity rather than added to the node role: that role is shared by every
-# pool, so EC2 launch rights there would be reachable from any pod via IMDS,
-# including the sandboxes themselves.
+# One EC2 instance per Conduct sandbox. Pod Identity, not the node role: that
+# role is shared by every pool and reachable from any pod via IMDS.
 
 resource "aws_iam_role" "peer_pods" {
   name               = "${module.naming.id}-peer-pods"
@@ -934,6 +932,8 @@ resource "aws_iam_role" "peer_pods" {
 }
 
 data "aws_iam_policy_document" "peer_pods" {
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md; the wildcards are tag-conditioned
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md; RunInstances cannot be resource-scoped for every created type
   statement {
     sid    = "DescribeForPodVMPlacement"
     effect = "Allow"
@@ -946,11 +946,8 @@ data "aws_iam_policy_document" "peer_pods" {
     resources = ["*"]
   }
 
-  # EC2 authorizes RunInstances once per resource it creates, and a request tag
-  # is only in context for the resources the caller actually tags. The adaptor
-  # tags the instance only, and always sends BlockDeviceMappings, so a blanket
-  # tag condition would deny the untagged volume and with it every launch.
-  # Tagged resources therefore carry the condition; the rest are named by ARN.
+  # RunInstances is authorized per created resource, and the adaptor tags only
+  # the instance -- so only that ARN carries the tag condition.
   statement {
     sid     = "RunPodVMTaggedResources"
     effect  = "Allow"
@@ -1008,14 +1005,14 @@ data "aws_iam_policy_document" "peer_pods" {
 }
 
 resource "aws_iam_role_policy" "peer_pods_ec2" {
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   name   = "peer-pods-ec2-launch"
   role   = aws_iam_role.peer_pods.id
   policy = data.aws_iam_policy_document.peer_pods.json
 }
 
-# Two associations: the adaptor and peerpod-ctrl are separate Deployments with
-# separate service accounts, and peerpod-ctrl calls TerminateInstances itself to
-# reclaim pod VMs whose sandbox went away.
+# Two service accounts: peerpod-ctrl reclaims pod VMs on its own.
 resource "aws_eks_pod_identity_association" "peer_pods" {
   cluster_name    = aws_eks_cluster.main.name
   namespace       = "sbx"
