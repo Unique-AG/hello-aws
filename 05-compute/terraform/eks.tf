@@ -604,6 +604,7 @@ resource "aws_eks_node_group" "pool" {
 # meant to have: DNS, and the egress proxy it is configured to use.
 
 resource "aws_security_group" "peer_pods" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   name        = "${module.naming.id}-peer-pods"
   description = "Conduct sandbox pod VMs. Egress confined to DNS and the sbx-gateway proxy."
   vpc_id      = local.infrastructure.vpc_id
