@@ -1,0 +1,15 @@
+# cloud-api-adaptor: launches one EC2 instance per sandbox so Conduct gets a VM
+# boundary. Chart lives in the upstream repo, so this is a git source.
+spec:
+  name: peer-pods
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: https://github.com/confidential-containers/cloud-api-adaptor.git
+      targetRevision: v0.22.0
+      path: src/cloud-api-adaptor/install/charts/peerpods
+      helm:
+        releaseName: peer-pods
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/peer-pods.yaml

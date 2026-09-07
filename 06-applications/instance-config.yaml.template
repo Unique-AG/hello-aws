@@ -26,6 +26,9 @@ aws:
     clusterName: <EKS_CLUSTER_NAME>    # terraform output -raw eks_cluster_name (compute layer)
   vpc:
     id: <VPC_ID>                       # terraform output -raw vpc_id (infrastructure layer)
+  sandbox:
+    subnetId: <SANDBOX_SUBNET_ID>          # private subnet for Conduct pod VMs (infrastructure layer)
+    nodeSecurityGroupId: <EKS_NODE_SECURITY_GROUP_ID>  # terraform output -raw eks_node_security_group_id (compute layer)
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
   route53:
