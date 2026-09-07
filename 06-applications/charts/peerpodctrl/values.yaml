@@ -1,0 +1,31 @@
+# Prefix prepended to all resource names
+namePrefix: peerpodctrl-
+
+# PeerPod controller image
+image:
+  repository: quay.io/confidential-containers/peerpod-ctrl
+  tag: 61b1aba91df646a663e60ab6b55c6a7dc93cd167
+  # Vendored addition: tags at this registry are mutable.
+  digest: "sha256:88e2b55b05de646579ced2fe7e4ec7d603d90d3b99cc80526edc7671d4761e62"
+  pullPolicy: IfNotPresent
+
+# kube-rbac-proxy: Sidecar container that protects the /metrics endpoint with RBAC authentication
+# When enabled, only authenticated clients with proper RBAC permissions can access metrics
+# Set to false to expose metrics without authentication (not recommended for production)
+authProxy:
+  enabled: true
+  image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.0@sha256:e2670fb55b3211fb101f17afa3d81ba816d7c0b76ed31bd3d93fa2affb491595
+
+# Additional labels merged into the peerpod-ctrl controller-manager pod template.
+# For example, opt into webhook injection via
+# azure.workload.identity/use: "true" (Azure Workload Identity), or the
+# equivalent label for other clouds' workload-identity webhooks.
+podLabels: {}
+
+# ServiceAccount customization for the peerpod-ctrl controller-manager.
+# For example, attach a cloud workload-identity binding via
+# annotations.azure\.workload\.identity/client-id (Azure Workload Identity),
+# or the equivalent GCP / AWS annotation, so the controller can authenticate
+# to the cloud provider.
+serviceAccount:
+  annotations: {}

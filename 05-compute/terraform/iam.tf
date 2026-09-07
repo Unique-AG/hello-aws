@@ -915,3 +915,114 @@ resource "aws_eks_pod_identity_association" "tempo" {
   service_account = "tempo"
   role_arn        = aws_iam_role.tempo[0].arn
 }
+
+#######################################
+# Peer Pods (cloud-api-adaptor) Role
+#######################################
+# One EC2 instance per Conduct sandbox. Pod Identity, not the node role: that
+# role is shared by every pool and reachable from any pod via IMDS.
+
+resource "aws_iam_role" "peer_pods" {
+  name               = "${module.naming.id}-peer-pods"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-peer-pods"
+  }
+}
+
+data "aws_iam_policy_document" "peer_pods" {
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md; the wildcards are tag-conditioned
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md; RunInstances cannot be resource-scoped for every created type
+  statement {
+    sid    = "DescribeForPodVMPlacement"
+    effect = "Allow"
+    actions = [
+      "ec2:DescribeImages",
+      "ec2:DescribeInstances",
+      "ec2:DescribeInstanceTypes",
+      "ec2:DescribeVolumes",
+    ]
+    resources = ["*"]
+  }
+
+  # RunInstances is authorized per created resource, and the adaptor tags only
+  # the instance -- so only that ARN carries the tag condition.
+  statement {
+    sid     = "RunPodVMTaggedResources"
+    effect  = "Allow"
+    actions = ["ec2:RunInstances"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestTag/PeerPod"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid     = "RunPodVMSupportingResources"
+    effect  = "Allow"
+    actions = ["ec2:RunInstances"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}::image/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:volume/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:subnet/${local.peer_pods_subnet_id}",
+      aws_security_group.peer_pods.arn,
+    ]
+  }
+
+  # Tagging only as part of a create, so the adaptor cannot relabel an instance
+  # it does not own to bring it into scope of the statements above.
+  statement {
+    sid       = "TagOnCreateOnly"
+    effect    = "Allow"
+    actions   = ["ec2:CreateTags"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:CreateAction"
+      values   = ["RunInstances"]
+    }
+  }
+
+  # Termination limited to instances the adaptor tagged on the way up. This is
+  # what stops a compromised adaptor stopping cluster nodes.
+  statement {
+    sid       = "TerminatePodVMOnly"
+    effect    = "Allow"
+    actions   = ["ec2:TerminateInstances"]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "ec2:ResourceTag/PeerPod"
+      values   = ["true"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "peer_pods_ec2" {
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
+  name   = "peer-pods-ec2-launch"
+  role   = aws_iam_role.peer_pods.id
+  policy = data.aws_iam_policy_document.peer_pods.json
+}
+
+# Two service accounts: peerpod-ctrl reclaims pod VMs on its own.
+resource "aws_eks_pod_identity_association" "peer_pods" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "sbx"
+  service_account = "cloud-api-adaptor"
+  role_arn        = aws_iam_role.peer_pods.arn
+}
+
+resource "aws_eks_pod_identity_association" "peer_pods_ctrl" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "sbx"
+  service_account = "peerpodctrl-controller-manager"
+  role_arn        = aws_iam_role.peer_pods.arn
+}

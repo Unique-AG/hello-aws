@@ -1,0 +1,48 @@
+# cloud-api-adaptor for AWS. Credentials come from EKS Pod Identity, bound in
+# 05-compute/terraform/iam.tf for both this chart's service accounts.
+
+provider: aws
+
+providerConfigs:
+  aws:
+    AWS_REGION: "<AWS_REGION>"
+    AWS_SUBNET_ID: "<SANDBOX_SUBNET_ID>"
+    # The pod VM group, not the node group: the VM's own ENI needs only the
+    # pod-network tunnel, the adaptor channel and its image pull.
+    AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
+    # Required, and deliberately left as a token: built out of band from the
+    # upstream podvm image-builder, and validate-instance.sh must fail until it
+    # is supplied.
+    PODVM_AMI_ID: "<PODVM_AMI_ID>"
+    PODVM_INSTANCE_TYPE: "m6a.large"
+    # The tag the IAM policy conditions on for both launch and termination.
+    TAGS: "PeerPod=true"
+    # The boundary here is the VM, not memory encryption; CVM needs SEV-SNP
+    # capable instance types.
+    DISABLECVM: "true"
+    PEERPODS_LIMIT_PER_NODE: "10"
+
+daemonset:
+  # Upstream hardcodes node.kubernetes.io/worker, which EKS will not set.
+  nodeSelector:
+    workload: sandbox
+  tolerations:
+    - key: workload
+      value: sandbox
+      effect: NoSchedule
+
+# Installed separately at 4.1.0 with only the remote shim; the chart's bundled
+# 4.0.0 copy would contend over containerd configuration.
+kata-deploy:
+  enabled: false
+
+# Reclaims pod VMs whose sandbox went away, so a failed teardown does not leak
+# EC2 instances. Has its own service account, hence the second association.
+resourceCtrl:
+  enabled: true
+
+# Off: a cluster-wide MutatingWebhookConfiguration with failurePolicy Fail on
+# every pod CREATE outside kube-system. Nothing here needs its extended-resource
+# mutation, and an unschedulable webhook would stop all pod creation.
+webhook:
+  enabled: false

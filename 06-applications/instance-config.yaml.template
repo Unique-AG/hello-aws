@@ -26,6 +26,10 @@ aws:
     clusterName: <EKS_CLUSTER_NAME>    # terraform output -raw eks_cluster_name (compute layer)
   vpc:
     id: <VPC_ID>                       # terraform output -raw vpc_id (infrastructure layer)
+  sandbox:
+    subnetId: <SANDBOX_SUBNET_ID>          # terraform output -raw peer_pods_subnet_id (compute layer)
+    securityGroupId: <PEER_PODS_SECURITY_GROUP_ID>  # terraform output -raw peer_pods_security_group_id (compute layer)
+    podvmAmiId: <PODVM_AMI_ID>             # built out of band; see 06-applications/charts/peerpods
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
   route53:

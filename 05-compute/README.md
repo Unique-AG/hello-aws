@@ -47,7 +47,7 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
@@ -60,6 +60,7 @@ Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assu
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
+| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
 
