@@ -91,14 +91,30 @@ Understand what that image is before relying on it:
 
 This is acceptable for `sbx`, where the value is verifying that the peer-pods path works end to end. It is **not** an acceptable basis for the sandbox boundary anywhere the sandbox runs real untrusted work.
 
-**Build or import a non-debug image.** The project also publishes the plain (non-debug) pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name — and its `podvm` directory builds one from source with mkosi. Either way the result is a qcow2 or raw disk that has to be imported: upload to S3, `ec2 import-snapshot`, then `ec2 register-image` with UEFI boot mode and `--tpm-support v2.0`.
+**Build it from source (the intended path).** Two scripts, split so the image source and the AWS half are independent:
 
-Notes for whoever does this:
+```bash
+# On a Linux host with Docker — mkosi needs a privileged container
+./05-compute/scripts/build-podvm-image.sh --check    # confirm the host first
+./05-compute/scripts/build-podvm-image.sh            # produces podvm-<ref>-x86_64.raw
 
-- `TEE_PLATFORM` does not need to be set for this deployment. The default build supports the filesystem attester only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types.
-- The upstream build runs on a stock `ubuntu-24.04` GitHub runner, so it needs no unusual hardware — apt packages plus `dnf`, `yq` 4.x, `oras` and Docker buildx.
-- Provenance of the published artifact **cannot currently be verified**. The build workflow runs `actions/attest` with `push-to-registry`, but neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
-- Upstream's `raw-to-ami.sh` does the import half, but it creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, plus an unencrypted bucket, and cleans up neither. It needs hardening before it belongs here.
+# From anywhere with credentials for this account
+terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=true
+./05-compute/scripts/import-podvm-ami.sh --image ./podvm-build/podvm-v0.22.0-x86_64.raw
+terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=false
+```
+
+The build clones the CAA version pinned in the script — it must match the `peerpods` chart's appVersion — runs upstream's `make` unmodified, and writes a `.provenance` file recording the ref, commit, mkosi version and SHA256. The import refuses to proceed if the image no longer matches that record.
+
+`TEE_PLATFORM` is deliberately left at its default of `none`. That builds filesystem-attester support only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types. The build otherwise needs no unusual hardware — upstream runs it on a stock `ubuntu-24.04` runner.
+
+**Import staging is off by default.** `enable_podvm_image_import` creates the bucket and role VM Import/Export needs, and nothing else uses them, so they should not stand between imports. The role is scoped to the staging bucket, the general KMS key, and the snapshot/image calls that cannot be resource-scoped because they create the resource they name. Contrast upstream's `raw-to-ami.sh`, which creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, an unencrypted bucket, and cleans up neither.
+
+The registered AMI is UEFI with `TpmSupport=v2.0`, IMDSv2-only, and encrypted under the general KMS key; the import verifies all four afterwards, because a pod VM missing UEFI or the TPM boots and then fails to attest.
+
+**Assurance on the result.** `trivy vm ami:<id>` scans the registered image for vulnerabilities and secrets, and the import runs it automatically (`--skip-scan` to opt out). This only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all. Note `trivy vm` is EXPERIMENTAL, supports only VMDK for local files (so scan the AMI, not the disk file), and cannot read LVM layouts.
+
+**Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
 
 ### ECR
 

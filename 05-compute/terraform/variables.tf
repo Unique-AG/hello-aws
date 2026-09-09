@@ -218,3 +218,9 @@ variable "acr_registry_url" {
   type        = string
   default     = ""
 }
+
+variable "enable_podvm_image_import" {
+  description = "Create the staging bucket and VM Import/Export role used to import a Conduct pod VM disk image. Enable only while importing; see 05-compute/README.md."
+  type        = bool
+  default     = false
+}
