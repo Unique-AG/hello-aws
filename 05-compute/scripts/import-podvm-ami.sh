@@ -199,9 +199,13 @@ fi
 AMI_NAME="${AMI_NAME:-$(basename "${RAW%.raw}")}"
 S3_KEY="$(basename "$RAW")"
 
-EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
-  --filters "Name=name,Values=${AMI_NAME}" --query 'Images[0].[ImageId,State]' --output text 2>/dev/null || echo "None None")
-read -r EXISTING_ID EXISTING_STATE <<<"$EXISTING"
+# A failed list is not an absent image: collapsing them starts a second
+# snapshot import while the first may already exist.
+if ! EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
+  --filters "Name=name,Values=${AMI_NAME}" --query 'Images[0].[ImageId,State]' --output text 2>&1); then
+  error "Cannot list images in ${TARGET_REGION}: ${EXISTING}"
+fi
+IFS=$'\t' read -r EXISTING_ID EXISTING_STATE <<<"$EXISTING"
 if [[ "$EXISTING_STATE" == "available" ]]; then
   log "Already imported: ${BOLD}${EXISTING_ID}${NC}"
   # A prior run may have registered it and then failed these very checks.
