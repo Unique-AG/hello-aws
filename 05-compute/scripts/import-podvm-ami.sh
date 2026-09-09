@@ -187,6 +187,8 @@ TASK_ID=$(aws ec2 import-snapshot \
 log "Import task ${TASK_ID}"
 
 DEADLINE=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+# A throttled or dropped describe call must not be read as a failed import.
+UNREADABLE=0
 while true; do
   read -r STATUS MESSAGE SNAPSHOT_ID <<<"$(aws ec2 describe-import-snapshot-tasks \
     --region "$TARGET_REGION" --import-task-ids "$TASK_ID" \
@@ -194,9 +196,17 @@ while true; do
     --output text 2>/dev/null || echo "unknown - -")"
 
   case "$STATUS" in
-    completed) log "Snapshot ${SNAPSHOT_ID}"; break ;;
-    active)    echo "    ${MESSAGE:-converting}" ;;
-    *)         error "Import ended as ${STATUS}: ${MESSAGE:-no detail}" ;;
+    completed)
+      log "Snapshot ${SNAPSHOT_ID}"; break ;;
+    active)
+      UNREADABLE=0
+      echo "    ${MESSAGE:-converting}" ;;
+    unknown)
+      UNREADABLE=$(( UNREADABLE + 1 ))
+      (( UNREADABLE <= 5 )) || error "Cannot read task ${TASK_ID} after 5 attempts; check it in the console"
+      warn "describe-import-snapshot-tasks failed (${UNREADABLE}/5), retrying" ;;
+    *)
+      error "Import ended as ${STATUS}: ${MESSAGE:-no detail}" ;;
   esac
 
   (( $(date +%s) < DEADLINE )) || error "Still converting after ${WAIT_MINUTES} minutes; check task ${TASK_ID}"
