@@ -18,6 +18,8 @@
 #   -r, --ref REF         CAA git ref to build (default: the pinned version)
 #   -o, --out DIR         Where to place the image (default: ./podvm-build)
 #       --debug-image     Build upstream's debug variant instead
+#       --no-verify-provenance
+#                         Skip attestation checks on upstream's binaries
 #       --check           Check host prerequisites and exit
 #   -h, --help            Show this help message
 #
@@ -62,12 +64,16 @@ CAA_REF="$PINNED_REF"
 OUT_DIR="$(pwd)/podvm-build"
 MAKE_TARGET="all"
 CHECK_ONLY=false
+# Upstream defaults this off. On, the build verifies GitHub attestations for the
+# kata-agent and guest-component binaries it pulls before baking them in.
+VERIFY_PROVENANCE="yes"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -r|--ref)       CAA_REF="$2"; shift 2 ;;
     -o|--out)       OUT_DIR="$2"; shift 2 ;;
     --debug-image)  MAKE_TARGET="debug"; shift ;;
+    --no-verify-provenance) VERIFY_PROVENANCE="no"; shift ;;
     --check)        CHECK_ONLY=true; shift ;;
     -h|--help)      awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)              error "Unknown option: $1 (try --help)" ;;
@@ -87,6 +93,11 @@ command -v docker >/dev/null 2>&1 || MISSING+=("docker")
 docker buildx version >/dev/null 2>&1 || MISSING+=("docker-buildx")
 command -v git >/dev/null 2>&1 || MISSING+=("git")
 command -v qemu-img >/dev/null 2>&1 || MISSING+=("qemu-utils")
+# The Makefile's pull_agent_artifact/pull_gc_artifact run oras on the host.
+command -v oras >/dev/null 2>&1 || MISSING+=("oras")
+if [[ "$VERIFY_PROVENANCE" == "yes" ]]; then
+  command -v gh >/dev/null 2>&1 || MISSING+=("gh (or pass --no-verify-provenance)")
+fi
 
 for c in bwrap dnf; do
   command -v "$c" >/dev/null 2>&1 || MISSING+=("$c")
@@ -149,9 +160,16 @@ PODVM_DIR="${SRC_DIR}/src/cloud-api-adaptor/podvm"
 # DISABLECVM=true, so no attester beyond the filesystem one is needed.
 MKOSI_VERSION=$(yq -e '.tools.mkosi' "${SRC_DIR}/src/cloud-api-adaptor/versions.yaml")
 info "mkosi ${MKOSI_VERSION}, target '${MAKE_TARGET}', TEE_PLATFORM=none"
+if [[ "$VERIFY_PROVENANCE" == "yes" ]]; then
+  info "Verifying upstream binary attestations as they are pulled"
+else
+  warn "Provenance verification disabled — upstream binaries are taken on trust"
+fi
 warn "This takes a while and needs a privileged container"
 
-make -C "$PODVM_DIR" "$MAKE_TARGET" MKOSI_VERSION="$MKOSI_VERSION"
+make -C "$PODVM_DIR" "$MAKE_TARGET" \
+  MKOSI_VERSION="$MKOSI_VERSION" \
+  VERIFY_PROVENANCE="$VERIFY_PROVENANCE"
 
 RAW="${PODVM_DIR}/build/system.raw"
 [[ -f "$RAW" ]] || error "Build finished but ${RAW} is missing"
@@ -170,6 +188,7 @@ caa_ref=${CAA_REF}
 caa_commit=${SRC_SHA}
 mkosi_version=${MKOSI_VERSION}
 make_target=${MAKE_TARGET}
+verify_provenance=${VERIFY_PROVENANCE}
 tee_platform=none
 sha256=${SHA}
 built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)

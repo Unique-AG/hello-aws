@@ -104,7 +104,9 @@ terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=true
 terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=false
 ```
 
-The build clones the CAA version pinned in the script — it must match the `peerpods` chart's appVersion — runs upstream's `make` unmodified, and writes a `.provenance` file recording the ref, commit, mkosi version and SHA256. The import refuses to proceed if the image no longer matches that record.
+The build clones the CAA version pinned in the script — it must match the `peerpods` chart's appVersion — runs upstream's `make` unmodified, and writes a `.provenance` file recording the ref, commit, mkosi version and SHA256. The import refuses to proceed if the image no longer matches that record, and tags the AMI `Provenance=built-from-source` only when that check actually ran.
+
+The build also sets `VERIFY_PROVENANCE=yes`, which upstream leaves off. The Makefile then runs `gh attestation verify` against the kata-agent and guest-component binaries as it pulls them, asserting each was built on its own repository from the expected commit — so the binaries baked into the image are attested even though the published pod VM artifact is not. It needs `gh` on the host; `--no-verify-provenance` opts out.
 
 `TEE_PLATFORM` is deliberately left at its default of `none`. That builds filesystem-attester support only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types. The build otherwise needs no unusual hardware — upstream runs it on a stock `ubuntu-24.04` runner.
 
