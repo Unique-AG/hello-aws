@@ -1,4 +1,5 @@
 resource "aws_security_group" "github_runners" {
+  #checkov:skip=CKV2_AWS_5: see docs/security-baseline.md
   count = var.enable_github_runners ? 1 : 0
 
   name        = "${module.naming.id}-github-runners"

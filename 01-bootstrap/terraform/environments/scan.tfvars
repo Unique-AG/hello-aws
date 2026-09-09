@@ -16,3 +16,4 @@ github_repository = "Unique-AG/hello-aws"
 
 # Safety knobs
 cloudwatch_log_retention_days = 365
+kms_deletion_window           = 30
