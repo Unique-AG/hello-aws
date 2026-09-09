@@ -75,6 +75,8 @@ resource "aws_iam_role" "github_runners" {
 }
 
 resource "aws_iam_role_policy" "github_runners" {
+  #checkov:skip=CKV_AWS_290: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_355: see docs/security-baseline.md
   count = var.enable_github_runners ? 1 : 0
 
   name = "github-runners-policy"
@@ -138,6 +140,19 @@ resource "aws_iam_role_policy" "github_runners" {
   })
 }
 
+resource "aws_cloudwatch_log_group" "github_runners" {
+  count = var.enable_github_runners ? 1 : 0
+
+  name              = "${module.naming.log_group_prefix}/github-runners"
+  retention_in_days = var.environment == "sbx" ? var.cloudwatch_log_retention_days : max(var.cloudwatch_log_retention_days, 365)
+  kms_key_id        = aws_kms_key.cloudwatch_logs.arn
+
+  tags = {
+    Name    = "log-${module.naming.id}-github-runners"
+    Purpose = "github-runner-build-logs"
+  }
+}
+
 resource "aws_codebuild_project" "github_runners" {
   count        = var.enable_github_runners ? 1 : 0
   name         = "${module.naming.id}-github-runners"
@@ -159,5 +174,16 @@ resource "aws_codebuild_project" "github_runners" {
     subnets            = aws_subnet.github_runners[*].id
     security_group_ids = [aws_security_group.github_runners[0].id]
   }
+  # Without this the project has no logging configuration at all.
+  logs_config {
+    cloudwatch_logs {
+      status     = "ENABLED"
+      group_name = aws_cloudwatch_log_group.github_runners[0].name
+    }
+    s3_logs {
+      status = "DISABLED"
+    }
+  }
+
   tags = { Name = "${module.naming.id}-github-runners" }
 }

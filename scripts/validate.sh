@@ -429,6 +429,13 @@ if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   if [[ -f "${TERRAFORM_DIR}/.checkov.yml" ]]; then
     CHECKOV_ARGS+=(--config-file "${TERRAFORM_DIR}/.checkov.yml")
   fi
+  # Same variable files as trivy: a count = 0 resource is not evaluated, so
+  # without these the conditional half of the layer goes unscanned.
+  [[ -f "$COMMON_CONFIG" ]] && CHECKOV_ARGS+=(--var-file "$COMMON_CONFIG")
+  [[ -f "$CONFIG_FILE" ]] && CHECKOV_ARGS+=(--var-file "$CONFIG_FILE")
+  if [[ -f "${TERRAFORM_DIR}/environments/scan.tfvars" ]]; then
+    CHECKOV_ARGS+=(--var-file "${TERRAFORM_DIR}/environments/scan.tfvars")
+  fi
 
   if checkov -d "$TERRAFORM_DIR" "${CHECKOV_ARGS[@]}"; then
     echo -e "${GREEN}✅ checkov passed${NC}"

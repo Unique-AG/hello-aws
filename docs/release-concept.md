@@ -99,13 +99,12 @@ checks locally:
   separately from its binary. Suppressions are `.trivyignore.yaml` entries for trivy and
   inline `#checkov:skip=` comments for checkov; every one is documented with rationale in
   [`docs/security-baseline.md`](security-baseline.md) — the single source of truth for
-  suppressions and sbx relaxations, reviewed toward a goal of zero. Layers are scanned with
-  every `enable_*` flag forced on, so a component cannot escape the gate by being disabled in
-  the environment CI happens to read. This is **not** yet complete coverage: resources gated on
-  other variables (`use_oidc`, `github_repository`, `connectivity_account_id`,
-  `transit_gateway_id`, `route53_private_zone_id`) are still skipped when those are unset, and
-  `checkov` is not given the variable files at all. See the pod VM image section of
-  05-compute/README.md for the same caveat applied to a specific layer.
+  suppressions and sbx relaxations, reviewed toward a goal of zero. Both scanners read the same
+  three variable files: the tracked `common.auto.tfvars.template`, the environment's config, and
+  `<layer>/terraform/environments/scan.tfvars` last. That last file defines the posture the gate
+  checks — **every optional component switched on, every safety knob at its production value** —
+  so neither a component an environment leaves off nor a relaxation it makes on purpose can
+  escape the gate. A `count = 0` resource is not evaluated at all, which is why this matters.
 - **Plan preview** — `terraform plan` posted as a PR comment (no apply on PRs)
 
 **Repository-wide checks:**
