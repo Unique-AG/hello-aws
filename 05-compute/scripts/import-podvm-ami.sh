@@ -259,7 +259,7 @@ while true; do
   IFS=$'\t' read -r STATUS MESSAGE SNAPSHOT_ID <<<"$(aws ec2 describe-import-snapshot-tasks \
     --region "$TARGET_REGION" --import-task-ids "$TASK_ID" \
     --query 'ImportSnapshotTasks[0].SnapshotTaskDetail.[Status,StatusMessage,SnapshotId]' \
-    --output text 2>/dev/null || echo "unknown - -")"
+    --output text 2>/dev/null || printf 'unknown\t-\t-')"
 
   case "$STATUS" in
     completed)
