@@ -21,6 +21,7 @@
 #   -k, --kms-key-arn ARN    Key for the copy (default: from terraform)
 #   -n, --name NAME          Name for the copy (default: derived from the source)
 #       --no-wait            Return once the copy is started, without polling
+#       --wait-minutes N     How long to poll for the copy (default: 45)
 #       --verify-only        Check the source image and exit without copying
 #   -h, --help               Show this help message
 #
@@ -67,6 +68,7 @@ TARGET_REGION=""
 KMS_KEY_ARN=""
 AMI_NAME=""
 WAIT=true
+WAIT_MINUTES=45
 VERIFY_ONLY=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -84,8 +86,9 @@ while [[ $# -gt 0 ]]; do
     -k|--kms-key-arn)  KMS_KEY_ARN="$2"; shift 2 ;;
     -n|--name)         AMI_NAME="$2"; shift 2 ;;
     --no-wait)         WAIT=false; shift ;;
+    --wait-minutes)    WAIT_MINUTES="$2"; shift 2 ;;
     --verify-only)     VERIFY_ONLY=true; shift ;;
-    -h|--help)         sed -n '2,32p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help)         awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)                 error "Unknown option: $1 (try --help)" ;;
   esac
 done
@@ -174,13 +177,40 @@ fi
 # Copy
 #######################################
 
-EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
-  --filters "Name=name,Values=${AMI_NAME}" --query 'Images[0].ImageId' --output text 2>/dev/null || echo "None")
+# describe-images returns pending and failed copies too, and a failed one keeps
+# the name -- so branch on state rather than on the ID existing.
+read -r EXISTING EXISTING_STATE <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
+  --filters "Name=name,Values=${AMI_NAME}" \
+  --query 'Images[0].[ImageId,State]' --output text 2>/dev/null || echo "None None")"
 
-if [[ "$EXISTING" != "None" && -n "$EXISTING" ]]; then
-  log "Already present in ${TARGET_REGION}: ${BOLD}${EXISTING}${NC}"
-  AMI_ID="$EXISTING"
-else
+AMI_ID=""
+
+case "$EXISTING_STATE" in
+  available)
+    log "Already present in ${TARGET_REGION}: ${BOLD}${EXISTING}${NC}"
+    AMI_ID="$EXISTING"
+
+    # A copy made under a different key still carries the right name.
+    EXISTING_KEY=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$EXISTING" \
+      --query 'Images[0].BlockDeviceMappings[0].Ebs.KmsKeyId' --output text 2>/dev/null || echo "None")
+    if [[ "$EXISTING_KEY" == "None" || -z "$EXISTING_KEY" ]]; then
+      warn "${EXISTING} is not encrypted; re-copy it or deregister it and run again"
+    elif [[ "$EXISTING_KEY" != "$KMS_KEY_ARN" ]]; then
+      warn "${EXISTING} is encrypted under ${EXISTING_KEY}, not ${KMS_KEY_ARN}"
+    fi
+    ;;
+  pending)
+    info "A copy named ${AMI_NAME} is still pending: ${EXISTING}"
+    AMI_ID="$EXISTING"
+    ;;
+  None|"")
+    ;;
+  *)
+    error "An image named ${AMI_NAME} exists in state ${EXISTING_STATE} (${EXISTING}). Deregister it, then run again."
+    ;;
+esac
+
+if [[ -z "$AMI_ID" ]]; then
   info "Copying to ${TARGET_REGION}"
   AMI_ID=$(aws ec2 copy-image \
     --region "$TARGET_REGION" \
@@ -199,13 +229,38 @@ else
     "Key=SourceRegion,Value=${SOURCE_REGION}" \
     "Key=SourceOwner,Value=${SRC_OWNER}" \
     "Key=Provenance,Value=upstream-debug-image-unverified-publisher" >/dev/null || warn "Could not tag ${AMI_ID}"
+fi
 
-  if [[ "$WAIT" == true ]]; then
-    info "Waiting for the copy to finish (several minutes)"
-    aws ec2 wait image-available --region "$TARGET_REGION" --image-ids "$AMI_ID" \
-      || error "Copy did not become available; check the console for ${AMI_ID}"
-    log "Available"
+#######################################
+# Wait
+#######################################
+
+# Not `aws ec2 wait image-available`: its fixed 40x15s gives up after ten
+# minutes, and a cross-region encrypted copy can take longer than that.
+if [[ "$WAIT" == true ]]; then
+  STATE=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+    --query 'Images[0].State' --output text 2>/dev/null || echo "unknown")
+
+  if [[ "$STATE" != "available" ]]; then
+    info "Waiting for ${AMI_ID} (up to ${WAIT_MINUTES} minutes)"
+    DEADLINE=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+
+    while [[ "$STATE" == "pending" ]]; do
+      if (( $(date +%s) >= DEADLINE )); then
+        error "Still pending after ${WAIT_MINUTES} minutes. It may yet finish — re-run to pick it up, or check ${AMI_ID} in the console."
+      fi
+      sleep 20
+      STATE=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+        --query 'Images[0].State' --output text 2>/dev/null || echo "unknown")
+    done
+
+    if [[ "$STATE" != "available" ]]; then
+      REASON=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+        --query 'Images[0].StateReason.Message' --output text 2>/dev/null || echo "no reason given")
+      error "Copy ended in state ${STATE}: ${REASON}"
+    fi
   fi
+  log "Available"
 fi
 
 #######################################
