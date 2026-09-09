@@ -83,7 +83,13 @@ jobs:
       - name: Install checkov
         run: pipx install checkov==3.2.526
       - name: checkov
-        run: checkov -d ${{ matrix.dir }}/terraform --framework terraform --quiet --compact
+        # Same variable files as trivy: a count = 0 resource is not evaluated,
+        # so without these the conditional half of each layer goes unscanned.
+        run: |
+          checkov -d ${{ matrix.dir }}/terraform --framework terraform --quiet --compact \
+            --var-file common.auto.tfvars.template \
+            --var-file ${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars \
+            --var-file ${{ matrix.dir }}/terraform/environments/scan.tfvars
       - name: trivy result
         if: steps.trivy.outcome == 'failure'
         run: |
