@@ -209,8 +209,11 @@ else
   DESCRIPTION="Conduct sandbox pod VM (copied from ${SOURCE_AMI} in ${SOURCE_REGION})"
 fi
 
-[[ -n "$SRC_NAME" && "$SRC_NAME" != "None" ]] || error "Source AMI has no name; pass --name"
-AMI_NAME="${AMI_NAME:-${SRC_NAME}}"
+# Resolve first, so --name can stand in for a source with no name of its own.
+if [[ -z "$AMI_NAME" ]]; then
+  [[ -n "$SRC_NAME" && "$SRC_NAME" != "None" ]] || error "Source AMI has no name; pass --name"
+  AMI_NAME="$SRC_NAME"
+fi
 
 if [[ "$VERIFY_ONLY" == true ]]; then
   log "Verify only — nothing copied"
@@ -276,8 +279,7 @@ if [[ -z "$AMI_ID" ]]; then
   log "Copy started: ${BOLD}${AMI_ID}${NC}"
 fi
 
-# Unconditional and idempotent: a re-run after an interrupted copy must not be
-# left with no record of where the image came from.
+# Unconditional: a re-run after an interrupted copy must still get tagged.
 aws ec2 create-tags --region "$TARGET_REGION" --resources "$AMI_ID" --tags \
   "Key=Name,Value=${AMI_NAME}" \
   "Key=SourceImageId,Value=${SOURCE_AMI}" \
@@ -351,11 +353,17 @@ fi
 echo ""
 echo -e "${BOLD}Pod VM AMI:${NC} ${AMI_ID}  (${TARGET_REGION})"
 
-if [[ "$WAIT" == false && "$STARTED_COPY" == true ]]; then
-  echo ""
-  warn "Still copying — not usable until it reports available, and its snapshot"
-  warn "is untagged until then. Re-run without --no-wait to follow and finish it."
-  exit 0
+if [[ "$WAIT" == false ]]; then
+  # Whether this run started the copy or found one already pending, the AMI is
+  # not usable and its snapshot is untagged.
+  FINAL_STATE=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+    --query 'Images[0].State' --output text 2>/dev/null || echo "unknown")
+  if [[ "$FINAL_STATE" != "available" ]]; then
+    echo ""
+    warn "State is ${FINAL_STATE} — not usable yet, and the snapshot is untagged."
+    warn "Re-run without --no-wait to follow it and finish tagging."
+    exit 0
+  fi
 fi
 
 echo ""
