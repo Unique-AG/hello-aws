@@ -178,7 +178,9 @@ RAW="${PODVM_DIR}/build/system.raw"
 # Report
 #######################################
 
-FINAL="${OUT_DIR}/podvm-${CAA_REF}-$(uname -m).raw"
+VARIANT_SUFFIX=""
+[[ "$MAKE_TARGET" == "debug" ]] && VARIANT_SUFFIX="-debug"
+FINAL="${OUT_DIR}/podvm-${CAA_REF}-$(uname -m)${VARIANT_SUFFIX}.raw"
 mv "$RAW" "$FINAL"
 SHA=$(sha256sum "$FINAL" | cut -d' ' -f1)
 
