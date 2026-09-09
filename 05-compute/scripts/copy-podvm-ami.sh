@@ -36,21 +36,8 @@
 
 set -euo pipefail
 
-#######################################
-# Colors & Output
-#######################################
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log()   { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
-error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
-info()  { echo -e "${BLUE}[i]${NC} $1"; }
+# shellcheck source=05-compute/scripts/lib/aws-common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 
 #######################################
 # Defaults
@@ -82,11 +69,6 @@ TF_INFRA="${REPO_ROOT}/03-infrastructure/terraform"
 # Arguments
 #######################################
 
-# Without this, a missing value dies on $2 with a raw unbound-variable message.
-need_value() {
-  [[ $# -ge 2 && -n "${2:-}" ]] || error "$1 needs a value (try --help)"
-}
-
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -s|--source-ami)   need_value "$@"; SOURCE_AMI="$2"; shift 2 ;;
@@ -97,7 +79,7 @@ while [[ $# -gt 0 ]]; do
     --wait-minutes)    need_value "$@"; WAIT_MINUTES="$2"; shift 2 ;;
     --no-wait)         WAIT=false; shift ;;
     --verify-only)     VERIFY_ONLY=true; shift ;;
-    -h|--help)         awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)         print_help "${BASH_SOURCE[0]}"; exit 0 ;;
     -*)                error "Unknown option: $1 (try --help)" ;;
     *)
       [[ -z "$ENV_NAME" ]] || error "Unexpected argument: $1 (try --help)"
@@ -117,7 +99,6 @@ SOURCE_AMI="${SOURCE_AMI:-$DEFAULT_SOURCE_AMI}"
 command -v aws >/dev/null 2>&1 || error "aws CLI is not installed"
 aws sts get-caller-identity >/dev/null 2>&1 || error "aws CLI has no usable credentials"
 
-tf_out() { terraform -chdir="$1" output -raw "$2" 2>/dev/null || true; }
 
 if [[ "$VERIFY_ONLY" == false ]]; then
   [[ -n "$ENV_NAME" ]] || error "No environment given. Usage: $(basename "$0") <env> (try --help)"
