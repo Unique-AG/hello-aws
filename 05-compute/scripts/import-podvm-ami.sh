@@ -85,6 +85,32 @@ CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
 tf_out() { terraform -chdir="$1" output -raw "$2" 2>/dev/null || true; }
 
+# Run against a freshly registered image and against one a previous run left
+# behind: an AMI that exists is not evidence that it is usable.
+verify_ami_properties() {
+  local ami="$1"
+  local boot tpm imds enc key
+  read -r boot tpm imds enc key <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$ami" \
+    --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,BlockDeviceMappings[0].Ebs.Encrypted,BlockDeviceMappings[0].Ebs.KmsKeyId]' \
+    --output text)"
+
+  # All five collected before failing, so one run shows every mismatch.
+  local mismatch=()
+  [[ "$boot" == "uefi" ]]        || mismatch+=("boot mode is ${boot}, expected uefi")
+  [[ "$tpm" == "v2.0" ]]         || mismatch+=("TPM support is ${tpm}, expected v2.0")
+  [[ "$imds" == "v2.0" ]]        || mismatch+=("IMDS support is ${imds}, expected v2.0")
+  [[ "$enc" == "True" ]]         || mismatch+=("root volume is not encrypted")
+  [[ "$key" == "$KMS_KEY_ARN" ]] || mismatch+=("encrypted under ${key}, not ${KMS_KEY_ARN}")
+
+  if ((${#mismatch[@]})); then
+    for m in "${mismatch[@]}"; do warn "$m"; done
+    # A pod VM missing UEFI or the TPM boots and then fails to attest, which is
+    # slow to diagnose -- better to reject the image than hand it over.
+    error "${ami} has the wrong properties. Deregister it, then re-run."
+  fi
+  log "Boot properties and encryption as expected"
+}
+
 EXPECTED_ACCOUNT=$(tf_out "$TF_COMPUTE" aws_account_id)
 if [[ -n "$EXPECTED_ACCOUNT" && "$EXPECTED_ACCOUNT" != "$CALLER_ACCOUNT" ]]; then
   error "Credentials are for ${CALLER_ACCOUNT}, but this deployment is ${EXPECTED_ACCOUNT}"
@@ -137,10 +163,17 @@ if [[ -f "$PROV" ]]; then
   CAA_REF=$(grep '^caa_ref=' "$PROV" | cut -d= -f2)
   CAA_COMMIT=$(grep '^caa_commit=' "$PROV" | cut -d= -f2)
   RECORDED=$(grep '^sha256=' "$PROV" | cut -d= -f2)
+  MAKE_TARGET=$(grep '^make_target=' "$PROV" | cut -d= -f2 || echo "")
   if [[ "$RECORDED" != "$SHA" ]]; then
     error "Image does not match its provenance record. Recorded ${RECORDED}, got ${SHA}."
   fi
-  PROVENANCE="built-from-source"
+  if [[ "$MAKE_TARGET" == "debug" ]]; then
+    PROVENANCE="built-from-source-debug"
+    warn "This is upstream's debug variant: serial console access is enabled."
+    warn "Do not use it as a sandbox boundary."
+  else
+    PROVENANCE="built-from-source"
+  fi
   log "Matches its provenance record (${CAA_REF} @ ${CAA_COMMIT:0:12})"
 else
   warn "No ${PROV##*/} beside the image — importing without a provenance check"
@@ -154,6 +187,8 @@ EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
 read -r EXISTING_ID EXISTING_STATE <<<"$EXISTING"
 if [[ "$EXISTING_STATE" == "available" ]]; then
   log "Already imported: ${BOLD}${EXISTING_ID}${NC}"
+  # A prior run may have registered it and then failed these very checks.
+  verify_ami_properties "$EXISTING_ID"
   echo "    Deregister it to re-import, or pass --name for a different name."
   exit 0
 elif [[ "$EXISTING_STATE" != "None" && -n "${EXISTING_STATE// /}" ]]; then
@@ -262,25 +297,7 @@ log "Registered ${BOLD}${AMI_ID}${NC}"
 # Verify
 #######################################
 
-read -r R_BOOT R_TPM R_IMDS R_ENC R_KEY <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
-  --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,BlockDeviceMappings[0].Ebs.Encrypted,BlockDeviceMappings[0].Ebs.KmsKeyId]' \
-  --output text)"
-
-# All five collected before failing, so one run shows every mismatch.
-MISMATCH=()
-[[ "$R_BOOT" == "uefi" ]]        || MISMATCH+=("boot mode is ${R_BOOT}, expected uefi")
-[[ "$R_TPM" == "v2.0" ]]         || MISMATCH+=("TPM support is ${R_TPM}, expected v2.0")
-[[ "$R_IMDS" == "v2.0" ]]        || MISMATCH+=("IMDS support is ${R_IMDS}, expected v2.0")
-[[ "$R_ENC" == "True" ]]         || MISMATCH+=("root volume is not encrypted")
-[[ "$R_KEY" == "$KMS_KEY_ARN" ]] || MISMATCH+=("encrypted under ${R_KEY}, not ${KMS_KEY_ARN}")
-
-if ((${#MISMATCH[@]})); then
-  for m in "${MISMATCH[@]}"; do warn "$m"; done
-  # A pod VM missing UEFI or the TPM boots and then fails to attest, which is a
-  # slow thing to diagnose -- better to reject the image than hand it over.
-  error "${AMI_ID} was registered with the wrong properties. Deregister it, then re-run."
-fi
-log "Boot properties and encryption as expected"
+verify_ami_properties "$AMI_ID"
 
 # Only possible on an AMI we own: trivy cannot read public snapshots.
 if [[ "$SKIP_SCAN" == false ]] && command -v trivy >/dev/null 2>&1; then
