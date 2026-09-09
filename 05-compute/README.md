@@ -118,7 +118,7 @@ Debug builds are kept separate end to end: the output file, the AMI name and the
 
 **Assurance on the result.** `trivy vm ami:<id>` scans the registered image for vulnerabilities and secrets, and the import runs it automatically (`--skip-scan` to opt out). This only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all. Note `trivy vm` is EXPERIMENTAL, supports only VMDK for local files (so scan the AMI, not the disk file), and cannot read LVM layouts.
 
-**Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
+**Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it, naming the raw after the qcow2's digest so a leftover conversion of a different image cannot be reused. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
 
 ### ECR
 

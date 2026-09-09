@@ -111,13 +111,22 @@ verify_ami_properties() {
   log "Boot properties and encryption as expected"
 }
 
-EXPECTED_ACCOUNT=$(tf_out "$TF_COMPUTE" aws_account_id)
-if [[ -n "$EXPECTED_ACCOUNT" && "$EXPECTED_ACCOUNT" != "$CALLER_ACCOUNT" ]]; then
-  error "Credentials are for ${CALLER_ACCOUNT}, but this deployment is ${EXPECTED_ACCOUNT}"
-fi
+# Same guards as copy-podvm-ami.sh: each layer is init'd per environment, so
+# their states can be for different ones, and encrypting under a mismatched key
+# would still satisfy verify_ami_properties because it compares the same value.
+COMPUTE_ACCOUNT=$(tf_out "$TF_COMPUTE" aws_account_id)
+COMPUTE_REGION=$(tf_out "$TF_COMPUTE" aws_region)
+INFRA_ACCOUNT=$(tf_out "$TF_INFRA" aws_account_id)
+INFRA_REGION=$(tf_out "$TF_INFRA" aws_region)
 
-[[ -n "$TARGET_REGION" ]] || TARGET_REGION=$(tf_out "$TF_COMPUTE" aws_region)
-TARGET_REGION="${TARGET_REGION:-${AWS_REGION:-eu-central-2}}"
+[[ -n "$COMPUTE_REGION" && -n "$INFRA_REGION" ]] || error \
+  "Cannot read terraform state. Run terraform init for 05-compute and 03-infrastructure first."
+[[ "$COMPUTE_ACCOUNT" == "$INFRA_ACCOUNT" && "$COMPUTE_REGION" == "$INFRA_REGION" ]] || error \
+  "05-compute state is ${COMPUTE_ACCOUNT}/${COMPUTE_REGION} but 03-infrastructure is ${INFRA_ACCOUNT}/${INFRA_REGION}. Re-init both for the same environment."
+[[ "$COMPUTE_ACCOUNT" == "$CALLER_ACCOUNT" ]] || error \
+  "Credentials are for ${CALLER_ACCOUNT}, but this deployment is ${COMPUTE_ACCOUNT}"
+
+TARGET_REGION="${TARGET_REGION:-$COMPUTE_REGION}"
 
 BUCKET=$(tf_out "$TF_COMPUTE" podvm_import_bucket)
 ROLE_NAME=$(tf_out "$TF_COMPUTE" podvm_import_role_name)
@@ -128,6 +137,11 @@ KMS_KEY_ARN=$(tf_out "$TF_INFRA" kms_key_general_arn)
 [[ -n "$ROLE_NAME" && "$ROLE_NAME" != "null" ]] \
   || error "No import role. Apply 05-compute with -var enable_podvm_image_import=true first."
 [[ -n "$KMS_KEY_ARN" ]] || error "Could not resolve the general KMS key from 03-infrastructure state"
+
+# A KMS key is regional; import-snapshot rejects one from another region.
+KEY_REGION="$(cut -d: -f4 <<<"$KMS_KEY_ARN")"
+[[ "$KEY_REGION" == "$TARGET_REGION" ]] \
+  || error "KMS key is in ${KEY_REGION} but the import targets ${TARGET_REGION}"
 
 info "Account ${CALLER_ACCOUNT}, region ${TARGET_REGION}"
 info "Staging in ${BUCKET} as ${ROLE_NAME}"
@@ -141,9 +155,12 @@ case "$IMAGE" in
   *.raw) RAW="$IMAGE" ;;
   *.qcow2)
     command -v qemu-img >/dev/null 2>&1 || error "qemu-img is needed to convert ${IMAGE##*.} to raw"
-    RAW="${IMAGE%.qcow2}.raw"
+    # Name the raw after the qcow2's digest, so a leftover conversion of some
+    # other image cannot be picked up by matching filename alone.
+    QCOW_SHA=$(sha256sum "$IMAGE" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$IMAGE" | cut -d' ' -f1)
+    RAW="${IMAGE%.qcow2}-${QCOW_SHA:0:12}.raw"
     if [[ -f "$RAW" ]]; then
-      info "Reusing ${RAW}"
+      info "Reusing ${RAW} (converted from this exact qcow2)"
     else
       info "Converting to raw"
       qemu-img convert -f qcow2 -O raw "$IMAGE" "$RAW" || error "Conversion failed"
