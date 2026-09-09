@@ -138,11 +138,12 @@ data "aws_iam_policy_document" "podvm_import" {
     sid    = "DecryptStagedImage"
     effect = "Allow"
     actions = [
+      "kms:CreateGrant",
       "kms:Decrypt",
       "kms:DescribeKey",
+      "kms:Encrypt",
       "kms:GenerateDataKey*",
       "kms:ReEncrypt*",
-      "kms:CreateGrant",
     ]
     resources = [local.infrastructure.kms_key_arn]
   }
