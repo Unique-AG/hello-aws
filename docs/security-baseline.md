@@ -6,6 +6,10 @@ This is a living document. Security posture is being hardened on an ongoing basi
 
 ## Suppressed Scanner Findings
 
+Trivy suppressions live in [`.trivyignore.yaml`](../.trivyignore.yaml) at the repository
+root, keyed by `AVD-` rule id and scoped to the files they apply to. Checkov suppressions
+are inline `#checkov:skip=` comments on the resource. Both point back here for rationale.
+
 ### 01-bootstrap
 
 #### Checkov
@@ -33,6 +37,7 @@ This is a living document. Security posture is being hardened on an ongoing basi
 | Rule | Resource | Rationale |
 |---|---|---|
 | CKV_AWS_91 | `aws_lb.ingress_nlb`, `aws_lb.websocket` | ALB access logging deferred — requires dedicated S3 log bucket with ELB write policy. CloudFront access logs provide partial coverage for the internal ALB. Public WebSocket ALB has no compensating control. **Remediation: provision log bucket before production.** |
+| CKV_AWS_2 | `aws_lb_listener.cloudfront_http` | Same listener as CKV_AWS_103 below — HTTP is the CloudFront VPC Origin's private hop to the ingress NLB, not a client-facing listener. **Compensating control:** CloudFront terminates TLS 1.2+ at the edge. |
 | CKV_AWS_103 | `aws_lb_listener.cloudfront_http` | Listener is HTTP-only by design — it is the CloudFront VPC Origin's HTTP→ingress hop. CloudFront terminates TLS (TLS 1.2+) at the edge; the VPC Origin → ALB segment is private VPC-internal traffic. Setting `ssl_policy` is not applicable to an `HTTP` protocol listener. **Compensating control:** CloudFront's `viewer_minimum_protocol_version` enforces TLS 1.2+ for all client-facing TLS. |
 | CKV_AWS_150 | `aws_lb.ingress_nlb` | Deletion protection controlled by `var.alb_deletion_protection`; disabled in sandbox for fast teardown |
 | CKV_AWS_290 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions do not support resource-level constraints (AWS API limitation) |
@@ -62,12 +67,15 @@ This is a living document. Security posture is being hardened on an ongoing basi
 
 ### 05-compute
 
-#### Trivy (`.trivyignore`)
+#### Trivy
 
 | Rule | Severity | Resource | Rationale |
 |---|---|---|---|
-| AWS-0040 | CRITICAL | `aws_eks_cluster.main` | `endpoint_public_access` is variable-driven (default `false`); only sbx overrides to `true` for development access |
-| AWS-0041 | CRITICAL | `aws_eks_cluster.main` | `public_access_cidrs` is variable-driven; defaults to `[]` when public access is disabled |
+| AVD-AWS-0104 | CRITICAL | `aws_vpc_security_group_egress_rule.eks_nodes_to_internet` | Workloads call third-party HTTPS APIs that have no AWS VPC endpoint — Azure OpenAI, Google Search, Slack webhooks — and that traffic leaves through the node ENI, so 443 to `0.0.0.0/0` via NAT is required. Container registry pulls do **not** depend on it: ECR interface endpoints plus the pull-through cache cover those. **Compensating controls:** port 443 only, egress-only via NAT (no inbound), private subnets. **Remediation:** route third-party API egress through an explicit proxy and scope this rule to prefix lists. |
+
+`AWS-0040` and `AWS-0041` were removed: sbx sets only `eks_endpoint_private_access = true`,
+so neither rule fires, and as unscoped file-level ignores they would have masked a genuine
+public-endpoint regression.
 
 #### Checkov
 
@@ -129,9 +137,11 @@ The following settings are overridden in sbx `00-config.auto.tfvars` to enable f
 
 | Setting | sbx Value | Production Default | Risk |
 |---|---|---|---|
-| `eks_endpoint_public_access` | `true` | `false` | EKS API accessible from internet |
-| `eks_endpoint_public_access_cidrs` | `["0.0.0.0/0"]` | `[]` | No CIDR restriction on public access |
 | `alb_deletion_protection` | `false` | `true` | ALBs can be accidentally deleted |
+
+The EKS public-endpoint relaxations that used to be listed here are gone: sbx now sets
+`eks_endpoint_private_access = true` with no public override, and access is via SSM to the
+management server.
 
 ## Production Guardrails via SCP
 

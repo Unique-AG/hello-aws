@@ -12,7 +12,6 @@ resource "aws_security_group" "github_runners" {
 
 # Outbound to internet (for GitHub API, package registries)
 resource "aws_vpc_security_group_egress_rule" "github_runners_https_internet" {
-  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
   count = var.enable_github_runners ? 1 : 0
 
   security_group_id = aws_security_group.github_runners[0].id

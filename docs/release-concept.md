@@ -95,9 +95,13 @@ checks locally:
 - **Lint** — `tflint`
 - **Security / IaC policy scanning** — `trivy` scans each layer's Terraform for
   misconfigurations and **fails the build on HIGH/CRITICAL**; `checkov` (3.x) runs the full
-  Terraform policy set. Every suppression for both (`.trivyignore` and `checkov` skips) is
-  documented with rationale in [`docs/security-baseline.md`](security-baseline.md) — the single
-  source of truth for suppressions and sbx relaxations, reviewed toward a goal of zero.
+  Terraform policy set. Both are pinned, and trivy's check bundle is pinned by digest
+  separately from its binary. Suppressions are `.trivyignore.yaml` entries for trivy and
+  inline `#checkov:skip=` comments for checkov; every one is documented with rationale in
+  [`docs/security-baseline.md`](security-baseline.md) — the single source of truth for
+  suppressions and sbx relaxations, reviewed toward a goal of zero. Layers are scanned with
+  every `enable_*` flag forced on, so a conditional resource cannot escape the gate by being
+  disabled in the environment CI happens to read.
 - **Plan preview** — `terraform plan` posted as a PR comment (no apply on PRs)
 
 **Repository-wide checks:**

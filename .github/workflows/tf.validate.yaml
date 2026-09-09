@@ -10,7 +10,11 @@ on:
       - '0[1-5]-*/**'
       - 'modules/**'
       - 'scripts/**'
-      - 'common.auto.tfvars'
+      # common.auto.tfvars itself is gitignored, so no commit can ever match it;
+      # the template and the suppression files are what the scan reads.
+      - 'common.auto.tfvars.template'
+      - '.trivyignore.yaml'
+      - 'trivy.yaml'
       - '.github/workflows/**'
       - '.github/actions/**'
 
@@ -53,19 +57,25 @@ jobs:
           tflint --init
           tflint --chdir=${{ matrix.dir }}/terraform
       - name: trivy
+        id: trivy
+        # Verdict deferred to the end so checkov still runs on a trivy failure.
+        continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          # The action's own default is v0.70.0.
+          version: v0.74.0
+          # Pins the check bundle, which is versioned separately from the binary.
+          trivy-config: trivy.yaml
           scan-type: fs
           scan-ref: ${{ matrix.dir }}/terraform
           scanners: misconfig
           severity: HIGH,CRITICAL
-          trivyignores: .trivyignore
-          # Resolve naming-module vars so the AWS provider's default_tags map
-          # doesn't contain nulls — trivy 0.70.0's adaptDefaultTags panics on
-          # AsString of a null value otherwise. Use the tracked *.template
-          # (common.auto.tfvars itself is gitignored — real values live only on
-          # the deploy branch); its example values are sufficient for the scan.
-          tf-vars: common.auto.tfvars.template,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars
+          # Without this the action leaves trivy's default of 0 and never fails.
+          exit-code: '1'
+          trivyignores: .trivyignore.yaml
+          # The template resolves module.naming; without it default_tags holds
+          # nulls, which crashes trivy <=0.70. scan.tfvars forces every flag on.
+          tf-vars: common.auto.tfvars.template,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars,${{ matrix.dir }}/terraform/environments/scan.tfvars
       # bridgecrewio/checkov-action's last release (2022) ships checkov 2.0.930,
       # which predates the split S3 resource pattern (separate versioning /
       # encryption / logging resources). Install checkov 3.x directly so rules
@@ -74,3 +84,8 @@ jobs:
         run: pipx install checkov==3.2.526
       - name: checkov
         run: checkov -d ${{ matrix.dir }}/terraform --framework terraform --quiet --compact
+      - name: trivy result
+        if: steps.trivy.outcome == 'failure'
+        run: |
+          echo "::error::trivy found HIGH/CRITICAL misconfigurations — see the trivy step above"
+          exit 1
