@@ -244,8 +244,29 @@ if [[ "$WAIT" == true ]]; then
   if [[ "$STATE" != "available" ]]; then
     info "Waiting for ${AMI_ID} (up to ${WAIT_MINUTES} minutes)"
     DEADLINE=$(( $(date +%s) + WAIT_MINUTES * 60 ))
+    # A throttled or dropped describe-images must not be read as a failed copy.
+    UNREADABLE=0
 
-    while [[ "$STATE" == "pending" ]]; do
+    while true; do
+      case "$STATE" in
+        available)
+          break
+          ;;
+        pending)
+          UNREADABLE=0
+          ;;
+        unknown)
+          UNREADABLE=$(( UNREADABLE + 1 ))
+          (( UNREADABLE <= 5 )) || error "Cannot read ${AMI_ID} after 5 attempts; check it in the console"
+          warn "describe-images failed (${UNREADABLE}/5), retrying"
+          ;;
+        *)
+          REASON=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+            --query 'Images[0].StateReason.Message' --output text 2>/dev/null || echo "no reason given")
+          error "Copy ended in state ${STATE}: ${REASON}"
+          ;;
+      esac
+
       if (( $(date +%s) >= DEADLINE )); then
         error "Still pending after ${WAIT_MINUTES} minutes. It may yet finish — re-run to pick it up, or check ${AMI_ID} in the console."
       fi
@@ -253,12 +274,6 @@ if [[ "$WAIT" == true ]]; then
       STATE=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
         --query 'Images[0].State' --output text 2>/dev/null || echo "unknown")
     done
-
-    if [[ "$STATE" != "available" ]]; then
-      REASON=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
-        --query 'Images[0].StateReason.Message' --output text 2>/dev/null || echo "no reason given")
-      error "Copy ended in state ${STATE}: ${REASON}"
-    fi
   fi
   log "Available"
 fi
