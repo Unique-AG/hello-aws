@@ -7,13 +7,19 @@
 
 locals {
   podvm_import_enabled = var.enable_podvm_image_import ? 1 : 0
-  podvm_import_bucket  = "s3-${module.naming.id}-podvm-import"
+  # Account-scoped: force_destroy plus the enable/disable cycle releases and
+  # re-claims this name, and a global collision would fail the apply.
+  podvm_import_bucket = "${module.naming.s3_bucket_prefix}-podvm-import-${module.naming.account_id}"
 }
 
 resource "aws_s3_bucket" "podvm_import" {
   #checkov:skip=CKV_AWS_18: see docs/security-baseline.md
   #checkov:skip=CKV_AWS_144: see docs/security-baseline.md
   #checkov:skip=CKV2_AWS_62: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_21: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_145: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_6: see docs/security-baseline.md
+  #checkov:skip=CKV2_AWS_61: see docs/security-baseline.md
   count = local.podvm_import_enabled
 
   bucket        = local.podvm_import_bucket

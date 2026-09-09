@@ -96,19 +96,20 @@ This is acceptable for `sbx`, where the value is verifying that the peer-pods pa
 ```bash
 # On a Linux host with Docker — mkosi needs a privileged container
 ./05-compute/scripts/build-podvm-image.sh --check    # confirm the host first
-./05-compute/scripts/build-podvm-image.sh            # produces podvm-<ref>-x86_64.raw
+./05-compute/scripts/build-podvm-image.sh            # writes to $TMPDIR/podvm-build
 
-# From anywhere with credentials for this account
-terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=true
-./05-compute/scripts/import-podvm-ami.sh --image ./podvm-build/podvm-v0.22.0-x86_64.raw
-terraform -chdir=05-compute/terraform apply -var enable_podvm_image_import=false
+# From anywhere with credentials for this account. Use deploy.sh, not a bare
+# terraform apply: the layer needs both tfvars files, and neither is auto-loaded.
+TF_VAR_enable_podvm_image_import=true ./scripts/deploy.sh compute sbx
+./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.22.0-x86_64.raw"
+./scripts/deploy.sh compute sbx
 ```
 
 The build clones the CAA version pinned in the script — it must match the `peerpods` chart's appVersion — runs upstream's `make` unmodified, and writes a `.provenance` file recording the ref, commit, mkosi version and SHA256. The import refuses to proceed if the image no longer matches that record, and tags the AMI `Provenance=built-from-source` only when that check actually ran.
 
-The build also sets `VERIFY_PROVENANCE=yes`, which upstream leaves off. The Makefile then runs `gh attestation verify` against the kata-agent and guest-component binaries as it pulls them, asserting each was built on its own repository from the expected commit — so the binaries baked into the image are attested even though the published pod VM artifact is not. It needs `gh` on the host; `--no-verify-provenance` opts out.
+The build also sets `VERIFY_PROVENANCE=yes`. Upstream's Makefile defaults it to `no`, though their release workflow sets it — so this matches how the published binaries are built rather than improving on it. The Makefile then runs `gh attestation verify` against the kata-agent and guest-component binaries as it pulls them, asserting each was built on its own repository from the expected commit — so the binaries baked into the image are attested even though the published pod VM artifact is not. `--no-verify-provenance` opts out. No extra host tooling is needed — `gh`, `oras` and `yq` are installed inside the build container.
 
-`TEE_PLATFORM` is deliberately left at its default of `none`. That builds filesystem-attester support only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types. The build otherwise needs no unusual hardware — upstream runs it on a stock `ubuntu-24.04` runner.
+`TEE_PLATFORM` is deliberately left at its default of `none`. That builds filesystem-attester support only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types. The build otherwise needs no unusual hardware — upstream runs it on a stock `ubuntu-24.04` runner. `TEE_PLATFORM=none` is passed on the make command line rather than left to the Makefile default, because an exported value would win over `?=` and build something the provenance record does not describe. The host needs only git, make, `qemu-img` and Docker with buildx; `gh`, `oras` and `yq` are installed inside the build containers.
 
 **Import staging is off by default.** `enable_podvm_image_import` creates the bucket and role VM Import/Export needs, and nothing else uses them, so they should not stand between imports. The role is scoped to the staging bucket, the general KMS key, and the snapshot/image calls that cannot be resource-scoped because they create the resource they name. Contrast upstream's `raw-to-ami.sh`, which creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, an unencrypted bucket, and cleans up neither.
 

@@ -30,21 +30,8 @@
 
 set -euo pipefail
 
-#######################################
-# Colors & Output
-#######################################
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log()   { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
-error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
-info()  { echo -e "${BLUE}[i]${NC} $1"; }
+# shellcheck source=05-compute/scripts/lib/aws-common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 
 IMAGE=""
 AMI_NAME=""
@@ -60,12 +47,12 @@ TF_INFRA="${REPO_ROOT}/03-infrastructure/terraform"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -i|--image)      IMAGE="$2"; shift 2 ;;
-    -n|--name)       AMI_NAME="$2"; shift 2 ;;
-    -r|--region)     TARGET_REGION="$2"; shift 2 ;;
+    -i|--image)      need_value "$@"; IMAGE="$2"; shift 2 ;;
+    -n|--name)       need_value "$@"; AMI_NAME="$2"; shift 2 ;;
+    -r|--region)     need_value "$@"; TARGET_REGION="$2"; shift 2 ;;
     --keep-staged)   KEEP_STAGED=true; shift ;;
     --skip-scan)     SKIP_SCAN=true; shift ;;
-    --wait-minutes)  WAIT_MINUTES="$2"; shift 2 ;;
+    --wait-minutes)  need_value "$@"; WAIT_MINUTES="$2"; shift 2 ;;
     -h|--help)       awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
     *)               error "Unknown option: $1 (try --help)" ;;
   esac
@@ -75,6 +62,8 @@ done
 # Pre-checks
 #######################################
 
+require_positive_int "--wait-minutes" "$WAIT_MINUTES"
+
 [[ -n "$IMAGE" ]] || error "No image given (--image PATH, or --help)"
 [[ -f "$IMAGE" ]] || error "No such file: ${IMAGE}"
 
@@ -83,22 +72,25 @@ aws sts get-caller-identity >/dev/null 2>&1 || error "aws CLI has no usable cred
 
 CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
-tf_out() { terraform -chdir="$1" output -raw "$2" 2>/dev/null || true; }
 
 # Run against a freshly registered image and against one a previous run left
 # behind: an AMI that exists is not evidence that it is usable.
 verify_ami_properties() {
   local ami="$1"
   local boot tpm imds enc key
-  read -r boot tpm imds enc key <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$ami" \
-    --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,BlockDeviceMappings[0].Ebs.Encrypted,BlockDeviceMappings[0].Ebs.KmsKeyId]' \
-    --output text)"
+  local tsv
+  tsv=$(describe_or_die "${ami}" aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$ami" \
+    --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,Architecture,BlockDeviceMappings[?Ebs].Ebs.Encrypted|[0],BlockDeviceMappings[?Ebs].Ebs.KmsKeyId|[0]]' \
+    --output text)
+  local arch
+  IFS=$'\t' read -r boot tpm imds arch enc key <<<"$tsv"
 
   # All five collected before failing, so one run shows every mismatch.
   local mismatch=()
   [[ "$boot" == "uefi" ]]        || mismatch+=("boot mode is ${boot}, expected uefi")
   [[ "$tpm" == "v2.0" ]]         || mismatch+=("TPM support is ${tpm}, expected v2.0")
   [[ "$imds" == "v2.0" ]]        || mismatch+=("IMDS support is ${imds}, expected v2.0")
+  [[ "$arch" == "$AMI_ARCH" ]]   || mismatch+=("architecture is ${arch}, expected ${AMI_ARCH}")
   [[ "$enc" == "True" ]]         || mismatch+=("root volume is not encrypted")
   [[ "$key" == "$KMS_KEY_ARN" ]] || mismatch+=("encrypted under ${key}, not ${KMS_KEY_ARN}")
 
@@ -106,7 +98,7 @@ verify_ami_properties() {
     for m in "${mismatch[@]}"; do warn "$m"; done
     # A pod VM missing UEFI or the TPM boots and then fails to attest, which is
     # slow to diagnose -- better to reject the image than hand it over.
-    error "${ami} has the wrong properties. Deregister it, then re-run."
+    error "${ami} has the wrong properties. Deregister it and delete its snapshot, then re-run."
   fi
   log "Boot properties and encryption as expected"
 }
@@ -170,19 +162,30 @@ esac
 
 SHA=$(sha256sum "$RAW" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$RAW" | cut -d' ' -f1)
 
+# build-podvm-image.sh names the file after the machine it built on. Registering
+# an arm64 image as x86_64 produces an AMI that never boots.
+case "$RAW" in
+  *aarch64*|*arm64*) AMI_ARCH="arm64" ;;
+  *)                 AMI_ARCH="x86_64" ;;
+esac
+
 # build-podvm-image.sh records what it produced; hold the import to it.
 PROV="${IMAGE}.provenance"
 CAA_REF="unrecorded"
 CAA_COMMIT="unrecorded"
 PROVENANCE="imported-artifact"
+DESCRIPTION="Conduct sandbox pod VM (imported disk image, no provenance record)"
 if [[ -f "$PROV" ]]; then
-  CAA_REF=$(grep '^caa_ref=' "$PROV" | cut -d= -f2)
-  CAA_COMMIT=$(grep '^caa_commit=' "$PROV" | cut -d= -f2)
-  RECORDED=$(grep '^sha256=' "$PROV" | cut -d= -f2)
-  MAKE_TARGET=$(grep '^make_target=' "$PROV" | cut -d= -f2 || echo "")
+  # || true: pipefail would otherwise abort with no message on a truncated file.
+  CAA_REF=$(grep '^caa_ref=' "$PROV" | cut -d= -f2 || true)
+  CAA_COMMIT=$(grep '^caa_commit=' "$PROV" | cut -d= -f2 || true)
+  RECORDED=$(grep '^sha256=' "$PROV" | cut -d= -f2 || true)
+  [[ -n "$RECORDED" ]] || error "${PROV##*/} has no sha256= line; it is truncated or from an older format"
+  MAKE_TARGET=$(grep '^make_target=' "$PROV" | cut -d= -f2 || true)
   if [[ "$RECORDED" != "$SHA" ]]; then
     error "Image does not match its provenance record. Recorded ${RECORDED}, got ${SHA}."
   fi
+  DESCRIPTION="Conduct sandbox pod VM (built from ${CAA_REF})"
   if [[ "$MAKE_TARGET" == "debug" ]]; then
     PROVENANCE="built-from-source-debug"
     warn "This is upstream's debug variant: serial console access is enabled."
@@ -293,8 +296,8 @@ info "Registering the AMI"
 AMI_ID=$(aws ec2 register-image \
   --region "$TARGET_REGION" \
   --name "$AMI_NAME" \
-  --description "Conduct sandbox pod VM (built from ${CAA_REF})" \
-  --architecture x86_64 \
+  --description "$DESCRIPTION" \
+  --architecture "$AMI_ARCH" \
   --virtualization-type hvm \
   --root-device-name /dev/xvda \
   --block-device-mappings "DeviceName=/dev/xvda,Ebs={SnapshotId=${SNAPSHOT_ID},DeleteOnTermination=true,VolumeType=gp3}" \
@@ -302,7 +305,7 @@ AMI_ID=$(aws ec2 register-image \
   --tpm-support v2.0 \
   --ena-support \
   --imds-support v2.0 \
-  --query 'ImageId' --output text) || error "register-image failed"
+  --query 'ImageId' --output text) || error "register-image failed. Snapshot ${SNAPSHOT_ID} is now orphaned — delete it before retrying."
 
 aws ec2 create-tags --region "$TARGET_REGION" --resources "$AMI_ID" "$SNAPSHOT_ID" --tags \
   "Key=Name,Value=${AMI_NAME}" \
@@ -323,8 +326,13 @@ verify_ami_properties "$AMI_ID"
 # Only possible on an AMI we own: trivy cannot read public snapshots.
 if [[ "$SKIP_SCAN" == false ]] && command -v trivy >/dev/null 2>&1; then
   info "Scanning the AMI for vulnerabilities (trivy vm is experimental)"
-  trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
-    "ami:${AMI_ID}" || warn "trivy could not scan the image; see the pod VM image section of 05-compute/README.md"
+  if ! trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
+    --exit-code 1 "ami:${AMI_ID}"; then
+    warn "The scan above found HIGH/CRITICAL findings, or could not read the image."
+    warn "See the pod VM image section of 05-compute/README.md."
+    error "${AMI_ID} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
+  fi
+  log "No HIGH/CRITICAL vulnerabilities or secrets found"
 elif [[ "$SKIP_SCAN" == false ]]; then
   warn "trivy not installed; skipping the image scan"
 fi
