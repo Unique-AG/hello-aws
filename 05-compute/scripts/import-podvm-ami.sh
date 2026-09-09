@@ -168,11 +168,21 @@ info "Uploading $(du -h "$RAW" | cut -f1) to s3://${BUCKET}/${S3_KEY}"
 aws s3 cp "$RAW" "s3://${BUCKET}/${S3_KEY}" --region "$TARGET_REGION" --only-show-errors \
   || error "Upload failed"
 
+# VM Import/Export reads the object for the whole conversion, so it can only be
+# removed once the snapshot exists -- not on a timeout or a Ctrl-C, when the
+# task is probably still running and is what the script tells you to go check.
+SNAPSHOT_DONE=false
 cleanup_staged() {
-  if [[ "$KEEP_STAGED" == false ]]; then
-    aws s3 rm "s3://${BUCKET}/${S3_KEY}" --region "$TARGET_REGION" --only-show-errors 2>/dev/null \
-      && info "Removed the staged image" || warn "Could not remove s3://${BUCKET}/${S3_KEY}"
+  if [[ "$KEEP_STAGED" == true ]]; then
+    return
   fi
+  if [[ "$SNAPSHOT_DONE" == false ]]; then
+    warn "Leaving s3://${BUCKET}/${S3_KEY} in place — the import may still be reading it"
+    warn "Remove it once the task settles, or the bucket lifecycle expires it in 7 days"
+    return
+  fi
+  aws s3 rm "s3://${BUCKET}/${S3_KEY}" --region "$TARGET_REGION" --only-show-errors 2>/dev/null \
+    && info "Removed the staged image" || warn "Could not remove s3://${BUCKET}/${S3_KEY}"
 }
 trap cleanup_staged EXIT
 
@@ -215,6 +225,7 @@ done
 
 aws ec2 wait snapshot-completed --region "$TARGET_REGION" --snapshot-ids "$SNAPSHOT_ID" \
   || error "Snapshot ${SNAPSHOT_ID} did not settle"
+SNAPSHOT_DONE=true
 
 #######################################
 # Register
@@ -251,13 +262,25 @@ log "Registered ${BOLD}${AMI_ID}${NC}"
 # Verify
 #######################################
 
-read -r R_BOOT R_TPM R_ENC R_KEY <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
-  --query 'Images[0].[BootMode,TpmSupport,BlockDeviceMappings[0].Ebs.Encrypted,BlockDeviceMappings[0].Ebs.KmsKeyId]' \
+read -r R_BOOT R_TPM R_IMDS R_ENC R_KEY <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+  --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,BlockDeviceMappings[0].Ebs.Encrypted,BlockDeviceMappings[0].Ebs.KmsKeyId]' \
   --output text)"
-[[ "$R_BOOT" == "uefi" ]]  || warn "Registered boot mode is ${R_BOOT}, expected uefi"
-[[ "$R_TPM" == "v2.0" ]]   || warn "Registered TPM support is ${R_TPM}, expected v2.0"
-[[ "$R_ENC" == "True" ]]   || warn "Root volume is not encrypted"
-[[ "$R_KEY" == "$KMS_KEY_ARN" ]] || warn "Encrypted under ${R_KEY}, not ${KMS_KEY_ARN}"
+
+# All five collected before failing, so one run shows every mismatch.
+MISMATCH=()
+[[ "$R_BOOT" == "uefi" ]]        || MISMATCH+=("boot mode is ${R_BOOT}, expected uefi")
+[[ "$R_TPM" == "v2.0" ]]         || MISMATCH+=("TPM support is ${R_TPM}, expected v2.0")
+[[ "$R_IMDS" == "v2.0" ]]        || MISMATCH+=("IMDS support is ${R_IMDS}, expected v2.0")
+[[ "$R_ENC" == "True" ]]         || MISMATCH+=("root volume is not encrypted")
+[[ "$R_KEY" == "$KMS_KEY_ARN" ]] || MISMATCH+=("encrypted under ${R_KEY}, not ${KMS_KEY_ARN}")
+
+if ((${#MISMATCH[@]})); then
+  for m in "${MISMATCH[@]}"; do warn "$m"; done
+  # A pod VM missing UEFI or the TPM boots and then fails to attest, which is a
+  # slow thing to diagnose -- better to reject the image than hand it over.
+  error "${AMI_ID} was registered with the wrong properties. Deregister it, then re-run."
+fi
+log "Boot properties and encryption as expected"
 
 # Only possible on an AMI we own: trivy cannot read public snapshots.
 if [[ "$SKIP_SCAN" == false ]] && command -v trivy >/dev/null 2>&1; then
