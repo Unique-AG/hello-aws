@@ -16,7 +16,7 @@
 #
 # Options:
 #   -r, --ref REF         CAA git ref to build (default: the pinned version)
-#   -o, --out DIR         Where to place the image (default: ./podvm-build)
+#   -o, --out DIR         Where to place the image (default: $TMPDIR/podvm-build)
 #       --debug-image     Build upstream's debug variant instead
 #       --no-verify-provenance
 #                         Skip attestation checks on upstream's binaries
@@ -33,21 +33,8 @@
 
 set -euo pipefail
 
-#######################################
-# Colors & Output
-#######################################
-
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log()   { echo -e "${GREEN}[✓]${NC} $1"; }
-warn()  { echo -e "${YELLOW}[!]${NC} $1"; }
-error() { echo -e "${RED}[✗]${NC} $1"; exit 1; }
-info()  { echo -e "${BLUE}[i]${NC} $1"; }
+# shellcheck source=05-compute/scripts/lib/aws-common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 
 #######################################
 # Defaults
@@ -57,11 +44,10 @@ info()  { echo -e "${BLUE}[i]${NC} $1"; }
 PINNED_REF="v0.22.0"
 CAA_REPO="https://github.com/confidential-containers/cloud-api-adaptor"
 
-# Upstream's own build host, for reference when a dependency is missing.
-APT_DEPS=(alien bubblewrap dnf qemu-utils uidmap)
+APT_DEPS=(git make qemu-utils uidmap)
 
 CAA_REF="$PINNED_REF"
-OUT_DIR="$(pwd)/podvm-build"
+OUT_DIR="${TMPDIR:-/tmp}/podvm-build"
 MAKE_TARGET="all"
 CHECK_ONLY=false
 # Upstream defaults this off. On, the build verifies GitHub attestations for the
@@ -70,12 +56,12 @@ VERIFY_PROVENANCE="yes"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -r|--ref)       CAA_REF="$2"; shift 2 ;;
-    -o|--out)       OUT_DIR="$2"; shift 2 ;;
+    -r|--ref)       need_value "$@"; CAA_REF="$2"; shift 2 ;;
+    -o|--out)       need_value "$@"; OUT_DIR="$2"; shift 2 ;;
     --debug-image)  MAKE_TARGET="debug"; shift ;;
     --no-verify-provenance) VERIFY_PROVENANCE="no"; shift ;;
     --check)        CHECK_ONLY=true; shift ;;
-    -h|--help)      awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
+    -h|--help)      print_help "${BASH_SOURCE[0]}"; exit 0 ;;
     *)              error "Unknown option: $1 (try --help)" ;;
   esac
 done
@@ -89,32 +75,20 @@ MISSING=()
 [[ "$(uname -s)" == "Linux" ]] \
   || error "The mkosi build needs Linux with Docker; this is $(uname -s). Run it on a Linux host or a CI runner."
 
+# Only what the host itself runs. oras, gh, yq and jq are installed inside
+# Dockerfile.podvm_binaries, and bwrap/dnf belong to the s390x path.
 command -v docker >/dev/null 2>&1 || MISSING+=("docker")
 docker buildx version >/dev/null 2>&1 || MISSING+=("docker-buildx")
 command -v git >/dev/null 2>&1 || MISSING+=("git")
 command -v qemu-img >/dev/null 2>&1 || MISSING+=("qemu-utils")
-# The Makefile's pull_agent_artifact/pull_gc_artifact run oras on the host.
-command -v oras >/dev/null 2>&1 || MISSING+=("oras")
-if [[ "$VERIFY_PROVENANCE" == "yes" ]]; then
-  command -v gh >/dev/null 2>&1 || MISSING+=("gh (or pass --no-verify-provenance)")
-fi
-
-for c in bwrap dnf; do
-  command -v "$c" >/dev/null 2>&1 || MISSING+=("$c")
-done
-
-if command -v yq >/dev/null 2>&1; then
-  yq --version 2>&1 | grep -qE 'v?4\.[0-9]+' || MISSING+=("yq-4.x (found $(yq --version 2>&1))")
-else
-  MISSING+=("yq-4.x")
-fi
+command -v make >/dev/null 2>&1 || MISSING+=("make")
 
 if ((${#MISSING[@]})); then
   warn "Missing prerequisites: ${MISSING[*]}"
   echo ""
-  echo "On Debian/Ubuntu, upstream's build host installs:"
+  echo "On Debian/Ubuntu:"
   echo "    sudo apt-get install -y ${APT_DEPS[*]}"
-  echo "    # plus Docker with buildx, and yq 4.x"
+  echo "    # plus Docker with buildx"
   $CHECK_ONLY && exit 1
   error "Cannot build until these are present"
 fi
@@ -167,12 +141,18 @@ else
 fi
 warn "This takes a while and needs a privileged container"
 
+# On the command line, not the environment: make lets an exported variable win
+# over the Makefile's ?=, which would build something the record does not match.
 make -C "$PODVM_DIR" "$MAKE_TARGET" \
   MKOSI_VERSION="$MKOSI_VERSION" \
-  VERIFY_PROVENANCE="$VERIFY_PROVENANCE"
+  VERIFY_PROVENANCE="$VERIFY_PROVENANCE" \
+  TEE_PLATFORM=none
 
 RAW="${PODVM_DIR}/build/system.raw"
 [[ -f "$RAW" ]] || error "Build finished but ${RAW} is missing"
+
+# The image target also converts to qcow2, which nothing here needs.
+rm -f "${PODVM_DIR}"/build/podvm-*.qcow2
 
 #######################################
 # Report
