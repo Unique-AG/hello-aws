@@ -1,5 +1,5 @@
 # Scanning only — never used for a deploy.
-# Forces every conditional resource into scope so a misconfiguration
-# cannot merge green just because an environment leaves its flag off.
+# Every enable_* flag, so a conditional resource cannot escape the gate
+# by being disabled in the environment CI reads.
 
-# This layer currently declares no enable_* flags. Add them here when it does.
+# This layer declares no enable_* flags. Add them here when it does.

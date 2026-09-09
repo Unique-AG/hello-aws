@@ -58,8 +58,7 @@ jobs:
           tflint --chdir=${{ matrix.dir }}/terraform
       - name: trivy
         id: trivy
-        # Reported at the end of the job instead of here, so a trivy failure
-        # still lets checkov run and the author sees both in one push.
+        # Verdict deferred to the end so checkov still runs on a trivy failure.
         continue-on-error: true
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
@@ -71,14 +70,11 @@ jobs:
           scan-ref: ${{ matrix.dir }}/terraform
           scanners: misconfig
           severity: HIGH,CRITICAL
-          # The action sets no exit-code, so trivy defaulted to 0 and the step
-          # only ever printed findings.
+          # Without this the action leaves trivy's default of 0 and never fails.
           exit-code: '1'
           trivyignores: .trivyignore.yaml
-          # The template resolves the module.naming inputs; without them the
-          # provider's default_tags map holds nulls, which crashes trivy <=0.70.
-          # sbx config supplies real values, and scan.tfvars forces every
-          # conditional resource into scope.
+          # The template resolves module.naming; without it default_tags holds
+          # nulls, which crashes trivy <=0.70. scan.tfvars forces every flag on.
           tf-vars: common.auto.tfvars.template,${{ matrix.dir }}/terraform/environments/sbx/00-config.auto.tfvars,${{ matrix.dir }}/terraform/environments/scan.tfvars
       # bridgecrewio/checkov-action's last release (2022) ships checkov 2.0.930,
       # which predates the split S3 resource pattern (separate versioning /

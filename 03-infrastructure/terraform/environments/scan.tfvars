@@ -1,8 +1,9 @@
 # Scanning only — never used for a deploy.
-# Forces every conditional resource into scope so a misconfiguration
-# cannot merge green just because an environment leaves its flag off.
+# Every enable_* flag, so a conditional resource cannot escape the gate
+# by being disabled in the environment CI reads.
 
 enable_bedrock_endpoint          = true
+enable_cloudfront_vpc_origin     = true
 enable_cloudwatch_endpoints      = true
 enable_connectivity_account_role = true
 enable_dns_hostnames             = true
@@ -12,6 +13,7 @@ enable_ecr_endpoints             = true
 enable_eks_auth_endpoint         = true
 enable_eks_endpoint              = true
 enable_github_runners            = true
+enable_ingress_nlb               = true
 enable_kms_endpoint              = true
 enable_managed_prometheus        = true
 enable_management_server         = true
