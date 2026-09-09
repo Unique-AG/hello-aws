@@ -163,7 +163,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 ### Suppressed Security Findings and Production Guardrails
 
-All scanner findings are either fixed or explicitly suppressed with rationale. Inline `#checkov:skip` and `.trivyignore` entries reference the central security baseline document. Sandbox relaxations and SCP enforcement recommendations are also documented there.
+All scanner findings are either fixed or explicitly suppressed with rationale. Inline `#checkov:skip` comments and `.trivyignore.yaml` entries reference the central security baseline document. Sandbox relaxations and SCP enforcement recommendations are also documented there.
 
 See **[docs/security-baseline.md](../docs/security-baseline.md)** for the complete suppression inventory, sbx relaxation matrix, and SCP implementation guide.
 

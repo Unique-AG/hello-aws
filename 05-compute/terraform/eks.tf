@@ -314,8 +314,7 @@ resource "aws_vpc_security_group_egress_rule" "eks_nodes_to_internet" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 data "aws_ec2_managed_prefix_list" "s3" {

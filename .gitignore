@@ -25,6 +25,8 @@ crash.*.log
 !*.auto.tfvars
 !common.auto.tfvars.template
 !**/environments/**/*.auto.tfvars
+# Scanner input only, no secrets — see docs/security-baseline.md
+!**/environments/scan.tfvars
 
 # Override files
 *_override.tf

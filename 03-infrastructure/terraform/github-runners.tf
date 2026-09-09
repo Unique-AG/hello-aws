@@ -19,8 +19,7 @@ resource "aws_vpc_security_group_egress_rule" "github_runners_https_internet" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  #trivy:ignore:AVD-AWS-0104 see docs/security-baseline.md
-  cidr_ipv4 = "0.0.0.0/0"
+  cidr_ipv4         = "0.0.0.0/0"
 }
 
 # Outbound to VPC endpoints
