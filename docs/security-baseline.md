@@ -68,6 +68,7 @@ This is a living document. Security posture is being hardened on an ongoing basi
 |---|---|---|---|
 | AWS-0040 | CRITICAL | `aws_eks_cluster.main` | `endpoint_public_access` is variable-driven (default `false`); only sbx overrides to `true` for development access |
 | AWS-0041 | CRITICAL | `aws_eks_cluster.main` | `public_access_cidrs` is variable-driven; defaults to `[]` when public access is disabled |
+| AVD-AWS-0104 | CRITICAL | `aws_vpc_security_group_egress_rule.eks_nodes_to_internet` | Nodes need HTTPS (443) egress to `0.0.0.0/0` via NAT to pull from external container registries; scoped to port 443 only. Same rationale as the github-runners rule in 03-infrastructure. |
 
 #### Checkov
 
