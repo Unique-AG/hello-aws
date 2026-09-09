@@ -70,7 +70,7 @@ Conduct sandboxes run as Kata peer pods: `cloud-api-adaptor` launches one EC2 in
 
 Two ways to obtain one:
 
-**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh` copies it into this deployment's region, re-encrypted under the general KMS key, and tags it with where it came from. The AMI ID is pinned in the script to the CAA version the `peerpods` chart vendors, and the script verifies the image's name, owner, architecture, boot mode and TPM support before copying — bumping the chart means re-pinning it. Use `--verify-only` to check the source without copying.
+**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh` copies it into this deployment's region, re-encrypted under the general KMS key, and tags it with where it came from. The AMI ID is pinned in the script to the CAA version the `peerpods` chart vendors, and the script verifies the image's name, owner, architecture, boot mode and TPM support before copying — bumping the chart means re-pinning it. It also refuses to run when the caller's account is not this deployment's, since an AMI in the wrong account is invisible to the adaptor. Use `--verify-only` to check the source without copying or needing state.
 
 Understand what that image is before relying on it:
 

@@ -99,6 +99,19 @@ SOURCE_AMI="${SOURCE_AMI:-$DEFAULT_SOURCE_AMI}"
 command -v aws >/dev/null 2>&1 || error "aws CLI is not installed"
 aws sts get-caller-identity >/dev/null 2>&1 || error "aws CLI has no usable credentials"
 
+CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+
+# An AMI belongs to one account. Copied into the wrong one it is invisible to
+# the adaptor, and the failure shows up much later as a launch error.
+if [[ "$VERIFY_ONLY" == false ]]; then
+  EXPECTED_ACCOUNT=$(terraform -chdir="${REPO_ROOT}/05-compute/terraform" output -raw aws_account_id 2>/dev/null || true)
+  if [[ -n "$EXPECTED_ACCOUNT" && "$EXPECTED_ACCOUNT" != "$CALLER_ACCOUNT" ]]; then
+    error "Credentials are for ${CALLER_ACCOUNT}, but this deployment is ${EXPECTED_ACCOUNT}"
+  fi
+  [[ -n "$EXPECTED_ACCOUNT" ]] || warn "No terraform state here — cannot confirm ${CALLER_ACCOUNT} is the deployment account"
+  info "Account: ${CALLER_ACCOUNT}"
+fi
+
 # Resolve region and key from state so the copy lands where the cluster is.
 if [[ "$VERIFY_ONLY" == false && -z "$TARGET_REGION" ]]; then
   TARGET_REGION=$(terraform -chdir="${REPO_ROOT}/05-compute/terraform" output -raw aws_region 2>/dev/null || true)
