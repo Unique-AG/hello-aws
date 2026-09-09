@@ -1,6 +1,7 @@
 # Scanning only — never used for a deploy.
-# Every enable_* flag, so a conditional resource cannot escape the gate
-# by being disabled in the environment CI reads.
+# Every enable_* flag, so a component cannot escape the gate by being
+# disabled in the environment CI reads. Gates named otherwise (use_oidc,
+# connectivity_account_id, ...) are not covered yet.
 
 enable_aurora_endpoint      = true
 enable_bedrock_logging      = true

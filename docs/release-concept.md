@@ -100,8 +100,12 @@ checks locally:
   inline `#checkov:skip=` comments for checkov; every one is documented with rationale in
   [`docs/security-baseline.md`](security-baseline.md) — the single source of truth for
   suppressions and sbx relaxations, reviewed toward a goal of zero. Layers are scanned with
-  every `enable_*` flag forced on, so a conditional resource cannot escape the gate by being
-  disabled in the environment CI happens to read.
+  every `enable_*` flag forced on, so a component cannot escape the gate by being disabled in
+  the environment CI happens to read. This is **not** yet complete coverage: resources gated on
+  other variables (`use_oidc`, `github_repository`, `connectivity_account_id`,
+  `transit_gateway_id`, `route53_private_zone_id`) are still skipped when those are unset, and
+  `checkov` is not given the variable files at all. See the pod VM image section of
+  05-compute/README.md for the same caveat applied to a specific layer.
 - **Plan preview** — `terraform plan` posted as a PR comment (no apply on PRs)
 
 **Repository-wide checks:**
