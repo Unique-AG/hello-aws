@@ -10,9 +10,7 @@ providerConfigs:
     # The pod VM group, not the node group: the VM's own ENI needs only the
     # pod-network tunnel, the adaptor channel and its image pull.
     AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
-    # Required, and deliberately left as a token: built out of band from the
-    # upstream podvm image-builder, and validate-instance.sh must fail until it
-    # is supplied.
+    # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
     PODVM_AMI_ID: "<PODVM_AMI_ID>"
     PODVM_INSTANCE_TYPE: "m6a.large"
     # The tag the IAM policy conditions on for both launch and termination.

@@ -64,6 +64,24 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
 
+### Conduct Pod VM Image
+
+Conduct sandboxes run as Kata peer pods: `cloud-api-adaptor` launches one EC2 instance per sandbox from a **pod VM AMI**, an image built by the Confidential Containers project rather than derived from the EKS worker AMI. It is not created by Terraform — the AMI ID is supplied as the `<PODVM_AMI_ID>` placeholder in `instance-config.yaml`, and `validate-instance.sh` fails until it is set.
+
+Two ways to obtain one:
+
+**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh` copies it into this deployment's region, re-encrypted under the general KMS key, and tags it with where it came from. The AMI ID is pinned in the script to the CAA version the `peerpods` chart vendors, and the script verifies the image's name, owner, architecture, boot mode and TPM support before copying — bumping the chart means re-pinning it. Use `--verify-only` to check the source without copying.
+
+Understand what that image is before relying on it:
+
+- Upstream describes it as a **debug** image published for proofs of concept.
+- It is published by an AWS account that appears nowhere in the project's repository or CI, and which has published exactly one public AMI. There is no cryptographic link between that account and the project.
+- Its backing snapshot is unencrypted upstream; the copy re-encrypts it, which addresses encryption but not provenance.
+
+This is acceptable for `sbx`, where the value is verifying that the peer-pods path works end to end. It is **not** an acceptable basis for the sandbox boundary anywhere the sandbox runs real untrusted work.
+
+**Build a trusted image.** Build the pod VM with the project's `podvm-mkosi` tooling (`TEE_PLATFORM=amd` for AWS), convert the qcow2 to raw, then import it: upload to S3, `ec2 import-snapshot`, and `ec2 register-image` with `--tpm-support v2.0` and UEFI boot mode. Upstream ships a `raw-to-ami.sh` that does the import half, but it creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, an unencrypted bucket, and cleans up neither — it needs hardening before use here. The mkosi build needs a Linux host with Docker.
+
 ### ECR
 
 ECR provides **secure container image storage** with automated vulnerability scanning:

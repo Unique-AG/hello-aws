@@ -29,7 +29,7 @@ aws:
   sandbox:
     subnetId: <SANDBOX_SUBNET_ID>          # terraform output -raw peer_pods_subnet_id (compute layer)
     securityGroupId: <PEER_PODS_SECURITY_GROUP_ID>  # terraform output -raw peer_pods_security_group_id (compute layer)
-    podvmAmiId: <PODVM_AMI_ID>             # built out of band; see 06-applications/charts/peerpods
+    podvmAmiId: <PODVM_AMI_ID>             # ./05-compute/scripts/copy-podvm-ami.sh (read the caveats in 05-compute/README.md)
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
   route53:
