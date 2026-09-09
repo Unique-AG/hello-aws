@@ -112,7 +112,7 @@ The build also sets `VERIFY_PROVENANCE=yes`, which upstream leaves off. The Make
 
 **Import staging is off by default.** `enable_podvm_image_import` creates the bucket and role VM Import/Export needs, and nothing else uses them, so they should not stand between imports. The role is scoped to the staging bucket, the general KMS key, and the snapshot/image calls that cannot be resource-scoped because they create the resource they name. Contrast upstream's `raw-to-ami.sh`, which creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, an unencrypted bucket, and cleans up neither.
 
-The registered AMI is UEFI with `TpmSupport=v2.0`, IMDSv2-only, and encrypted under the general KMS key; the import verifies all four afterwards, because a pod VM missing UEFI or the TPM boots and then fails to attest.
+The registered AMI is UEFI with `TpmSupport=v2.0`, IMDSv2-only, and encrypted under the general KMS key. The import reads all five properties back and **fails**, naming every mismatch, rather than handing over an image that would boot and then fail to attest — a slow thing to diagnose. The AMI is already registered at that point, so the error says to deregister it before re-running.
 
 **Assurance on the result.** `trivy vm ami:<id>` scans the registered image for vulnerabilities and secrets, and the import runs it automatically (`--skip-scan` to opt out). This only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all. Note `trivy vm` is EXPERIMENTAL, supports only VMDK for local files (so scan the AMI, not the disk file), and cannot read LVM layouts.
 
