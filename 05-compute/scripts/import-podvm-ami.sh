@@ -111,9 +111,8 @@ verify_ami_properties() {
   log "Boot properties and encryption as expected"
 }
 
-# Same guards as copy-podvm-ami.sh: each layer is init'd per environment, so
-# their states can be for different ones, and encrypting under a mismatched key
-# would still satisfy verify_ami_properties because it compares the same value.
+# Same guards as copy-podvm-ami.sh: the layers can be init'd for different
+# environments, and verify_ami_properties would not catch a mismatched key.
 COMPUTE_ACCOUNT=$(tf_out "$TF_COMPUTE" aws_account_id)
 COMPUTE_REGION=$(tf_out "$TF_COMPUTE" aws_region)
 INFRA_ACCOUNT=$(tf_out "$TF_INFRA" aws_account_id)
@@ -256,7 +255,8 @@ DEADLINE=$(( $(date +%s) + WAIT_MINUTES * 60 ))
 # A throttled or dropped describe call must not be read as a failed import.
 UNREADABLE=0
 while true; do
-  read -r STATUS MESSAGE SNAPSHOT_ID <<<"$(aws ec2 describe-import-snapshot-tasks \
+  # Tab-delimited: StatusMessage is free text and would shift SnapshotId.
+  IFS=$'\t' read -r STATUS MESSAGE SNAPSHOT_ID <<<"$(aws ec2 describe-import-snapshot-tasks \
     --region "$TARGET_REGION" --import-task-ids "$TASK_ID" \
     --query 'ImportSnapshotTasks[0].SnapshotTaskDetail.[Status,StatusMessage,SnapshotId]' \
     --output text 2>/dev/null || echo "unknown - -")"
