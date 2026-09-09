@@ -3,34 +3,35 @@
 # Conduct Pod VM AMI Copy Script
 #######################################
 #
-# Copies the upstream Confidential Containers pod VM AMI into this deployment's
-# region, re-encrypted under the general KMS key, and prints the resulting AMI
-# ID for instance-config.yaml.
+# Copies a Confidential Containers pod VM AMI into this deployment's region,
+# re-encrypted under the general KMS key, and prints the resulting AMI ID for
+# instance-config.yaml.
 #
-# The upstream image is a DEBUG image published for proofs of concept, from an
-# AWS account with no verifiable link to the project. Read the pod VM AMI
-# section of 05-compute/README.md before using the result for anything but sbx.
+# The pinned upstream image is a DEBUG image published for proofs of concept,
+# from an AWS account with no verifiable link to the project. Read the pod VM
+# image section of 05-compute/README.md before using it for anything but sbx;
+# build-podvm-image.sh is the path for anything else.
 #
 # Usage:
-#   ./copy-podvm-ami.sh [options]
+#   ./copy-podvm-ami.sh <env> [options]
 #
 # Options:
 #   -s, --source-ami ID      Source AMI (default: the pinned v0.22.0 image)
 #       --source-region R    Region to copy from (default: us-east-2)
-#   -r, --region REGION      Target region (default: from terraform, else eu-central-2)
-#   -k, --kms-key-arn ARN    Key for the copy (default: from terraform)
-#   -n, --name NAME          Name for the copy (default: derived from the source)
+#   -r, --region REGION      Target region (default: from terraform state)
+#   -k, --kms-key-arn ARN    Key for the copy (default: from terraform state)
+#   -n, --name NAME          Name for the copy (default: the source's name)
 #       --no-wait            Return once the copy is started, without polling
 #       --wait-minutes N     How long to poll for the copy (default: 45)
 #       --verify-only        Check the source image and exit without copying
 #   -h, --help               Show this help message
 #
 # Examples:
-#   # Copy the pinned image using values resolved from terraform state
-#   ./copy-podvm-ami.sh
+#   # Copy the pinned image into the sbx deployment
+#   ./copy-podvm-ami.sh sbx
 #
-#   # Copy a specific image into a specific region
-#   ./copy-podvm-ami.sh --source-ami ami-0123456789abcdef0 --region eu-central-2
+#   # Check the upstream image without reading any terraform state
+#   ./copy-podvm-ami.sh --verify-only
 #######################################
 
 set -euo pipefail
@@ -62,6 +63,7 @@ DEFAULT_SOURCE_REGION="us-east-2"
 EXPECTED_NAME="podvm-ubuntu-amd64-0-22-0"
 EXPECTED_OWNER="992382582441"
 
+ENV_NAME=""
 SOURCE_AMI=""
 SOURCE_REGION="$DEFAULT_SOURCE_REGION"
 TARGET_REGION=""
@@ -73,27 +75,40 @@ VERIFY_ONLY=false
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+TF_COMPUTE="${REPO_ROOT}/05-compute/terraform"
+TF_INFRA="${REPO_ROOT}/03-infrastructure/terraform"
 
 #######################################
 # Arguments
 #######################################
 
+# Without this, a missing value dies on $2 with a raw unbound-variable message.
+need_value() {
+  [[ $# -ge 2 && -n "${2:-}" ]] || error "$1 needs a value (try --help)"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -s|--source-ami)   SOURCE_AMI="$2"; shift 2 ;;
-    --source-region)   SOURCE_REGION="$2"; shift 2 ;;
-    -r|--region)       TARGET_REGION="$2"; shift 2 ;;
-    -k|--kms-key-arn)  KMS_KEY_ARN="$2"; shift 2 ;;
-    -n|--name)         AMI_NAME="$2"; shift 2 ;;
+    -s|--source-ami)   need_value "$@"; SOURCE_AMI="$2"; shift 2 ;;
+    --source-region)   need_value "$@"; SOURCE_REGION="$2"; shift 2 ;;
+    -r|--region)       need_value "$@"; TARGET_REGION="$2"; shift 2 ;;
+    -k|--kms-key-arn)  need_value "$@"; KMS_KEY_ARN="$2"; shift 2 ;;
+    -n|--name)         need_value "$@"; AMI_NAME="$2"; shift 2 ;;
+    --wait-minutes)    need_value "$@"; WAIT_MINUTES="$2"; shift 2 ;;
     --no-wait)         WAIT=false; shift ;;
-    --wait-minutes)    WAIT_MINUTES="$2"; shift 2 ;;
     --verify-only)     VERIFY_ONLY=true; shift ;;
     -h|--help)         awk 'NR==1{next} /^#/{sub(/^# ?/, ""); print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
-    *)                 error "Unknown option: $1 (try --help)" ;;
+    -*)                error "Unknown option: $1 (try --help)" ;;
+    *)
+      [[ -z "$ENV_NAME" ]] || error "Unexpected argument: $1 (try --help)"
+      ENV_NAME="$1"; shift ;;
   esac
 done
 
 SOURCE_AMI="${SOURCE_AMI:-$DEFAULT_SOURCE_AMI}"
+
+[[ "$WAIT_MINUTES" =~ ^[1-9][0-9]*$ ]] \
+  || error "--wait-minutes must be a positive whole number, got '${WAIT_MINUTES}'"
 
 #######################################
 # Pre-checks
@@ -102,30 +117,52 @@ SOURCE_AMI="${SOURCE_AMI:-$DEFAULT_SOURCE_AMI}"
 command -v aws >/dev/null 2>&1 || error "aws CLI is not installed"
 aws sts get-caller-identity >/dev/null 2>&1 || error "aws CLI has no usable credentials"
 
-CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+tf_out() { terraform -chdir="$1" output -raw "$2" 2>/dev/null || true; }
 
-# An AMI belongs to one account. Copied into the wrong one it is invisible to
-# the adaptor, and the failure shows up much later as a launch error.
 if [[ "$VERIFY_ONLY" == false ]]; then
-  EXPECTED_ACCOUNT=$(terraform -chdir="${REPO_ROOT}/05-compute/terraform" output -raw aws_account_id 2>/dev/null || true)
-  if [[ -n "$EXPECTED_ACCOUNT" && "$EXPECTED_ACCOUNT" != "$CALLER_ACCOUNT" ]]; then
-    error "Credentials are for ${CALLER_ACCOUNT}, but this deployment is ${EXPECTED_ACCOUNT}"
+  [[ -n "$ENV_NAME" ]] || error "No environment given. Usage: $(basename "$0") <env> (try --help)"
+  [[ -d "${TF_COMPUTE}/environments/${ENV_NAME}" ]] \
+    || error "No such environment: ${ENV_NAME} (looked in 05-compute/terraform/environments)"
+
+  CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+
+  # Each layer is init'd per environment, so their states can be for different
+  # ones. Mixing them copies to one environment's region under another's key.
+  COMPUTE_ACCOUNT=$(tf_out "$TF_COMPUTE" aws_account_id)
+  COMPUTE_REGION=$(tf_out "$TF_COMPUTE" aws_region)
+  INFRA_ACCOUNT=$(tf_out "$TF_INFRA" aws_account_id)
+  INFRA_REGION=$(tf_out "$TF_INFRA" aws_region)
+
+  if [[ -z "$COMPUTE_REGION" || -z "$INFRA_REGION" ]]; then
+    # Nothing to resolve against and nothing to guard, so require both rather
+    # than guess a region and land the copy where the adaptor cannot see it.
+    [[ -n "$TARGET_REGION" && -n "$KMS_KEY_ARN" ]] || error \
+      "Cannot read terraform state for ${ENV_NAME}. Run terraform init for 05-compute and 03-infrastructure, or pass both --region and --kms-key-arn."
+    warn "No terraform state — cannot confirm ${CALLER_ACCOUNT} is the ${ENV_NAME} account"
+  else
+    [[ "$COMPUTE_ACCOUNT" == "$INFRA_ACCOUNT" && "$COMPUTE_REGION" == "$INFRA_REGION" ]] || error \
+      "05-compute state is ${COMPUTE_ACCOUNT}/${COMPUTE_REGION} but 03-infrastructure is ${INFRA_ACCOUNT}/${INFRA_REGION}. Re-init both for ${ENV_NAME}."
+    [[ "$COMPUTE_ACCOUNT" == "$CALLER_ACCOUNT" ]] || error \
+      "Credentials are for ${CALLER_ACCOUNT}, but ${ENV_NAME} is ${COMPUTE_ACCOUNT}"
+    TARGET_REGION="${TARGET_REGION:-$COMPUTE_REGION}"
+    info "Account ${CALLER_ACCOUNT}, environment ${ENV_NAME}"
   fi
-  [[ -n "$EXPECTED_ACCOUNT" ]] || warn "No terraform state here — cannot confirm ${CALLER_ACCOUNT} is the deployment account"
-  info "Account: ${CALLER_ACCOUNT}"
-fi
 
-# Resolve region and key from state so the copy lands where the cluster is.
-if [[ "$VERIFY_ONLY" == false && -z "$TARGET_REGION" ]]; then
-  TARGET_REGION=$(terraform -chdir="${REPO_ROOT}/05-compute/terraform" output -raw aws_region 2>/dev/null || true)
-  TARGET_REGION="${TARGET_REGION:-${AWS_REGION:-eu-central-2}}"
-  info "Target region: ${TARGET_REGION} (resolved)"
-fi
+  if [[ -z "$TARGET_REGION" ]]; then
+    TARGET_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || true)}}"
+  fi
+  [[ -n "$TARGET_REGION" ]] || error "Could not determine the target region; pass --region"
 
-if [[ "$VERIFY_ONLY" == false && -z "$KMS_KEY_ARN" ]]; then
-  KMS_KEY_ARN=$(terraform -chdir="${REPO_ROOT}/03-infrastructure/terraform" output -raw kms_key_general_arn 2>/dev/null || true)
-  [[ -n "$KMS_KEY_ARN" ]] || error "Could not resolve the general KMS key from terraform state; pass --kms-key-arn"
-  info "Encrypting under: ${KMS_KEY_ARN}"
+  if [[ -z "$KMS_KEY_ARN" ]]; then
+    KMS_KEY_ARN=$(tf_out "$TF_INFRA" kms_key_general_arn)
+    [[ -n "$KMS_KEY_ARN" ]] || error "Could not resolve the general KMS key; pass --kms-key-arn"
+  fi
+
+  # A KMS key is regional; copy-image rejects one from another region.
+  KEY_REGION="$(cut -d: -f4 <<<"$KMS_KEY_ARN")"
+  [[ "$KEY_REGION" == "$TARGET_REGION" ]] \
+    || error "KMS key is in ${KEY_REGION} but the copy targets ${TARGET_REGION}"
+  info "Target ${TARGET_REGION}, encrypting under ${KMS_KEY_ARN}"
 fi
 
 #######################################
@@ -134,15 +171,15 @@ fi
 
 info "Inspecting ${SOURCE_AMI} in ${SOURCE_REGION}"
 
-SOURCE_JSON=$(aws ec2 describe-images --region "$SOURCE_REGION" --image-ids "$SOURCE_AMI" --output json 2>/dev/null) \
-  || error "Cannot read ${SOURCE_AMI} in ${SOURCE_REGION} — wrong ID, wrong region, or no longer public"
+# Tab-separated: AMI names may contain spaces, which a space-split would shift
+# across the following fields.
+if ! SOURCE_TSV=$(aws ec2 describe-images --region "$SOURCE_REGION" --image-ids "$SOURCE_AMI" \
+  --query 'Images[0].[Name,OwnerId,State,Architecture,BootMode,TpmSupport]' \
+  --output text 2>&1); then
+  error "Cannot read ${SOURCE_AMI} in ${SOURCE_REGION}: ${SOURCE_TSV}"
+fi
 
-read -r SRC_NAME SRC_OWNER SRC_STATE SRC_ARCH SRC_BOOT SRC_TPM <<<"$(python3 -c '
-import json, sys
-i = json.load(sys.stdin)["Images"][0]
-print(i.get("Name", "-"), i.get("OwnerId", "-"), i.get("State", "-"),
-      i.get("Architecture", "-"), i.get("BootMode", "-"), i.get("TpmSupport", "-"))
-' <<<"$SOURCE_JSON")"
+IFS=$'\t' read -r SRC_NAME SRC_OWNER SRC_STATE SRC_ARCH SRC_BOOT SRC_TPM <<<"$SOURCE_TSV"
 
 echo "    Name:  ${SRC_NAME}"
 echo "    Owner: ${SRC_OWNER}"
@@ -162,10 +199,17 @@ if [[ "$SOURCE_AMI" == "$DEFAULT_SOURCE_AMI" ]]; then
   [[ "$SRC_OWNER" == "$EXPECTED_OWNER" ]] \
     || error "Pinned AMI is owned by ${SRC_OWNER}, expected ${EXPECTED_OWNER} — refusing to copy"
   log "Pinned image matches its recorded name and owner"
+  PROVENANCE="upstream-debug-image-unverified-publisher"
+  DESCRIPTION="Conduct sandbox pod VM (upstream CoCo debug image, copied)"
 else
+  # Name and owner are only known for the pinned image, so they go unchecked
+  # here and the tags must not imply otherwise.
   warn "Not the pinned image — verify its provenance yourself"
+  PROVENANCE="copied-from-${SRC_OWNER}"
+  DESCRIPTION="Conduct sandbox pod VM (copied from ${SOURCE_AMI} in ${SOURCE_REGION})"
 fi
 
+[[ -n "$SRC_NAME" && "$SRC_NAME" != "None" ]] || error "Source AMI has no name; pass --name"
 AMI_NAME="${AMI_NAME:-${SRC_NAME}}"
 
 if [[ "$VERIFY_ONLY" == true ]]; then
@@ -178,25 +222,33 @@ fi
 #######################################
 
 # describe-images returns pending and failed copies too, and a failed one keeps
-# the name -- so branch on state rather than on the ID existing.
-read -r EXISTING EXISTING_STATE <<<"$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
+# the name -- so branch on state rather than on the ID existing. A failed call
+# is distinguished from an absent image, since only one of them means "copy".
+if ! EXISTING_TSV=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
   --filters "Name=name,Values=${AMI_NAME}" \
-  --query 'Images[0].[ImageId,State]' --output text 2>/dev/null || echo "None None")"
+  --query 'Images[0].[ImageId,State]' --output text 2>&1); then
+  error "Cannot list images in ${TARGET_REGION}: ${EXISTING_TSV}"
+fi
+IFS=$'\t' read -r EXISTING EXISTING_STATE <<<"$EXISTING_TSV"
 
 AMI_ID=""
+STARTED_COPY=false
 
 case "$EXISTING_STATE" in
   available)
     log "Already present in ${TARGET_REGION}: ${BOLD}${EXISTING}${NC}"
     AMI_ID="$EXISTING"
 
-    # A copy made under a different key still carries the right name.
+    # A copy made under a different key still carries the right name, and an
+    # unencrypted one is what this script exists to avoid -- so refuse it
+    # rather than print it as the AMI to configure.
     EXISTING_KEY=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$EXISTING" \
-      --query 'Images[0].BlockDeviceMappings[0].Ebs.KmsKeyId' --output text 2>/dev/null || echo "None")
+      --query 'Images[0].BlockDeviceMappings[?Ebs].Ebs.KmsKeyId | [0]' \
+      --output text 2>/dev/null || echo "None")
     if [[ "$EXISTING_KEY" == "None" || -z "$EXISTING_KEY" ]]; then
-      warn "${EXISTING} is not encrypted; re-copy it or deregister it and run again"
+      error "${EXISTING} is not encrypted. Deregister it and run again."
     elif [[ "$EXISTING_KEY" != "$KMS_KEY_ARN" ]]; then
-      warn "${EXISTING} is encrypted under ${EXISTING_KEY}, not ${KMS_KEY_ARN}"
+      error "${EXISTING} is encrypted under ${EXISTING_KEY}, not ${KMS_KEY_ARN}. Deregister it and run again."
     fi
     ;;
   pending)
@@ -217,19 +269,21 @@ if [[ -z "$AMI_ID" ]]; then
     --source-region "$SOURCE_REGION" \
     --source-image-id "$SOURCE_AMI" \
     --name "$AMI_NAME" \
-    --description "Conduct sandbox pod VM (upstream CoCo debug image, copied)" \
+    --description "$DESCRIPTION" \
     --encrypted --kms-key-id "$KMS_KEY_ARN" \
     --query 'ImageId' --output text) || error "copy-image failed"
+  STARTED_COPY=true
   log "Copy started: ${BOLD}${AMI_ID}${NC}"
-
-  # Record where it came from; the copy itself keeps no link to the source.
-  aws ec2 create-tags --region "$TARGET_REGION" --resources "$AMI_ID" --tags \
-    "Key=Name,Value=${AMI_NAME}" \
-    "Key=SourceImageId,Value=${SOURCE_AMI}" \
-    "Key=SourceRegion,Value=${SOURCE_REGION}" \
-    "Key=SourceOwner,Value=${SRC_OWNER}" \
-    "Key=Provenance,Value=upstream-debug-image-unverified-publisher" >/dev/null || warn "Could not tag ${AMI_ID}"
 fi
+
+# Unconditional and idempotent: a re-run after an interrupted copy must not be
+# left with no record of where the image came from.
+aws ec2 create-tags --region "$TARGET_REGION" --resources "$AMI_ID" --tags \
+  "Key=Name,Value=${AMI_NAME}" \
+  "Key=SourceImageId,Value=${SOURCE_AMI}" \
+  "Key=SourceRegion,Value=${SOURCE_REGION}" \
+  "Key=SourceOwner,Value=${SRC_OWNER}" \
+  "Key=Provenance,Value=${PROVENANCE}" >/dev/null || warn "Could not tag ${AMI_ID}"
 
 #######################################
 # Wait
@@ -276,6 +330,18 @@ if [[ "$WAIT" == true ]]; then
     done
   fi
   log "Available"
+
+  # The copy creates its own snapshot, billed and listed separately, and it
+  # outlives the AMI if the image is ever deregistered.
+  SNAPSHOT_ID=$(aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$AMI_ID" \
+    --query 'Images[0].BlockDeviceMappings[?Ebs].Ebs.SnapshotId | [0]' --output text 2>/dev/null || echo "None")
+  if [[ -n "$SNAPSHOT_ID" && "$SNAPSHOT_ID" != "None" ]]; then
+    aws ec2 create-tags --region "$TARGET_REGION" --resources "$SNAPSHOT_ID" --tags \
+      "Key=Name,Value=${AMI_NAME}" \
+      "Key=SourceImageId,Value=${SOURCE_AMI}" \
+      "Key=Provenance,Value=${PROVENANCE}" >/dev/null 2>&1 \
+      || warn "Could not tag snapshot ${SNAPSHOT_ID}"
+  fi
 fi
 
 #######################################
@@ -284,14 +350,26 @@ fi
 
 echo ""
 echo -e "${BOLD}Pod VM AMI:${NC} ${AMI_ID}  (${TARGET_REGION})"
+
+if [[ "$WAIT" == false && "$STARTED_COPY" == true ]]; then
+  echo ""
+  warn "Still copying — not usable until it reports available, and its snapshot"
+  warn "is untagged until then. Re-run without --no-wait to follow and finish it."
+  exit 0
+fi
+
 echo ""
-echo "Set it in instance-config.yaml, then re-run the configure step:"
+echo "Set it in 06-applications/${ENV_NAME}/instance-config.yaml:"
 echo ""
 echo "    aws:"
 echo "      sandbox:"
 echo "        podvmAmiId: ${AMI_ID}"
 echo ""
-echo "    ./06-applications/scripts/configure-instance.sh"
+echo "then re-run the configure step:"
 echo ""
-warn "This is upstream's debug image from an unverified publisher. Suitable for"
-warn "sbx only — build a trusted image before the sandbox runs anything real."
+echo "    cd 06-applications && ./scripts/configure-instance.sh ${ENV_NAME}"
+echo ""
+if [[ "$SOURCE_AMI" == "$DEFAULT_SOURCE_AMI" ]]; then
+  warn "This is upstream's debug image from an unverified publisher. Suitable for"
+  warn "sbx only — build a trusted image before the sandbox runs anything real."
+fi

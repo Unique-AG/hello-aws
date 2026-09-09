@@ -60,7 +60,7 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
-| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls |
+| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
 
@@ -70,7 +70,15 @@ Conduct sandboxes run as Kata peer pods: `cloud-api-adaptor` launches one EC2 in
 
 Two ways to obtain one:
 
-**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh` copies it into this deployment's region, re-encrypted under the general KMS key, and tags it with where it came from. The AMI ID is pinned in the script to the CAA version the `peerpods` chart vendors, and the script verifies the image's name, owner, architecture, boot mode and TPM support before copying — bumping the chart means re-pinning it. It also refuses to run when the caller's account is not this deployment's, since an AMI in the wrong account is invisible to the adaptor. Use `--verify-only` to check the source without copying or needing state.
+**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh <env>` copies it into this deployment's region, re-encrypted under the general KMS key, and tags both the image and its snapshot with where they came from.
+
+What it checks before copying:
+
+- Architecture, boot mode and TPM support on every source image — a mismatch means the wrong image, not a cosmetic difference.
+- Name and owner **only for the pinned AMI**, which is the CAA version the `peerpods` chart vendors. Bumping the chart means re-pinning it. With `--source-ami` those two are unknown, so it warns instead and tags the result accordingly rather than claiming upstream provenance.
+- That the caller's account matches the environment's, and that both layers' state is for the same environment — each is init'd separately, so they can disagree and silently mix one environment's region with another's key. Without readable state it cannot check either, so it requires `--region` and `--kms-key-arn` explicitly rather than guessing.
+
+`--verify-only` runs the source checks alone, and needs no state and no environment.
 
 Understand what that image is before relying on it:
 

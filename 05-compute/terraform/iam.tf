@@ -991,6 +991,37 @@ data "aws_iam_policy_document" "peer_pods" {
 
   # Termination limited to instances the adaptor tagged on the way up. This is
   # what stops a compromised adaptor stopping cluster nodes.
+  # Launching from an encrypted AMI makes EC2 create a grant on the caller's
+  # behalf; without these the RunInstances above fails with an opaque error.
+  statement {
+    sid    = "KMSForPodVMVolume"
+    effect = "Allow"
+    actions = [
+      "kms:CreateGrant",
+      "kms:ListGrants",
+      "kms:RevokeGrant",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "KMSDescribeAndDecryptPodVMVolume"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+
   statement {
     sid       = "TerminatePodVMOnly"
     effect    = "Allow"
