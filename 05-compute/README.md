@@ -60,9 +60,45 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
-| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls |
+| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
+
+### Conduct Pod VM Image
+
+Conduct sandboxes run as Kata peer pods: `cloud-api-adaptor` launches one EC2 instance per sandbox from a **pod VM AMI**, an image built by the Confidential Containers project rather than derived from the EKS worker AMI. It is not created by Terraform — the AMI ID is supplied as the `<PODVM_AMI_ID>` placeholder in `instance-config.yaml`, and `validate-instance.sh` fails until it is set.
+
+Two ways to obtain one:
+
+**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh <env>` copies it into this deployment's region, re-encrypted under the general KMS key, and tags both the image and its snapshot with where they came from.
+
+What it checks before copying:
+
+- Architecture, boot mode and TPM support on every source image — a mismatch means the wrong image, not a cosmetic difference.
+- Name and owner **only for the pinned AMI**, which is the CAA version the `peerpods` chart vendors. Bumping the chart means re-pinning it. With `--source-ami` those two are unknown, so it warns instead and tags the result accordingly rather than claiming upstream provenance.
+- That the caller's account matches the environment's, and that both layers' state is for the same environment — each is init'd separately, so they can disagree and silently mix one environment's region with another's key. Without readable state it cannot check either, so it requires `--region` and `--kms-key-arn` explicitly rather than guessing.
+
+`--verify-only` runs the source checks alone, and needs no state and no environment.
+
+Understand what that image is before relying on it:
+
+- Upstream describes it as a **debug** image published for proofs of concept. That is a
+  build variant, not a label: the project's `make image-debug` target adds debugging
+  packages and **enables serial console access into the pod VM**, which is at odds with
+  the VM's purpose here.
+- It is published by an AWS account that appears nowhere in the project's repository or CI, and which has published exactly one public AMI. There is no cryptographic link between that account and the project.
+- Its backing snapshot is unencrypted upstream; the copy re-encrypts it, which addresses encryption but not provenance.
+
+This is acceptable for `sbx`, where the value is verifying that the peer-pods path works end to end. It is **not** an acceptable basis for the sandbox boundary anywhere the sandbox runs real untrusted work.
+
+**Build or import a non-debug image.** The project also publishes the plain (non-debug) pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name — and its `podvm` directory builds one from source with mkosi. Either way the result is a qcow2 or raw disk that has to be imported: upload to S3, `ec2 import-snapshot`, then `ec2 register-image` with UEFI boot mode and `--tpm-support v2.0`.
+
+Notes for whoever does this:
+
+- `TEE_PLATFORM` does not need to be set for this deployment. The default build supports the filesystem attester only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types.
+- The upstream build runs on a stock `ubuntu-24.04` GitHub runner, so it needs no unusual hardware — apt packages plus `dnf`, `yq` 4.x, `oras` and Docker buildx.
+- Provenance of the published artifact **cannot currently be verified**. The build workflow runs `actions/attest` with `push-to-registry`, but neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
+- Upstream's `raw-to-ami.sh` does the import half, but it creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, plus an unencrypted bucket, and cleans up neither. It needs hardening before it belongs here.
 
 ### ECR
 
