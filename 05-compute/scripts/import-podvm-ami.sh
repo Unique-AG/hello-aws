@@ -132,6 +132,7 @@ SHA=$(sha256sum "$RAW" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$RAW" | cut
 PROV="${IMAGE}.provenance"
 CAA_REF="unrecorded"
 CAA_COMMIT="unrecorded"
+PROVENANCE="imported-artifact"
 if [[ -f "$PROV" ]]; then
   CAA_REF=$(grep '^caa_ref=' "$PROV" | cut -d= -f2)
   CAA_COMMIT=$(grep '^caa_commit=' "$PROV" | cut -d= -f2)
@@ -139,6 +140,7 @@ if [[ -f "$PROV" ]]; then
   if [[ "$RECORDED" != "$SHA" ]]; then
     error "Image does not match its provenance record. Recorded ${RECORDED}, got ${SHA}."
   fi
+  PROVENANCE="built-from-source"
   log "Matches its provenance record (${CAA_REF} @ ${CAA_COMMIT:0:12})"
 else
   warn "No ${PROV##*/} beside the image — importing without a provenance check"
@@ -230,7 +232,7 @@ aws ec2 create-tags --region "$TARGET_REGION" --resources "$AMI_ID" "$SNAPSHOT_I
   "Key=SourceRef,Value=${CAA_REF}" \
   "Key=SourceCommit,Value=${CAA_COMMIT}" \
   "Key=ImageSha256,Value=${SHA}" \
-  "Key=Provenance,Value=built-from-source" >/dev/null || warn "Could not tag ${AMI_ID}"
+  "Key=Provenance,Value=${PROVENANCE}" >/dev/null || warn "Could not tag ${AMI_ID}"
 
 aws ec2 wait image-available --region "$TARGET_REGION" --image-ids "$AMI_ID" 2>/dev/null || true
 log "Registered ${BOLD}${AMI_ID}${NC}"
