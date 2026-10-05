@@ -1,0 +1,111 @@
+name: '[rel] Release'
+# Publishes a GitHub Release for a release tag (YYYY.WW.P) on main — see
+# docs/release-concept.md. Two entry points:
+#   - push a tag:          git tag -a 2026.40.4 -m 2026.40.4 <sha> && git push origin 2026.40.4
+#   - run from Actions:    workflow_dispatch tags the tip of main with the given version
+# A tag pushed by this workflow's GITHUB_TOKEN does not re-trigger it, so the
+# dispatch path publishes in the same run.
+on:
+  push:
+    tags: ['20[0-9][0-9].[0-9]*.[0-9]*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (YYYY.WW.P) — tags the tip of main'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          # Full history + tags: previous-tag lookup and the main-ancestry check.
+          fetch-depth: 0
+          ref: ${{ github.event_name == 'workflow_dispatch' && 'main' || github.ref }}
+
+      - name: Resolve version and target commit
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT" == "workflow_dispatch" ]]; then
+            VERSION="$INPUT_VERSION"
+            if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
+              echo "::error::Tag ${VERSION} already exists; push a new version or re-run the tag's own workflow run."
+              exit 1
+            fi
+            TARGET=$(git rev-parse origin/main)
+          else
+            VERSION="$GITHUB_REF_NAME"
+            TARGET=$(git rev-parse "refs/tags/${VERSION}^{commit}")
+          fi
+          if [[ ! "$VERSION" =~ ^20[0-9]{2}\.[0-9]{1,2}\.[0-9]+$ ]]; then
+            echo "::error::'${VERSION}' is not a release version (YYYY.WW.P)."
+            exit 1
+          fi
+          if ! git merge-base --is-ancestor "$TARGET" origin/main; then
+            echo "::error::${TARGET} is not on main; releases are cut from main only."
+            exit 1
+          fi
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          echo "TARGET=${TARGET}" >> "$GITHUB_ENV"
+
+      - name: Check the release content pins this version
+        # Every Unique image tag and release-locked chart in the app specs must
+        # equal the release version, so a tag cannot be cut on unbumped content.
+        run: |
+          set -euo pipefail
+          git checkout --quiet "$TARGET"
+          # shellcheck disable=SC2016 # $v is a yq variable
+          mismatches=$(find 06-applications/*/apps -name '*.yaml' -print0 \
+            | xargs -0 yq -N -r '
+                (.spec.sources[] | .helm.valuesObject.image.tag // "", .targetRevision // "")
+                | tostring | select(test("^20[0-9]{2}\\.[0-9]+\\.[0-9]+$"))
+                | filename + ": " + .' \
+            | grep -v ": ${VERSION}\$" || true)
+          if [[ -n "$mismatches" ]]; then
+            echo "::error::App specs do not pin ${VERSION}:"
+            echo "$mismatches"
+            exit 1
+          fi
+
+      - name: Create the tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Release ${VERSION}" "$TARGET"
+          git push origin "refs/tags/${VERSION}"
+
+      - name: Render release notes
+        run: |
+          set -euo pipefail
+          PREV=$(git describe --tags --abbrev=0 --match '20[0-9][0-9].*' "${VERSION}^" 2>/dev/null || true)
+          echo "PREV=${PREV}" >> "$GITHUB_ENV"
+          ./scripts/release-notes.sh "$PREV" "$VERSION" > "${RUNNER_TEMP}/notes.md"
+          cat "${RUNNER_TEMP}/notes.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          if gh release view "$VERSION" >/dev/null 2>&1; then
+            # Re-run on an existing release: refresh the notes, keep everything else.
+            gh release edit "$VERSION" --notes-file "${RUNNER_TEMP}/notes.md"
+            exit 0
+          fi
+          args=(--title "$VERSION" --notes-file "${RUNNER_TEMP}/notes.md" --verify-tag --generate-notes)
+          [[ -n "$PREV" ]] && args+=(--notes-start-tag "$PREV")
+          gh release create "$VERSION" "${args[@]}"
