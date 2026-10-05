@@ -35,12 +35,14 @@ components_at() {
     || { echo "release-notes: unknown ref '${ref}'" >&2; return 1; }
   files=$(git ls-tree -r --name-only "$ref" -- "$APPS_DIR" | { grep -E '\.ya?ml$' || true; } | sort)
   for file in $files; do
-    # shellcheck disable=SC2016 # $s, $charts, $images are yq variables
+    # shellcheck disable=SC2016 # $s, $srcs, $charts, $images are yq variables
     git show "$ref:$file" | yq -r '
       .spec as $s
-      | [ $s.sources[] | select(.chart != null and .chart != "raw")
+      # An Application spec carries either sources[] or a single source.
+      | ((($s.sources // []) + [$s.source]) | map(select(. != null))) as $srcs
+      | [ $srcs[] | select(.chart != null and .chart != "raw")
           | (.chart | sub("^helm/"; "") | sub("^\.$"; "(git)")) + "@" + (.targetRevision | tostring | sub("^(sha256:[0-9a-f]{12}).*"; "${1}")) ] as $charts
-      | [ $s.sources[] | select(.helm.valuesObject.image.tag != null) | .helm.valuesObject.image.tag ] as $images
+      | [ $srcs[] | select(.helm.valuesObject.image.tag != null) | .helm.valuesObject.image.tag ] as $images
       | [ $s.name, ($charts | join(", ")), ($images | join(", ")) ] | join("\t")' \
       || { echo "release-notes: cannot parse ${ref}:${file}" >&2; return 1; }
   done

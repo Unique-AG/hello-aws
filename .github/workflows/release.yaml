@@ -69,7 +69,8 @@ jobs:
           # shellcheck disable=SC2016 # $v is a yq variable
           mismatches=$(find 06-applications/*/apps -name '*.yaml' -print0 \
             | xargs -0 yq -N -r '
-                (.spec.sources[] | .helm.valuesObject.image.tag // "", .targetRevision // "")
+                (((.spec.sources // []) + [.spec.source]) | .[] | select(. != null)
+                  | .helm.valuesObject.image.tag // "", .targetRevision // "")
                 | tostring | select(test("^20[0-9]{2}\\.[0-9]+\\.[0-9]+$"))
                 | filename + ": " + .' \
             | grep -v ": ${VERSION}\$" || true)
@@ -101,11 +102,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # The merged-PR changelog is generated explicitly (not --generate-notes) so a
+          # re-run that edits an existing release rebuilds the same full body.
+          gen=(-f tag_name="$VERSION" -f target_commitish="$TARGET")
+          [[ -n "$PREV" ]] && gen+=(-f previous_tag_name="$PREV")
+          { echo; gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" "${gen[@]}" -q .body; } \
+            >> "${RUNNER_TEMP}/notes.md"
           if gh release view "$VERSION" >/dev/null 2>&1; then
-            # Re-run on an existing release: refresh the notes, keep everything else.
             gh release edit "$VERSION" --notes-file "${RUNNER_TEMP}/notes.md"
-            exit 0
+          else
+            gh release create "$VERSION" --title "$VERSION" --notes-file "${RUNNER_TEMP}/notes.md" --verify-tag
           fi
-          args=(--title "$VERSION" --notes-file "${RUNNER_TEMP}/notes.md" --verify-tag --generate-notes)
-          [[ -n "$PREV" ]] && args+=(--notes-start-tag "$PREV")
-          gh release create "$VERSION" "${args[@]}"
