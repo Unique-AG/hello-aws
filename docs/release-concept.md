@@ -273,7 +273,9 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
    required environment variables and feature flags; dependency upgrades).
 2. Branch from `main`: `chore/release-202X.XX`.
 3. **Bump versions** in the affected app specs (`apps/*.yaml`: chart `targetRevision` + image tag).
-4. **Update `defaults/`**: add newly-required flags / env defaults; leave optional ones out.
+4. **Update `defaults/`**: add newly-required flags / env defaults. Optional ones belong here
+   only when the fleet should adopt them together — list each in the release's upgrade notes
+   with its effect, since `defaults/` is shared and every environment inherits it on adoption.
 5. **Bump Terraform** module/provider versions in layers 01–05 if the release requires it.
 6. If the release needs operator action (new instance values, renamed flags, manual steps),
    add it to the PR as `docs/releases/202X.XX.X.md`; it heads the release notes.

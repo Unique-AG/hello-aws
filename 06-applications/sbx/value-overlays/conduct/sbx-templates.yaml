@@ -6,9 +6,9 @@ image:
   # Split explicitly: the chart defaults registry to the ACR host.
   registry: <ECR_REGISTRY_PRIMARY>
   repository: unique/unique-polyagent-001
-  # By tag: the chart's digest names the ACR path, not the ECR one.
+  # By tag: the chart's digest names the ACR path, not the ECR one. The tag
+  # itself is release content and lives in the app spec.
   useDigest: false
-  tag: "2026.37.0"
 
 sandboxTemplate:
   enabled: true

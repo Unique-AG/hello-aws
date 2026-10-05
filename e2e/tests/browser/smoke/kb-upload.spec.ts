@@ -22,7 +22,9 @@ test('@smoke browser — upload a file in Knowledge Base', async ({ page }) => {
     const fileInput = uploadButton.locator('input[type="file"]');
     await fileInput.setInputFiles(SEED);
 
-    await expect(page.getByText('Upload Completed!').first()).toBeVisible({ timeout: 120_000 });
+    // Loose on purpose: the toast copy moves with FEATURE_FLAG_ENABLE_TOAST_V2_UN_23011,
+    // so a failure here means changed wording, not broken ingestion.
+    await expect(page.getByText(/upload\s*complet/i).first()).toBeVisible({ timeout: 120_000 });
   } finally {
     await deleteScope(token, scopeId);
   }
