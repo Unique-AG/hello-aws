@@ -1,10 +1,6 @@
 name: '[rel] Release'
-# Publishes a GitHub Release for a release tag (YYYY.WW.P) on main — see
-# docs/release-concept.md. Two entry points:
-#   - push a tag:          git tag -a 2026.40.4 -m 2026.40.4 <sha> && git push origin 2026.40.4
-#   - run from Actions:    workflow_dispatch tags the tip of main with the given version
-# A tag pushed by this workflow's GITHUB_TOKEN does not re-trigger it, so the
-# dispatch path publishes in the same run.
+# Publishes a GitHub Release for a release tag (YYYY.WW.P) on main, from a
+# pushed tag or from workflow_dispatch. See docs/release-concept.md.
 on:
   push:
     tags: ['20[0-9][0-9].[0-9]*.[0-9]*']
@@ -38,13 +34,21 @@ jobs:
           INPUT_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
+          TAG_EXISTS=false
           if [[ "$EVENT" == "workflow_dispatch" ]]; then
             VERSION="$INPUT_VERSION"
-            if git rev-parse -q --verify "refs/tags/${VERSION}" >/dev/null; then
-              echo "::error::Tag ${VERSION} already exists; push a new version or re-run the tag's own workflow run."
-              exit 1
-            fi
             TARGET=$(git rev-parse origin/main)
+            # A tag this workflow pushed does not start a new run, so a failure
+            # after tagging can only be retried here. Re-running is allowed when
+            # the tag already points at the target; publishing is idempotent.
+            if EXISTING=$(git rev-parse -q --verify "refs/tags/${VERSION}^{commit}"); then
+              if [[ "$EXISTING" != "$TARGET" ]]; then
+                echo "::error::Tag ${VERSION} exists at ${EXISTING}, not the tip of main (${TARGET}). Push a new version."
+                exit 1
+              fi
+              echo "Tag ${VERSION} already exists at the target; re-publishing."
+              TAG_EXISTS=true
+            fi
           else
             VERSION="$GITHUB_REF_NAME"
             TARGET=$(git rev-parse "refs/tags/${VERSION}^{commit}")
@@ -59,6 +63,7 @@ jobs:
           fi
           echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
           echo "TARGET=${TARGET}" >> "$GITHUB_ENV"
+          echo "TAG_EXISTS=${TAG_EXISTS}" >> "$GITHUB_ENV"
 
       - name: Check the release content pins this version
         # Every Unique image tag and release-locked chart in the app specs must
@@ -67,13 +72,20 @@ jobs:
           set -euo pipefail
           git checkout --quiet "$TARGET"
           # shellcheck disable=SC2016 # $v is a yq variable
-          mismatches=$(find 06-applications/*/apps -name '*.yaml' -print0 \
+          # Collected first: with the || true on the whole pipeline, a find or
+          # yq failure produced an empty list and the gate passed.
+          pins=$(find 06-applications/*/apps -name '*.yaml' -print0 \
             | xargs -0 yq -N -r '
                 (((.spec.sources // []) + [.spec.source]) | .[] | select(. != null)
                   | .helm.valuesObject.image.tag // "", .targetRevision // "")
                 | tostring | select(test("^20[0-9]{2}\\.[0-9]+\\.[0-9]+$"))
-                | filename + ": " + .' \
-            | grep -v ": ${VERSION}\$" || true)
+                | filename + ": " + .')
+          if [[ -z "$pins" ]]; then
+            echo "::error::Found no pinned versions in 06-applications/*/apps; the check cannot confirm anything."
+            exit 1
+          fi
+          # grep exits 1 when nothing mismatches, which is the success case.
+          mismatches=$(printf '%s\n' "$pins" | grep -v ": ${VERSION}\$" || true)
           if [[ -n "$mismatches" ]]; then
             echo "::error::App specs do not pin ${VERSION}:"
             echo "$mismatches"
@@ -81,7 +93,7 @@ jobs:
           fi
 
       - name: Create the tag
-        if: github.event_name == 'workflow_dispatch'
+        if: github.event_name == 'workflow_dispatch' && env.TAG_EXISTS != 'true'
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
