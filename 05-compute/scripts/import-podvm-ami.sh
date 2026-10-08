@@ -73,6 +73,26 @@ aws sts get-caller-identity >/dev/null 2>&1 || error "aws CLI has no usable cred
 CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 
 
+# Only possible on an image we own: trivy cannot read public snapshots. Run on
+# every path that hands an AMI over, including a rerun that found one already
+# registered -- the earlier run may have registered it and then failed this.
+scan_ami() {
+  local ami="$1"
+  [[ "$SKIP_SCAN" == false ]] || return 0
+  if ! command -v trivy >/dev/null 2>&1; then
+    warn "trivy not installed; the image is unscanned"
+    return 0
+  fi
+  info "Scanning ${ami} for vulnerabilities (trivy vm is experimental)"
+  if ! trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
+    --exit-code 1 "ami:${ami}"; then
+    warn "The scan above found HIGH/CRITICAL findings, or could not read the image."
+    warn "See the pod VM image section of 05-compute/README.md."
+    error "${ami} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
+  fi
+  log "No HIGH/CRITICAL vulnerabilities or secrets found"
+}
+
 # Run against a freshly registered image and against one a previous run left
 # behind: an AMI that exists is not evidence that it is usable.
 verify_ami_properties() {
@@ -212,6 +232,7 @@ if [[ "$EXISTING_STATE" == "available" ]]; then
   log "Already imported: ${BOLD}${EXISTING_ID}${NC}"
   # A prior run may have registered it and then failed these very checks.
   verify_ami_properties "$EXISTING_ID"
+  scan_ami "$EXISTING_ID"
   echo "    Deregister it to re-import, or pass --name for a different name."
   exit 0
 elif [[ "$EXISTING_STATE" != "None" && -n "${EXISTING_STATE// /}" ]]; then
@@ -324,18 +345,7 @@ log "Registered ${BOLD}${AMI_ID}${NC}"
 verify_ami_properties "$AMI_ID"
 
 # Only possible on an AMI we own: trivy cannot read public snapshots.
-if [[ "$SKIP_SCAN" == false ]] && command -v trivy >/dev/null 2>&1; then
-  info "Scanning the AMI for vulnerabilities (trivy vm is experimental)"
-  if ! trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
-    --exit-code 1 "ami:${AMI_ID}"; then
-    warn "The scan above found HIGH/CRITICAL findings, or could not read the image."
-    warn "See the pod VM image section of 05-compute/README.md."
-    error "${AMI_ID} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
-  fi
-  log "No HIGH/CRITICAL vulnerabilities or secrets found"
-elif [[ "$SKIP_SCAN" == false ]]; then
-  warn "trivy not installed; skipping the image scan"
-fi
+scan_ami "$AMI_ID"
 
 #######################################
 # Next steps

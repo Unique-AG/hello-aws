@@ -44,7 +44,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 PINNED_REF="v0.22.0"
 CAA_REPO="https://github.com/confidential-containers/cloud-api-adaptor"
 
-APT_DEPS=(git make qemu-utils uidmap)
+APT_DEPS=(git make qemu-utils uidmap)  # plus yq 4.x
 
 CAA_REF="$PINNED_REF"
 OUT_DIR="${TMPDIR:-/tmp}/podvm-build"
@@ -75,13 +75,19 @@ MISSING=()
 [[ "$(uname -s)" == "Linux" ]] \
   || error "The mkosi build needs Linux with Docker; this is $(uname -s). Run it on a Linux host or a CI runner."
 
-# Only what the host itself runs. oras, gh, yq and jq are installed inside
-# Dockerfile.podvm_binaries, and bwrap/dnf belong to the s390x path.
+# Only what the host itself runs: yq reads the pinned mkosi version below.
+# oras, gh and jq are installed inside Dockerfile.podvm_binaries, and
+# bwrap/dnf belong to the s390x path.
 command -v docker >/dev/null 2>&1 || MISSING+=("docker")
 docker buildx version >/dev/null 2>&1 || MISSING+=("docker-buildx")
 command -v git >/dev/null 2>&1 || MISSING+=("git")
 command -v qemu-img >/dev/null 2>&1 || MISSING+=("qemu-utils")
 command -v make >/dev/null 2>&1 || MISSING+=("make")
+if command -v yq >/dev/null 2>&1; then
+  yq --version 2>&1 | grep -qE 'v?4\.' || MISSING+=("yq-4.x (found $(yq --version 2>&1))")
+else
+  MISSING+=("yq-4.x")
+fi
 
 if ((${#MISSING[@]})); then
   warn "Missing prerequisites: ${MISSING[*]}"
