@@ -21,7 +21,7 @@ env:
   ADMIN_FRONTEND_URL: unset_default_value
   AMQP_BENCHMARK_PREFETCH: 1
   ANONYMIZED_CHAT_INTERACTIONS_EXPORT: "false"
-  APP_REPOSITORY_URL: http://node-app-repository.unique.svc
+  APP_REPOSITORY_URL: http://backend-service-app-repository.unique.svc
   ASSISTANT_CORE_API_URL: http://assistants-core.unique.svc:8081/core
   AUDIT_LOG_DIR: /dev/stdout
   BENCHMARKS_PER_MINUTE_PER_PROCESS: 1
@@ -67,6 +67,7 @@ env:
   PUBSUB_BACKEND: redis
   PUBSUB_REDIS_DB: 2
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
+  SOURCE_AVAILABLE_TOOLS_REMOTELY: "true"
 envVars:
   - name: AMQP_USERNAME
     valueFrom:

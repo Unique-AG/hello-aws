@@ -5,9 +5,9 @@ image:
   # Split explicitly: the chart defaults registry to the ACR host.
   registry: <ECR_REGISTRY_PRIMARY>
   repository: unique/sbx-gateway
-  # By tag: the chart's digest names the ACR path, not the ECR one.
+  # By tag: the chart's digest names the ACR path, not the ECR one. The tag
+  # itself is release content and lives in the app spec.
   useDigest: false
-  tag: "2026.37.0"
 
 # Nodes authenticate to ECR by IAM.
 imagePullSecrets: []
@@ -18,8 +18,8 @@ nodeSelector:
   scalability: steady
   lifecycle: persistent
 
-# 2026.37.0 flipped the PDB default to minAvailable: 1, which blocks node
-# drains. Nulling it is required; the chart rejects both fields set.
+# Suppresses the chart's minAvailable: 1, which blocks node drains; it rejects
+# both fields set. Carried forward unverified since 2026.37.0 — see the release notes.
 pdb:
   minAvailable: null
   maxUnavailable: 1

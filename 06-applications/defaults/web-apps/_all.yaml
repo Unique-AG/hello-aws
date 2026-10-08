@@ -1,0 +1,5 @@
+# Release config shared by every web app, so a release-wide flag is set once
+# rather than pasted per file.
+
+env:
+  FEATURE_FLAG_ENABLE_TOAST_V2_UN_23011: "true"
