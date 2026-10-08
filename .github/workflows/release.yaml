@@ -37,17 +37,15 @@ jobs:
           TAG_EXISTS=false
           if [[ "$EVENT" == "workflow_dispatch" ]]; then
             VERSION="$INPUT_VERSION"
-            TARGET=$(git rev-parse origin/main)
             # A tag this workflow pushed does not start a new run, so a failure
-            # after tagging can only be retried here. Re-running is allowed when
-            # the tag already points at the target; publishing is idempotent.
-            if EXISTING=$(git rev-parse -q --verify "refs/tags/${VERSION}^{commit}"); then
-              if [[ "$EXISTING" != "$TARGET" ]]; then
-                echo "::error::Tag ${VERSION} exists at ${EXISTING}, not the tip of main (${TARGET}). Push a new version."
-                exit 1
-              fi
-              echo "Tag ${VERSION} already exists at the target; re-publishing."
+            # after tagging can only be retried here. On a retry the tag is the
+            # target, not the tip of main -- main has usually moved on by then.
+            # The ancestry check below still requires it to be on main.
+            if TARGET=$(git rev-parse -q --verify "refs/tags/${VERSION}^{commit}"); then
+              echo "Tag ${VERSION} already exists at ${TARGET}; re-publishing for it."
               TAG_EXISTS=true
+            else
+              TARGET=$(git rev-parse origin/main)
             fi
           else
             VERSION="$GITHUB_REF_NAME"
