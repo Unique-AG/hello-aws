@@ -83,10 +83,13 @@ docker buildx version >/dev/null 2>&1 || MISSING+=("docker-buildx")
 command -v git >/dev/null 2>&1 || MISSING+=("git")
 command -v qemu-img >/dev/null 2>&1 || MISSING+=("qemu-utils")
 command -v make >/dev/null 2>&1 || MISSING+=("make")
+# Behavioural, not a version string: python-yq also calls itself yq and emits
+# JSON-quoted scalars, which would pin MKOSI_VERSION to a quoted value.
 if command -v yq >/dev/null 2>&1; then
-  yq --version 2>&1 | grep -qE 'v?4\.' || MISSING+=("yq-4.x (found $(yq --version 2>&1))")
+  [[ "$(printf 'a: b\n' | yq -e '.a' 2>/dev/null)" == "b" ]] \
+    || MISSING+=("yq (mikefarah 4.x; found $(yq --version 2>&1))")
 else
-  MISSING+=("yq-4.x")
+  MISSING+=("yq (mikefarah 4.x)")
 fi
 
 if ((${#MISSING[@]})); then
