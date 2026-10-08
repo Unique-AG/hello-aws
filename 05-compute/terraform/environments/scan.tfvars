@@ -3,4 +3,4 @@
 # disabled in the environment CI reads. Gates named otherwise (use_oidc,
 # connectivity_account_id, ...) are not covered yet.
 
-# This layer declares no enable_* flags. Add them here when it does.
+enable_podvm_image_import = true
