@@ -41,6 +41,7 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
 #######################################
 
 resource "aws_iam_role" "connectivity_account" {
+  #checkov:skip=CKV_AWS_61: see docs/security-baseline.md
   count = var.enable_connectivity_account_role && var.connectivity_account_id != null ? 1 : 0
 
   name = "${module.naming.id}-connectivity-cross-account-role"

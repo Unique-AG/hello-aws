@@ -32,6 +32,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Keep in step with .github/workflows/tf.validate.yaml
 TRIVY_PINNED_VERSION="0.74.0"
+CHECKOV_PINNED_VERSION="3.2.526"
 
 # Colors for output
 RED='\033[0;31m'
@@ -428,6 +429,20 @@ if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   CHECKOV_ARGS=(--quiet --framework terraform)
   if [[ -f "${TERRAFORM_DIR}/.checkov.yml" ]]; then
     CHECKOV_ARGS+=(--config-file "${TERRAFORM_DIR}/.checkov.yml")
+  fi
+  # Same variable files as trivy: a count = 0 resource is not evaluated, so
+  # without these the conditional half of the layer goes unscanned.
+  [[ -f "$COMMON_CONFIG" ]] && CHECKOV_ARGS+=(--var-file "$COMMON_CONFIG")
+  [[ -f "$CONFIG_FILE" ]] && CHECKOV_ARGS+=(--var-file "$CONFIG_FILE")
+  if [[ -f "${TERRAFORM_DIR}/environments/scan.tfvars" ]]; then
+    CHECKOV_ARGS+=(--var-file "${TERRAFORM_DIR}/environments/scan.tfvars")
+  fi
+
+  # CI pins this; an older local checkov both reports findings CI does not and
+  # misses findings CI has.
+  LOCAL_CHECKOV=$(checkov --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+  if [[ "$LOCAL_CHECKOV" != "$CHECKOV_PINNED_VERSION" ]]; then
+    echo -e "${YELLOW}   checkov ${LOCAL_CHECKOV} locally, CI pins ${CHECKOV_PINNED_VERSION}${NC}"
   fi
 
   if checkov -d "$TERRAFORM_DIR" "${CHECKOV_ARGS[@]}"; then

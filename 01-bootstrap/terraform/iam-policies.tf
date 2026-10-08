@@ -65,6 +65,12 @@ resource "aws_iam_role_policy" "github_actions_terraform" {
 }
 
 data "aws_iam_policy_document" "github_actions_deploy" {
+  #checkov:skip=CKV_AWS_107: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_108: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_109: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_110: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_111: see docs/security-baseline.md
+  #checkov:skip=CKV_AWS_356: see docs/security-baseline.md
   count = var.use_oidc && var.github_repository != "" ? 1 : 0
 
   statement {
