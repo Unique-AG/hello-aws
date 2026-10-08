@@ -255,8 +255,8 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 1. **Cut on `main`** — bump the chart + image versions in the affected app specs
    (`apps/*.yaml`) and update `defaults/` for any new or newly-required release config, and the
    Terraform module/provider versions for the release. Open a PR; CI gates it; squash-merge.
-2. **Tag and publish** — tag the merge commit `202X.XX.X` and publish the GitHub Release with
-   notes. This is the release.
+2. **Tag and publish** — tag the merge commit `202X.XX.X`; the release workflow publishes the
+   GitHub Release with notes. This is the release.
 3. **Adopt per environment** — set the environment's adopted release tag (see
    [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)) and supply any new instance
    values in `<env>/value-overlays/`, then push. The Terraform pipeline applies that
@@ -275,8 +275,16 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 3. **Bump versions** in the affected app specs (`apps/*.yaml`: chart `targetRevision` + image tag).
 4. **Update `defaults/`**: add newly-required flags / env defaults; leave optional ones out.
 5. **Bump Terraform** module/provider versions in layers 01–05 if the release requires it.
-6. Open a PR to `main`; CI must be green; review the per-layer plan.
-7. Squash-merge; **tag `202X.XX.X`**; **publish the GitHub Release** with notes.
+6. If the release needs operator action (new instance values, renamed flags, manual steps),
+   add it to the PR as `docs/releases/202X.XX.X.md`; it heads the release notes.
+7. Open a PR to `main`; CI must be green; review the per-layer plan.
+8. Squash-merge, then **tag `202X.XX.X`** — either push the tag
+   (`git tag -a 202X.XX.X -m 202X.XX.X <merge-sha> && git push origin 202X.XX.X`) or run
+   the **`[rel] Release`** workflow from the Actions tab with the version, which tags the tip
+   of `main`. The workflow (`.github/workflows/release.yaml`) refuses a tag that is not on
+   `main` or whose app specs pin a different version, then **publishes the GitHub Release**:
+   the upgrade notes, a component version table diffed against the previous release
+   (`scripts/release-notes.sh`), and the merged pull requests.
 
 ### Part B — Adopt a release in an environment (on `deploy`)
 1. **Bring the release into the environment** — merge the release into the `deploy` branch so
