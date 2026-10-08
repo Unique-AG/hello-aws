@@ -40,8 +40,18 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "main" {
 # Requires: var.connectivity_account_id
 #######################################
 
+variable "connectivity_account_principals" {
+  description = "Principals in the connectivity account allowed to assume the cross-account role, as ARN suffixes. A bare role/* or user/* leaves org membership as the only real constraint."
+  type        = list(string)
+  default     = ["role/*-terraform-execution"]
+
+  validation {
+    condition     = !contains(var.connectivity_account_principals, "role/*") && !contains(var.connectivity_account_principals, "user/*")
+    error_message = "A bare role/* or user/* defeats the condition; name the role pattern the connectivity account actually uses."
+  }
+}
+
 resource "aws_iam_role" "connectivity_account" {
-  #checkov:skip=CKV_AWS_61: see docs/security-baseline.md
   count = var.enable_connectivity_account_role && var.connectivity_account_id != null ? 1 : 0
 
   name = "${module.naming.id}-connectivity-cross-account-role"
@@ -61,9 +71,8 @@ resource "aws_iam_role" "connectivity_account" {
           }
           ArnLike = {
             "aws:PrincipalArn" = [
-              "arn:aws:iam::${var.connectivity_account_id}:role/*-terraform-execution",
-              "arn:aws:iam::${var.connectivity_account_id}:user/*",
-              "arn:aws:iam::${var.connectivity_account_id}:role/*"
+              for p in var.connectivity_account_principals :
+              "arn:aws:iam::${var.connectivity_account_id}:${p}"
             ]
           }
         }
