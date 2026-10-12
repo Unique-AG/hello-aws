@@ -6,9 +6,12 @@ spec:
   sources:
     - repoURL: uniquecr.azurecr.io
       chart: helm/sbx-gateway
-      targetRevision: "2026.37.0"
+      targetRevision: "2026.40.4"
       helm:
         releaseName: sbx-gateway
         skipSchemaValidation: true
         valueFiles:
           - $values/06-applications/sbx/value-overlays/conduct/sbx-gateway.yaml
+        valuesObject:
+          image:
+            tag: "2026.40.4"
