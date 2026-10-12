@@ -42,20 +42,34 @@ only if your DNS differs.
 
 ## Run in CI (your fork)
 
-Two workflows under `.github/workflows/`, both gated behind the `e2e-aws`
-GitHub Environment:
+Two workflows under `.github/workflows/`:
 
 - `e2e-watchdog.yaml` — watchdog (browser + API), scheduled.
 - `e2e-smoke.yaml` — smoke (browser + API), dispatch + weekday morning.
 
-Provide **all** of these as **Environment secrets** on `e2e-aws` (nothing is a
-plaintext variable): `BASE_DOMAIN`, `TEST_USER`, `ZITADEL_UNIQUE_APP_PROJECT_ID`,
-`SERVICE_USER_CLIENT_ID`, `PASSWORD`, `SERVICE_USER_CLIENT_SECRET` (plus optional
-`E2E_SLACK_WEBHOOK_URL`).
+No tenant credentials live in this repo. Each job assumes the GitHub OIDC role
+from `01-bootstrap` (`secrets.AWS_ROLE_ARN` — an ARN, not a credential) with no
+static keys, then reads a single JSON secret from AWS Secrets Manager and masks
+every value before exporting it.
 
-In the Unique-AG org these are managed as code in the private `infrastructure`
-repo (GitHub Terraform provider) and stored as ciphertext — see that repo's
-`providers/github/unique-ag`. Forkers set their own Environment secrets.
+The secret is `manual-e2e-aws-credentials` in the bootstrap account, hand-managed
+and deliberately outside Terraform (same convention as
+`manual-zitadel-scope-mgmt-pat`). Its JSON keys become environment variables, so
+it must contain `BASE_DOMAIN`, `TEST_USER`, `ZITADEL_UNIQUE_APP_PROJECT_ID`,
+`SERVICE_USER_CLIENT_ID`, `PASSWORD` and `SERVICE_USER_CLIENT_SECRET`. Any other
+key is exported too — add `SLACK_WEBHOOK_URL` to enable the failure alert.
+
+Create or rotate it from a populated `e2e/.env` with:
+
+```bash
+aws secretsmanager create-secret --region eu-central-2 \
+  --name manual-e2e-aws-credentials --secret-string file://creds.json
+# later rotations: put-secret-value --secret-id manual-e2e-aws-credentials
+```
+
+A fork points `AWS_ROLE_ARN` at its own OIDC role and creates the same secret in
+its own account. The role already carries `secretsmanager:*` via the bootstrap
+deploy policy, so no extra IAM is needed.
 
 ## Relationship to the internal QA suite
 
