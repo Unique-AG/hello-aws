@@ -1,4 +1,5 @@
-# Always-on watchdog: critical-path browser + API checks against the deployment.
+# Watchdog: critical-path browser + API checks against the deployment.
+# Schedule paused (see below) — dispatch only until credentials exist.
 # Self-contained — tests live in ./e2e in this repo. A fork just sets the repo
 # vars/secrets below (see e2e/README.md).
 name: "e2e · AWS Watchdog"
