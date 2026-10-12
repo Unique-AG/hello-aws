@@ -1,7 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
-# Make set -e apply inside $(...), so a failure in components_at aborts the script.
-shopt -s inherit_errexit
+
+# inherit_errexit (bash 4.4+) makes set -e apply inside $(...), so a failure in
+# components_at aborts instead of rendering notes from partial output.
+if ! shopt -s inherit_errexit 2>/dev/null; then
+  echo "release-notes.sh needs bash 4.4+, found ${BASH_VERSION}." >&2
+  echo "macOS ships 3.2 as /bin/bash; 'brew install bash' puts a newer one first on PATH." >&2
+  exit 1
+fi
 
 #######################################
 # Release Notes Generator
