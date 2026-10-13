@@ -84,13 +84,22 @@ scan_ami() {
     return 0
   fi
   info "Scanning ${ami} for vulnerabilities (trivy vm is experimental)"
-  if ! trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
-    --exit-code 1 "ami:${ami}"; then
-    warn "The scan above found HIGH/CRITICAL findings, or could not read the image."
+  local report os_family rc=0
+  report=$(mktemp)
+  trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
+    --exit-code 1 --format json --output "$report" "ami:${ami}" || rc=$?
+  os_family=$(jq -r '.Metadata.OS.Family // ""' "$report" 2>/dev/null || true)
+  rm -f "$report"
+
+  if (( rc != 0 )); then
+    warn "The scan found HIGH/CRITICAL findings, or could not read the image."
     warn "See the pod VM image section of 05-compute/README.md."
     error "${ami} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
   fi
-  log "No HIGH/CRITICAL vulnerabilities or secrets found"
+  # trivy vm exits 0 having found nothing when it cannot parse the layout, so an
+  # undetected OS means the image is unscanned, not clean.
+  [[ -n "$os_family" ]] || error "${ami} is UNSCANNED: trivy detected no OS in it. See 05-compute/README.md."
+  log "No HIGH/CRITICAL vulnerabilities or secrets found (${os_family})"
 }
 
 # Run against a freshly registered image and against one a previous run left
@@ -100,10 +109,14 @@ verify_ami_properties() {
   local boot tpm imds enc key
   local tsv
   tsv=$(describe_or_die "${ami}" aws ec2 describe-images --region "$TARGET_REGION" --image-ids "$ami" \
-    --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,Architecture,BlockDeviceMappings[?Ebs].Ebs.Encrypted|[0],BlockDeviceMappings[?Ebs].Ebs.KmsKeyId|[0]]' \
+    --query 'Images[0].[BootMode,TpmSupport,ImdsSupport,Architecture,BlockDeviceMappings[?Ebs].Ebs.Encrypted|[0],BlockDeviceMappings[?Ebs].Ebs.SnapshotId|[0]]' \
     --output text)
-  local arch
-  IFS=$'\t' read -r boot tpm imds arch enc key <<<"$tsv"
+  local arch snap
+  IFS=$'\t' read -r boot tpm imds arch enc snap <<<"$tsv"
+
+  # describe-images never returns KmsKeyId; only the snapshot carries the key.
+  key=$(describe_or_die "snapshot ${snap}" aws ec2 describe-snapshots --region "$TARGET_REGION" \
+    --snapshot-ids "$snap" --query 'Snapshots[0].KmsKeyId' --output text)
 
   # All five collected before failing, so one run shows every mismatch.
   local mismatch=()
