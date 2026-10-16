@@ -47,7 +47,7 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
@@ -60,8 +60,66 @@ Nine IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assu
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
+| Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
+
+### Conduct Pod VM Image
+
+Conduct sandboxes run as Kata peer pods: `cloud-api-adaptor` launches one EC2 instance per sandbox from a **pod VM AMI**, an image built by the Confidential Containers project rather than derived from the EKS worker AMI. It is not created by Terraform — the AMI ID is supplied as the `<PODVM_AMI_ID>` placeholder in `instance-config.yaml`, and `validate-instance.sh` fails until it is set.
+
+Two ways to obtain one:
+
+**Copy the upstream image (sbx only).** The project publishes a pod VM AMI per release in `us-east-2`. `./05-compute/scripts/copy-podvm-ami.sh <env>` copies it into this deployment's region, re-encrypted under the general KMS key, and tags both the image and its snapshot with where they came from.
+
+What it checks before copying:
+
+- Architecture, boot mode and TPM support on every source image — a mismatch means the wrong image, not a cosmetic difference.
+- Name and owner **only for the pinned AMI**, which is the CAA version the `peerpods` chart vendors. Bumping the chart means re-pinning it. With `--source-ami` those two are unknown, so it warns instead and tags the result accordingly rather than claiming upstream provenance.
+- That the caller's account matches the environment's, and that both layers' state is for the same environment — each is init'd separately, so they can disagree and silently mix one environment's region with another's key. Without readable state it cannot check either, so it requires `--region` and `--kms-key-arn` explicitly rather than guessing.
+
+`--verify-only` runs the source checks alone, and needs no state and no environment.
+
+Understand what that image is before relying on it:
+
+- Upstream describes it as a **debug** image published for proofs of concept. That is a
+  build variant, not a label: the project's `make image-debug` target adds debugging
+  packages and **enables serial console access into the pod VM**, which is at odds with
+  the VM's purpose here.
+- It is published by an AWS account that appears nowhere in the project's repository or CI, and which has published exactly one public AMI. There is no cryptographic link between that account and the project.
+- Its backing snapshot is unencrypted upstream; the copy re-encrypts it, which addresses encryption but not provenance.
+
+This is acceptable for `sbx`, where the value is verifying that the peer-pods path works end to end. It is **not** an acceptable basis for the sandbox boundary anywhere the sandbox runs real untrusted work.
+
+**Build it from source (the intended path).** Two scripts, split so the image source and the AWS half are independent:
+
+```bash
+# On a Linux host with Docker — mkosi needs a privileged container
+./05-compute/scripts/build-podvm-image.sh --check    # confirm the host first
+./05-compute/scripts/build-podvm-image.sh            # writes to $TMPDIR/podvm-build
+
+# From anywhere with credentials for this account. Use deploy.sh, not a bare
+# terraform apply: the layer needs both tfvars files, and neither is auto-loaded.
+TF_VAR_enable_podvm_image_import=true ./scripts/deploy.sh compute sbx
+./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.23.0-x86_64.raw"
+./scripts/deploy.sh compute sbx
+```
+
+The build clones the CAA version pinned in the script — it must match the `peerpods` chart's appVersion — runs upstream's `make` unmodified, and writes a `.provenance` file recording the ref, commit, mkosi version and SHA256. The import refuses to proceed if the image no longer matches that record, and tags the AMI `Provenance=built-from-source` only when that check actually ran.
+
+The build also sets `VERIFY_PROVENANCE=yes`. Upstream's Makefile defaults it to `no`, though their release workflow sets it — so this matches how the published binaries are built rather than improving on it. The Makefile then runs `gh attestation verify` against the kata-agent and guest-component binaries as it pulls them, asserting each was built on its own repository from the expected commit — so the binaries baked into the image are attested even though the published pod VM artifact is not. `--no-verify-provenance` opts out. It needs no extra host tooling — `gh` and `oras` are installed inside the build container.
+
+`TEE_PLATFORM` is deliberately left at its default of `none`. That builds filesystem-attester support only, which is what `DISABLECVM: "true"` in the overlay asks for; `TEE_PLATFORM=snp` is for confidential pod VMs on SEV-SNP instance types. The build otherwise needs no unusual hardware — upstream runs it on a stock `ubuntu-24.04` runner. `TEE_PLATFORM=none` is passed on the make command line rather than left to the Makefile default, because an exported value would win over `?=` and build something the provenance record does not describe. The host needs git, make, `qemu-img`, `yq` 4.x and Docker with buildx; `gh`, `oras` and `jq` are installed inside the build containers.
+
+**Import staging is off by default.** `enable_podvm_image_import` creates the bucket and role VM Import/Export needs, and nothing else uses them, so they should not stand between imports. The role is scoped to the staging bucket, the general KMS key, and the snapshot/image calls that cannot be resource-scoped because they create the resource they name. Contrast upstream's `raw-to-ami.sh`, which creates an account-wide `vmimport` role with `Resource: "*"` on `ec2:RegisterImage`, `CopySnapshot` and `ModifySnapshotAttribute`, an unencrypted bucket, and cleans up neither.
+
+The registered AMI is UEFI with `TpmSupport=v2.0`, IMDSv2-only, and encrypted under the general KMS key. The import reads all five properties back and **fails**, naming every mismatch, rather than handing over an image that would boot and then fail to attest — a slow thing to diagnose. The AMI is already registered at that point, so the error says to deregister it before re-running. The same check runs when an AMI of that name already exists, since one left behind by a run that failed these checks is not evidence of a usable image.
+
+Debug builds are kept separate end to end: the output file, the AMI name and the `Provenance` tag all carry the variant, so a debug image cannot occupy the release name or be mistaken for one.
+
+**Assurance on the result.** `trivy vm ami:<id>` scans the registered image for vulnerabilities and secrets, and the import runs it automatically (`--skip-scan` to opt out). This only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all. Note `trivy vm` is EXPERIMENTAL, supports only VMDK for local files (so scan the AMI, not the disk file), and cannot read LVM layouts.
+
+**Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it, naming the raw after the qcow2's digest so a leftover conversion of a different image cannot be reused. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
 
 ### ECR
 
@@ -76,9 +134,11 @@ ECR provides **secure container image storage** with automated vulnerability sca
 Pull-through cache reduces external registry dependencies and egress costs. For authenticated registries (Docker Hub, GHCR), creating pull-through cache rules with credentials is the recommended approach — it avoids rate limits and provides reliable, cached access to upstream images.
 
 - **Supported Upstream Registries**: Docker Hub, ECR Public, Quay.io, GCR, GHCR, Azure Container Registry (ACR). Enabled registries are configured via `ecr_pull_through_cache_upstream_registries`.
-- **ACR Credentials**: Stored in Secrets Manager using `secret_string_wo` (write-only — never in Terraform state). The `acr_username` and `acr_password` variables are also declared `ephemeral = true`, so they are never persisted in plan files. A resource policy grants the ECR service-linked role access to the secret.
+- **ACR Credentials**: Terraform creates the secret *container* only — `aws_secretsmanager_secret.acr_credentials`, named `ecr-pullthroughcache/<registry-url>` — and never the value, so the credentials never enter Terraform state or a plan file. The value is a JSON object with `username` and `password`, written by `scripts/deploy-with-acr.sh` (which reads them from 1Password) or by the secret-seeding script. A resource policy grants the ECR service-linked role access to the secret.
+- **Rotating ACR credentials**: re-run `./scripts/deploy-with-acr.sh compute <env>`, or write the value directly. Either way `put-secret-value` adds a new version against the same ARN, so the pull-through cache rules keep resolving and **no Terraform change is needed**.
 - **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
+- **Must match exactly**: the ACR entries in `ecr_pull_through_cache_upstream_registries` (the full `<registry>.azurecr.io` hostname and its short alias) must equal `acr_registry_url` and the alias derived from it. Entries with no known upstream URL are dropped without error, so a mismatch shows up only as unpullable application images; the `check` block in `ecr.tf` raises a warning when this happens. `06-applications/scripts/configure-instance.sh` rewrites the registry list and the root `common.auto.tfvars` `acr_registry_url` together to keep them in step.
 
 ### Ingress NLB, ALBs, and CloudFront VPC Origin (Infrastructure Layer)
 
@@ -160,7 +220,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 ### Suppressed Security Findings and Production Guardrails
 
-All scanner findings are either fixed or explicitly suppressed with rationale. Inline `#checkov:skip` and `.trivyignore` entries reference the central security baseline document. Sandbox relaxations and SCP enforcement recommendations are also documented there.
+All scanner findings are either fixed or explicitly suppressed with rationale. Inline `#checkov:skip` comments and `.trivyignore.yaml` entries reference the central security baseline document. Sandbox relaxations and SCP enforcement recommendations are also documented there.
 
 See **[docs/security-baseline.md](../docs/security-baseline.md)** for the complete suppression inventory, sbx relaxation matrix, and SCP implementation guide.
 

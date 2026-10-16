@@ -2,16 +2,15 @@ spec:
   name: backend-service-configuration
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
-      ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: backend-service
-      targetRevision: 10.3.0
+      targetRevision: 10.5.1
       helm:
         releaseName: backend-service-configuration
         valueFiles:
           - $values/06-applications/defaults/backend-services/configuration.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/configuration.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/configuration.yaml
+        valuesObject:
+          image:
+            tag: "2026.40.4"

@@ -2,19 +2,18 @@ spec:
   name: backend-service-ingestion-worker-chat
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
-      ref: values
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: backend-service
-      targetRevision: 10.3.0
+      targetRevision: 10.5.1
       helm:
         releaseName: backend-service-ingestion-worker-chat
         valueFiles:
           - $values/06-applications/defaults/backend-services/ingestion-worker.yaml
-          - $values/06-applications/sbx/values/backend-services/_all.yaml
-          - $values/06-applications/sbx/values/backend-services/ingestion-worker.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/_all.yaml
+          - $values/06-applications/sbx/value-overlays/backend-services/ingestion-worker.yaml
         valuesObject:
+          image:
+            tag: "2026.40.4"
           env:
             INGESTION_QUEUE: chat_queue
           keda:

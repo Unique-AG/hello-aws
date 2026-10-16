@@ -1,0 +1,45 @@
+# ArgoCD OCI Helm repository credential for uniquecr.azurecr.io, so ArgoCD can
+# pull the Conduct charts (helm/sbx-gateway, helm/sbx-templates). Reuses the ACR
+# pull credentials Terraform provisions for the ECR pull-through cache; the
+# label is what makes ArgoCD treat the Secret as a repository credential.
+
+resources:
+  - apiVersion: external-secrets.io/v1beta1
+    kind: ExternalSecret
+    metadata:
+      name: argocd-repo-uniquecr
+      namespace: unique
+      annotations:
+        # The ESO CRD and the ClusterSecretStore come from earlier waves.
+        argocd.argoproj.io/sync-wave: "3"
+        # ArgoCD dry-run-validates every task before any wave runs, so a missing
+        # CRD would fail the whole sync rather than just this resource.
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    spec:
+      refreshInterval: 24h
+      secretStoreRef:
+        kind: ClusterSecretStore
+        name: aws-secrets-manager
+      target:
+        name: argocd-repo-uniquecr
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              argocd.argoproj.io/secret-type: repository
+          data:
+            type: helm
+            url: uniquecr.azurecr.io
+            name: uniquecr-oci
+            enableOCI: "true"
+            username: "{{ .username }}"
+            password: "{{ .password }}"
+      data:
+        - secretKey: username
+          remoteRef:
+            key: ecr-pullthroughcache/<ACR_REGISTRY_URL>
+            property: username
+        - secretKey: password
+          remoteRef:
+            key: ecr-pullthroughcache/<ACR_REGISTRY_URL>
+            property: password

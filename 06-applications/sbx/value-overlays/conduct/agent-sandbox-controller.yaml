@@ -1,0 +1,15 @@
+# The chart defaults router egress to the release namespace; sandboxes run in sbx.
+router:
+  networkPolicy:
+    egress:
+      sandboxNamespaceSelector:
+        kubernetes.io/metadata.name: sbx
+    ingress:
+      # assistants-core drives the router; nothing else needs to reach it.
+      allowedSources:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: assistants-core
+          namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: unique

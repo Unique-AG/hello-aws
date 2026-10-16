@@ -190,3 +190,28 @@ output "pod_identity_tempo_role_arn" {
   description = "IAM role ARN for Tempo S3 storage"
   value       = try(aws_iam_role.tempo[0].arn, null)
 }
+
+output "peer_pods_role_arn" {
+  description = "IAM role assumed by cloud-api-adaptor and peerpod-ctrl via Pod Identity"
+  value       = aws_iam_role.peer_pods.arn
+}
+
+output "peer_pods_security_group_id" {
+  description = "Security group attached to Conduct sandbox pod VMs"
+  value       = aws_security_group.peer_pods.id
+}
+
+output "peer_pods_subnet_id" {
+  description = "Subnet the Conduct sandbox pod VMs launch into"
+  value       = local.peer_pods_subnet_id
+}
+
+output "podvm_import_bucket" {
+  description = "Staging bucket for pod VM disk image imports (null unless enable_podvm_image_import)"
+  value       = var.enable_podvm_image_import ? aws_s3_bucket.podvm_import[0].id : null
+}
+
+output "podvm_import_role_name" {
+  description = "Role VM Import/Export assumes to read a staged pod VM image (null unless enable_podvm_image_import)"
+  value       = var.enable_podvm_image_import ? aws_iam_role.podvm_import[0].name : null
+}

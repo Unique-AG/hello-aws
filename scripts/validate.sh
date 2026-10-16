@@ -30,6 +30,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+# Keep in step with .github/workflows/tf.validate.yaml
+TRIVY_PINNED_VERSION="0.74.0"
+CHECKOV_PINNED_VERSION="3.2.526"
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -142,6 +146,11 @@ TERRAFORM_DIR="${LAYER_DIR}/terraform"
 CONFIG_FILE="${TERRAFORM_DIR}/environments/${ENV}/00-config.auto.tfvars"
 BACKEND_CONFIG="${TERRAFORM_DIR}/environments/${ENV}/backend-config.hcl"
 COMMON_CONFIG="${PROJECT_ROOT}/common.auto.tfvars"
+# Gitignored, so absent on a fresh clone. CI uses the tracked template;
+# fall back to it or the naming vars go unresolved and scans diverge.
+if [[ ! -f "$COMMON_CONFIG" ]]; then
+  COMMON_CONFIG="${PROJECT_ROOT}/common.auto.tfvars.template"
+fi
 
 # Check if terraform directory exists
 if [[ ! -d "$TERRAFORM_DIR" ]]; then
@@ -370,20 +379,33 @@ fi
 if [[ "$TRIVY_AVAILABLE" == "true" ]]; then
   echo -e "${YELLOW}🔒 Step 6: Running trivy IaC security scan...${NC}"
 
+  # Same gate as CI: exit 1 on findings, or this reports a pass CI will reject.
   # shellcheck disable=SC2054
-  TRIVY_ARGS=(fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 0)
-  # Use root .trivyignore for suppressed findings (see docs/security-baseline.md)
-  if [[ -f "$PROJECT_ROOT/.trivyignore" ]]; then
-    TRIVY_ARGS+=(--ignorefile "$PROJECT_ROOT/.trivyignore")
+  TRIVY_ARGS=(fs --scanners misconfig --severity HIGH,CRITICAL --exit-code 1)
+  if [[ -f "$PROJECT_ROOT/.trivyignore.yaml" ]]; then
+    TRIVY_ARGS+=(--ignorefile "$PROJECT_ROOT/.trivyignore.yaml")
   fi
-  # Pass tfvars so trivy can resolve variables (avoids null-value panics in adaptDefaultTags)
+  if [[ -f "$PROJECT_ROOT/trivy.yaml" ]]; then
+    TRIVY_ARGS+=(--config "$PROJECT_ROOT/trivy.yaml")
+  fi
+  # The template resolves module.naming inputs; without them the provider's
+  # default_tags map holds nulls, which crashes trivy <=0.70.
   if [[ -f "$COMMON_CONFIG" ]]; then
     TRIVY_ARGS+=(--tf-vars "$COMMON_CONFIG")
   fi
   if [[ -f "$CONFIG_FILE" ]]; then
     TRIVY_ARGS+=(--tf-vars "$CONFIG_FILE")
   fi
+  if [[ -f "$TERRAFORM_DIR/environments/scan.tfvars" ]]; then
+    TRIVY_ARGS+=(--tf-vars "$TERRAFORM_DIR/environments/scan.tfvars")
+  fi
   TRIVY_ARGS+=("$TERRAFORM_DIR")
+
+  # CI pins this; a local mismatch changes which findings appear.
+  LOCAL_TRIVY=$(trivy --version 2>/dev/null | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+  if [[ "$LOCAL_TRIVY" != "$TRIVY_PINNED_VERSION" ]]; then
+    echo -e "${YELLOW}   trivy ${LOCAL_TRIVY} locally, CI pins ${TRIVY_PINNED_VERSION}${NC}"
+  fi
 
   if trivy "${TRIVY_ARGS[@]}"; then
     echo -e "${GREEN}✅ trivy passed (no HIGH/CRITICAL misconfigurations)${NC}"
@@ -407,6 +429,20 @@ if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   CHECKOV_ARGS=(--quiet --framework terraform)
   if [[ -f "${TERRAFORM_DIR}/.checkov.yml" ]]; then
     CHECKOV_ARGS+=(--config-file "${TERRAFORM_DIR}/.checkov.yml")
+  fi
+  # Same variable files as trivy: a count = 0 resource is not evaluated, so
+  # without these the conditional half of the layer goes unscanned.
+  [[ -f "$COMMON_CONFIG" ]] && CHECKOV_ARGS+=(--var-file "$COMMON_CONFIG")
+  [[ -f "$CONFIG_FILE" ]] && CHECKOV_ARGS+=(--var-file "$CONFIG_FILE")
+  if [[ -f "${TERRAFORM_DIR}/environments/scan.tfvars" ]]; then
+    CHECKOV_ARGS+=(--var-file "${TERRAFORM_DIR}/environments/scan.tfvars")
+  fi
+
+  # CI pins this; an older local checkov both reports findings CI does not and
+  # misses findings CI has.
+  LOCAL_CHECKOV=$(checkov --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || echo "unknown")
+  if [[ "$LOCAL_CHECKOV" != "$CHECKOV_PINNED_VERSION" ]]; then
+    echo -e "${YELLOW}   checkov ${LOCAL_CHECKOV} locally, CI pins ${CHECKOV_PINNED_VERSION}${NC}"
   fi
 
   if checkov -d "$TERRAFORM_DIR" "${CHECKOV_ARGS[@]}"; then

@@ -1,0 +1,74 @@
+[
+ {
+  "RuleID": "terraform-secret",
+  "Description": "Terraform Secret Variable",
+  "StartLine": 73,
+  "EndLine": 73,
+  "StartColumn": 12,
+  "EndColumn": 37,
+  "Match": "Password: \"REDACTED\"",
+  "Secret": "REDACTED",
+  "File": "06-applications/sbx/values/zitadel/zitadel.yaml",
+  "SymlinkFile": "",
+  "Commit": "962f19b02dfa6e3b30cd8c85244c96d2779c32f5",
+  "Link": "https://github.com/Unique-AG/hello-aws/blob/962f19b02dfa6e3b30cd8c85244c96d2779c32f5/06-applications/sbx/values/zitadel/zitadel.yaml#L73",
+  "Entropy": 3.324863,
+  "Author": "gustav-mango-unique-ai",
+  "Email": "gustav.mango@unique.ai",
+  "Date": "2026-02-25T14:45:21Z",
+  "Message": "feat: add applications layer (ArgoCD, Helm apps, instance config) (#7)\n\n## Summary\n\nAdds the applications layer (06-applications) — a forkable ArgoCD-driven\ndeployment template for AWS EKS. The `main` branch carries\n`\u003cPLACEHOLDER\u003e` tokens; deployment branches substitute real values via\n`configure-instance.sh`.\n\n### Applications\n\n- **12 system apps**: ArgoCD, cert-manager, external-secrets, Kong,\nstorage-class, reloader, Elasticsearch, ECK, RabbitMQ operator, Zitadel,\nAWS LB controller, KEDA\n- **21 chat apps**: backend services, AI services, web apps, RabbitMQ,\nQdrant, LiteLLM\n- **LiteLLM proxy**: Bedrock model routing — EU cross-region inference\n(Claude), application inference profile (Cohere Embed v4)\n- **Kong ingress**: ClusterIP proxy with TargetGroupBindings — AWS LB\nController registers pods into Terraform-managed NLB target groups\n\n### Instance configuration tooling\n\n- `configure-instance.sh` — idempotent placeholder replacement with\nstate tracking\n- `validate-instance.sh` — ensures no placeholder tokens remain after\nconfiguration\n- `validate.sh` — YAML lint, shellcheck, value file reference integrity,\nsecret scanning\n\n### Cross-layer changes\n\nChanges to layers 02–05 discovered during sbx deployment and review:\n\n- **03-infrastructure**: Restore `resolve_aws_region()` function and\nsubshell `cd` pattern in `connect-ssm.sh`; restore\n`local.secondary_cidr`; fix variable renames (`enable_*` prefix); harden\nNLB ingress with SG-scoped rules and secondary CIDR egress; add S3 VPC\nendpoint policy allowance\n- **05-compute**: Add launch template to attach `eks_nodes` SG to\nmanaged node groups (encrypted gp3, IMDSv2); migrate inline SG rules to\nstandalone resources; add EBS CSI KMS permissions, ingress NLB→EKS SG\nrule, Quay pull-through cache, node group alignment, IAM policy refactor\n(native HCL data sources)\n- **04-data-and-ai**: Aurora final snapshot identifier, Bedrock resource\nrename, S3 random suffix, restrict Aurora/ElastiCache SG to private\nsubnets\n- **02-governance**: Remove redundant `tags = local.tags` (already in\n`default_tags`)\n- **All terraform layers**: Remove `merge(local.tags, ...)` —\n`default_tags` in providers.tf handles base tags; resources carry only\nresource-specific tags\n\n### Security baseline\n\nAll scanner suppressions documented in\n[`docs/security-baseline.md`](docs/security-baseline.md) with rationale,\ncompensating controls, and production remediation notes. New entries:\n\n- `CKV_AWS_341` — IMDS hop limit 2 required for EKS containerized\nworkloads\n- `CKV_AWS_24/25/260` — checkov false positive on\n`referenced_security_group_id`\n([checkov#6624](https://github.com/bridgecrewio/checkov/issues/6624))\n- `allowInsecureImages` — Bitnami legacy RabbitMQ operator images are\nunsigned\n\n### Validation\n\n`scripts/validate.sh all \u003cenv\u003e true` now validates all layers in a\nsingle command (terraform fmt, tflint, shellcheck, trivy, checkov for\nlayers 01–05; yamllint, shellcheck, refs, secrets for 06-applications).\n\n## Test plan\n\n- [x] All 33 ArgoCD apps Synced/Healthy on sbx\n- [x] `terraform plan` clean on layers 03–05 against sbx\n- [x] `./scripts/validate.sh all sbx true` — all layers pass\n- [x] `06-applications/scripts/validate.sh sbx` — YAML, shellcheck,\nrefs, secrets all pass\n- [x] Cherry-pick gap scan: all structural changes synced between deploy\nand template branches\n- [x] PR 2–6 review comment audit — no regressions",
+  "Tags": [
+   "terraform",
+   "secret"
+  ],
+  "Fingerprint": "962f19b02dfa6e3b30cd8c85244c96d2779c32f5:06-applications/sbx/values/zitadel/zitadel.yaml:terraform-secret:73"
+ },
+ {
+  "RuleID": "hardcoded-password",
+  "Description": "Hardcoded Password",
+  "StartLine": 73,
+  "EndLine": 73,
+  "StartColumn": 12,
+  "EndColumn": 26,
+  "Match": "Password: \"REDACTED",
+  "Secret": "REDACTED",
+  "File": "06-applications/sbx/values/zitadel/zitadel.yaml",
+  "SymlinkFile": "",
+  "Commit": "962f19b02dfa6e3b30cd8c85244c96d2779c32f5",
+  "Link": "https://github.com/Unique-AG/hello-aws/blob/962f19b02dfa6e3b30cd8c85244c96d2779c32f5/06-applications/sbx/values/zitadel/zitadel.yaml#L73",
+  "Entropy": 1.5,
+  "Author": "gustav-mango-unique-ai",
+  "Email": "gustav.mango@unique.ai",
+  "Date": "2026-02-25T14:45:21Z",
+  "Message": "feat: add applications layer (ArgoCD, Helm apps, instance config) (#7)\n\n## Summary\n\nAdds the applications layer (06-applications) — a forkable ArgoCD-driven\ndeployment template for AWS EKS. The `main` branch carries\n`\u003cPLACEHOLDER\u003e` tokens; deployment branches substitute real values via\n`configure-instance.sh`.\n\n### Applications\n\n- **12 system apps**: ArgoCD, cert-manager, external-secrets, Kong,\nstorage-class, reloader, Elasticsearch, ECK, RabbitMQ operator, Zitadel,\nAWS LB controller, KEDA\n- **21 chat apps**: backend services, AI services, web apps, RabbitMQ,\nQdrant, LiteLLM\n- **LiteLLM proxy**: Bedrock model routing — EU cross-region inference\n(Claude), application inference profile (Cohere Embed v4)\n- **Kong ingress**: ClusterIP proxy with TargetGroupBindings — AWS LB\nController registers pods into Terraform-managed NLB target groups\n\n### Instance configuration tooling\n\n- `configure-instance.sh` — idempotent placeholder replacement with\nstate tracking\n- `validate-instance.sh` — ensures no placeholder tokens remain after\nconfiguration\n- `validate.sh` — YAML lint, shellcheck, value file reference integrity,\nsecret scanning\n\n### Cross-layer changes\n\nChanges to layers 02–05 discovered during sbx deployment and review:\n\n- **03-infrastructure**: Restore `resolve_aws_region()` function and\nsubshell `cd` pattern in `connect-ssm.sh`; restore\n`local.secondary_cidr`; fix variable renames (`enable_*` prefix); harden\nNLB ingress with SG-scoped rules and secondary CIDR egress; add S3 VPC\nendpoint policy allowance\n- **05-compute**: Add launch template to attach `eks_nodes` SG to\nmanaged node groups (encrypted gp3, IMDSv2); migrate inline SG rules to\nstandalone resources; add EBS CSI KMS permissions, ingress NLB→EKS SG\nrule, Quay pull-through cache, node group alignment, IAM policy refactor\n(native HCL data sources)\n- **04-data-and-ai**: Aurora final snapshot identifier, Bedrock resource\nrename, S3 random suffix, restrict Aurora/ElastiCache SG to private\nsubnets\n- **02-governance**: Remove redundant `tags = local.tags` (already in\n`default_tags`)\n- **All terraform layers**: Remove `merge(local.tags, ...)` —\n`default_tags` in providers.tf handles base tags; resources carry only\nresource-specific tags\n\n### Security baseline\n\nAll scanner suppressions documented in\n[`docs/security-baseline.md`](docs/security-baseline.md) with rationale,\ncompensating controls, and production remediation notes. New entries:\n\n- `CKV_AWS_341` — IMDS hop limit 2 required for EKS containerized\nworkloads\n- `CKV_AWS_24/25/260` — checkov false positive on\n`referenced_security_group_id`\n([checkov#6624](https://github.com/bridgecrewio/checkov/issues/6624))\n- `allowInsecureImages` — Bitnami legacy RabbitMQ operator images are\nunsigned\n\n### Validation\n\n`scripts/validate.sh all \u003cenv\u003e true` now validates all layers in a\nsingle command (terraform fmt, tflint, shellcheck, trivy, checkov for\nlayers 01–05; yamllint, shellcheck, refs, secrets for 06-applications).\n\n## Test plan\n\n- [x] All 33 ArgoCD apps Synced/Healthy on sbx\n- [x] `terraform plan` clean on layers 03–05 against sbx\n- [x] `./scripts/validate.sh all sbx true` — all layers pass\n- [x] `06-applications/scripts/validate.sh sbx` — YAML, shellcheck,\nrefs, secrets all pass\n- [x] Cherry-pick gap scan: all structural changes synced between deploy\nand template branches\n- [x] PR 2–6 review comment audit — no regressions",
+  "Tags": [
+   "password",
+   "hardcoded"
+  ],
+  "Fingerprint": "962f19b02dfa6e3b30cd8c85244c96d2779c32f5:06-applications/sbx/values/zitadel/zitadel.yaml:hardcoded-password:73"
+ },
+ {
+  "RuleID": "terraform-secret",
+  "Description": "Terraform Secret Variable",
+  "StartLine": 357,
+  "EndLine": 357,
+  "StartColumn": 23,
+  "EndColumn": 48,
+  "Match": "password=\"REDACTED\"",
+  "Secret": "REDACTED",
+  "File": "README.md",
+  "SymlinkFile": "",
+  "Commit": "31e98d5f36a1caeb9049cc832853b0d076669cad",
+  "Link": "https://github.com/Unique-AG/hello-aws/blob/31e98d5f36a1caeb9049cc832853b0d076669cad/README.md?plain=1#L357",
+  "Entropy": 3.5068905,
+  "Author": "gustav-mango-unique-ai",
+  "Email": "gustav.mango@unique.ai",
+  "Date": "2026-02-11T18:39:54Z",
+  "Message": "feat: root-level scaffolding for AWS workload account template (#1)\n\n## Summary\n\n- Add `.gitignore` for Terraform state, plans, and local working\ndirectories\n- Add `common.auto.tfvars.template` for cross-layer configuration with\nnaming convention guidance\n- Add `modules/naming/` — centralized naming and tagging module with AWS\nlength constraints\n- Add deployment, validation, and operational scripts (deploy, destroy,\nvalidate, secret scanning, KMS/Secrets Manager recovery)\n- Add `scripts/gitleaks-config.toml` with per-rule allowlists for false\npositive suppression\n- Overwrite `README.md` with full architecture documentation: 6-layer\nstructure, platform topologies, naming conventions, validation\ntoolchain, and cross-layer dependency model\n\n## Context\n\nFirst PR in a stacked branch train (`feat/00-root` → `feat/01-bootstrap`\n→ ... → `feat/06-applications`) to turn this repo into a forkable\nreference architecture for AWS workload accounts.\n\nThis PR establishes the root-level foundation. No AWS resources are\ncreated — actual infrastructure begins in `feat/01-bootstrap`.\n\n## Validation\n\n- [x] `gitleaks` — 6 commits scanned, no leaks found\n- [x] `checkov` — no findings (naming module has no checkable resources)\n- [x] `shellcheck` — all scripts pass clean\n- [x] All account-specific values scrubbed (placeholder conventions\ndocumented)",
+  "Tags": [
+   "terraform",
+   "secret"
+  ],
+  "Fingerprint": "31e98d5f36a1caeb9049cc832853b0d076669cad:README.md:terraform-secret:357"
+ }
+]

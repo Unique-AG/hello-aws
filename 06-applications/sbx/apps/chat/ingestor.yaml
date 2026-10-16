@@ -2,9 +2,6 @@ spec:
   name: ingestor
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
-      ref: values
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
@@ -25,10 +22,12 @@ spec:
                     storage: 30Gi
     - chart: backend-service
       repoURL: ghcr.io/unique-ag/helm-charts
-      targetRevision: 10.3.0
+      targetRevision: 10.5.1
       helm:
         releaseName: ingestor
         valueFiles:
           - $values/06-applications/defaults/ai-services/ingestor.yaml
-          - $values/06-applications/sbx/values/ai-services/ingestor.yaml
-        valuesObject: {}
+          - $values/06-applications/sbx/value-overlays/ai-services/ingestor.yaml
+        valuesObject:
+          image:
+            tag: "2026.40.4"

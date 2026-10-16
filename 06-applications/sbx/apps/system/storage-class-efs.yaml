@@ -2,13 +2,10 @@ spec:
   name: storage-class-efs
   autoSync: true
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
-      ref: values
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0
       helm:
         releaseName: storage-class-efs
         valueFiles:
-          - $values/06-applications/sbx/values/storage-class/efs.yaml
+          - $values/06-applications/sbx/value-overlays/storage-class/efs.yaml

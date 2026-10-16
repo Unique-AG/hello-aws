@@ -1,0 +1,30 @@
+# Chat backend service configuration (AWS sbx)
+# Secrets pulled from AWS Secrets Manager via ExternalSecrets
+
+env:
+  AMQP_BENCHMARK_PREFETCH: "1"
+  BENCHMARKS_PER_MINUTE_PER_PROCESS: "1"
+  CACHE_REDIS_DB: "3"
+  LITELLM_ENDPOINT: http://litellm.unique.svc:4000
+  # Without this, node-chat does not register the litellm:* models
+  # (Claude/qwen/minimax) as usable clusters even when present in the allowlist
+  # below. Users hit ModelRestrictedException 400 ("not available on the
+  # cluster").
+  LITELLM_ENABLED: "true"
+  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-4-6,litellm:anthropic-claude-sonnet-4-6,litellm:qwen-3-235B-A22B,litellm:minimax-m2-5,litellm:gemma-4-31b-it,litellm:qwen3-6-35b-a3b,gpt-4o-2024-11-20"
+  MAX_HEAP_MB: "3700"
+  PUBSUB_REDIS_DB: "2"
+  MCP_POLICY_MODE: "UNRESTRICTED"
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-chat
+resources:
+  limits:
+    cpu: "1"
+    memory: 4Gi
+  requests:
+    cpu: 500m
+    memory: 3Gi
+serviceAccount:
+  enabled: true
+extraEnvSecrets:
+  - chat-secrets

@@ -173,6 +173,20 @@ resource "aws_secretsmanager_secret" "zitadel_master_key" {
   tags = { Name = var.zitadel_master_key_secret_name, Purpose = "zitadel" }
 }
 
+# Zitadel FirstInstance bootstrap admin password.
+# Consumed only by the `zitadel setup` job, which seeds the first IAM_OWNER human
+# so an operator can log in once and mint the PAT that setup-zitadel.sh needs.
+# Zitadel forces a password change at first login, so this value is single-use.
+resource "aws_secretsmanager_secret" "zitadel_firstinstance_password" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.zitadel_firstinstance_password_secret_name
+  description             = "Zitadel FirstInstance bootstrap admin password (single-use — Zitadel forces a change at first login)"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.zitadel_firstinstance_password_secret_name, Purpose = "zitadel" }
+}
+
 # Zitadel PAT (placeholder — must be set manually after Zitadel deployment)
 resource "aws_secretsmanager_secret" "zitadel_pat" {
   #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
