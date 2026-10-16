@@ -43,8 +43,8 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 # Defaults
 #######################################
 
-# Pinned to the CAA version the peerpods chart vendors (appVersion v0.22.0).
-# Bumping the chart means re-pinning this, and re-checking the fingerprint below.
+# Upstream's published image for v0.22.0. The chart now vendors v0.23.0 and
+# upstream publishes no v0.23.0 AMI, so pass --source-ami or build instead.
 DEFAULT_SOURCE_AMI="ami-0edeef8b3d8ff0444"
 DEFAULT_SOURCE_REGION="us-east-2"
 EXPECTED_NAME="podvm-ubuntu-amd64-0-22-0"

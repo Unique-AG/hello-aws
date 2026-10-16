@@ -18,6 +18,7 @@
 #   -r, --ref REF         CAA git ref to build (default: the pinned version)
 #   -o, --out DIR         Where to place the image (default: $TMPDIR/podvm-build)
 #       --debug-image     Build upstream's debug variant instead
+#       --go-version VER  Build with this Go toolchain instead of the pinned one
 #       --no-verify-provenance
 #                         Skip attestation checks on upstream's binaries
 #       --check           Check host prerequisites and exit
@@ -41,7 +42,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/aws-common.sh"
 #######################################
 
 # Must match the appVersion of 06-applications/charts/peerpods.
-PINNED_REF="v0.22.0"
+PINNED_REF="v0.23.0"
 CAA_REPO="https://github.com/confidential-containers/cloud-api-adaptor"
 
 APT_DEPS=(git make qemu-utils uidmap)  # plus yq 4.x
@@ -53,6 +54,9 @@ CHECK_ONLY=false
 # Upstream defaults this off. On, the build verifies GitHub attestations for the
 # kata-agent and guest-component binaries it pulls before baking them in.
 VERIFY_PROVENANCE="yes"
+# Empty means upstream's versions.yaml pin. Set it to remediate stdlib CVEs
+# without waiting for upstream to move; it is recorded in the provenance file.
+GO_VERSION=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -60,6 +64,7 @@ while [[ $# -gt 0 ]]; do
     -o|--out)       need_value "$@"; OUT_DIR="$2"; shift 2 ;;
     --debug-image)  MAKE_TARGET="debug"; shift ;;
     --no-verify-provenance) VERIFY_PROVENANCE="no"; shift ;;
+    --go-version)   need_value "$@"; GO_VERSION="$2"; shift 2 ;;
     --check)        CHECK_ONLY=true; shift ;;
     -h|--help)      print_help "${BASH_SOURCE[0]}"; exit 0 ;;
     *)              error "Unknown option: $1 (try --help)" ;;
@@ -155,6 +160,7 @@ warn "This takes a while and needs a privileged container"
 make -C "$PODVM_DIR" "$MAKE_TARGET" \
   MKOSI_VERSION="$MKOSI_VERSION" \
   VERIFY_PROVENANCE="$VERIFY_PROVENANCE" \
+  ${GO_VERSION:+GO_VERSION="$GO_VERSION"} \
   TEE_PLATFORM=none
 
 RAW="${PODVM_DIR}/build/system.raw"
@@ -181,6 +187,7 @@ mkosi_version=${MKOSI_VERSION}
 make_target=${MAKE_TARGET}
 verify_provenance=${VERIFY_PROVENANCE}
 tee_platform=none
+go_version=${GO_VERSION:-$(yq -e '.tools.golang' "${SRC_DIR}/src/cloud-api-adaptor/versions.yaml")}
 sha256=${SHA}
 built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 PROV
