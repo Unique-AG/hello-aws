@@ -15,9 +15,9 @@ replicas: 2
 # Webhook image
 image:
   repository: quay.io/confidential-containers/peer-pods-webhook
-  tag: 61b1aba91df646a663e60ab6b55c6a7dc93cd167
+  tag: e3e0f00480b41c08e3e4dbc6b64aba7722fb65f9
   # Vendored addition: tags at this registry are mutable.
-  digest: "sha256:9189d5b10ddafe1c280495220866d32cafbbf006167231049314621a4272dd88"
+  digest: "sha256:503b464d6bec874763d16b4b3a80695a890cc9bb117502560019e82f4f7cad09"
   pullPolicy: IfNotPresent
 
 # Manager container resource limits and requests

@@ -80,9 +80,9 @@ secrets:
 # Note: libvirt provider files override this with the dev image.
 image:
   name: quay.io/confidential-containers/cloud-api-adaptor
-  tag: "61b1aba91df646a663e60ab6b55c6a7dc93cd167"
+  tag: "e3e0f00480b41c08e3e4dbc6b64aba7722fb65f9"
   # Vendored addition: tags at this registry are mutable.
-  digest: "sha256:43d7e37f6c063c110ba1890e43ab43918393d18de85e833c87e264aa20647d20"
+  digest: "sha256:0eaa02a8fad19a2bf1b27745fb8d0ca28edc68da1f8c5c886b87444f188170ef"
 
 # Cloud provider: libvirt, aws, azure, byom, gcp, ibmcloud, vsphere
 provider: libvirt
