@@ -25,7 +25,7 @@
 #
 # Examples:
 #   # Import an image built by build-podvm-image.sh
-#   ./import-podvm-ami.sh --image ./podvm-build/podvm-v0.22.0-x86_64.raw
+#   ./import-podvm-ami.sh --image ./podvm-build/podvm-v0.23.0-x86_64.raw
 #######################################
 
 set -euo pipefail
