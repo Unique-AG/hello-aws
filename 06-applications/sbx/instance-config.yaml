@@ -4,14 +4,12 @@
 github:
   repoURL: https://github.com/unique-ag/hello-aws
   targetRevision: deploy/sbx
-
 domain:
   base: hello.aws.unique.dev
   api: api.hello.aws.unique.dev
   identity: id.hello.aws.unique.dev
   argocd: argo.hello.aws.unique.dev
   dnsZone: aws.unique.dev
-
 aws:
   region: eu-central-2
   accountId: "217381566492"
@@ -46,7 +44,12 @@ aws:
     thirdParty:
       accountId: "217381566492"
       prefix: uniquecr
-
+  sandbox:
+    subnetId: subnet-0077a59d31fe5e775
+    securityGroupId: sg-0be1640509df0d481
+    podvmAmiId: ami-07edd3eda11acfd0a
+  efs:
+    doclingModelsId: fs-070ce1b868e568369
 zitadel:
   projectId: "368533034342811339"
   clientId: "368533034594535115"

@@ -40,11 +40,45 @@ eks_node_groups = {
       scalability = "rapid"
     }
   }
+
+  # Conduct sandbox hosts. The sandbox workload itself runs in a per-sandbox
+  # peer-pod EC2 instance, so these nodes only carry the kata shim and the
+  # adaptor -- they do not need to be large.
+  #
+  # Tainted so nothing but sandbox components lands here. Deliberately no
+  # startup taint: EKS reconciles managed node group taints, so one removed by
+  # kata-deploy would simply be re-applied. The scheduling race is closed on
+  # the RuntimeClass instead, which selects the node label kata-deploy sets
+  # once the shim is in place.
+  sandbox = {
+    instance_types = ["m6i.large"]
+    desired_size   = 1
+    min_size       = 0
+    max_size       = 3
+    labels = {
+      lifecycle   = "ephemeral"
+      scalability = "rapid"
+      workload    = "sandbox"
+    }
+    taints = [
+      { key = "workload", value = "sandbox", effect = "NO_SCHEDULE" }
+    ]
+  }
 }
 
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
+  # ACR upstream for Unique application images: the full registry hostname and
+  # its short alias, both of which must exactly match `acr_registry_url` (and
+  # the alias derived from it) in the repository-root common.auto.tfvars --
+  # entries that do not match are silently dropped by the `contains(...)`
+  # filter in ../../ecr.tf, leaving the cluster unable to pull app images.
+  #
+  # 06-applications/scripts/configure-instance.sh rewrites both these entries
+  # and `acr_registry_url` from instance-config.yaml (aws.ecr.primary.prefix).
+  # Do not delete them when de-configuring: a fresh clone would then have no
+  # way to restore its ACR pull-through cache.
   "uniquecr.azurecr.io",
   "uniquecr",
   "quay.io",

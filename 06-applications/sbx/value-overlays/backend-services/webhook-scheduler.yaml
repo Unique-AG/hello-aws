@@ -1,0 +1,7 @@
+# Webhook Scheduler backend service configuration (AWS sbx)
+
+image:
+  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/backend-service-webhook-scheduler
+
+extraEnvSecrets:
+  - webhook-scheduler-secrets

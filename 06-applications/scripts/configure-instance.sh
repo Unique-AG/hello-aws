@@ -82,6 +82,11 @@ aws:
     clusterName: "<EKS_CLUSTER_NAME>"
   vpc:
     id: "<VPC_ID>"
+  sandbox:
+    subnetId: "<SANDBOX_SUBNET_ID>"
+    nodeSecurityGroupId: "<EKS_NODE_SECURITY_GROUP_ID>"
+  efs:
+    doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
   route53:
     privateZoneId: "<ROUTE53_PRIVATE_ZONE_ID>"
   connectivity:
@@ -151,6 +156,10 @@ FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
+FROM_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$FROM")
+FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$FROM")
+FROM_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$FROM")
+FROM_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$FROM")
 FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
 FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
@@ -203,6 +212,10 @@ TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
 TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
+TO_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$CONFIG")
+TO_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$CONFIG")
+TO_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$CONFIG")
+TO_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$CONFIG")
 TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
 TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
@@ -210,9 +223,9 @@ TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
 TO_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion' "$CONFIG")
-TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId' "$CONFIG")
-TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl' "$CONFIG")
-TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName' "$CONFIG")
+TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$CONFIG")
+TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$CONFIG")
+TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$CONFIG")
 TO_ZITADEL_PROJECT_ID=$(yq '.zitadel.projectId' "$CONFIG")
 TO_ZITADEL_CLIENT_ID=$(yq '.zitadel.clientId' "$CONFIG")
 TO_ZITADEL_ORG_ID=$(yq '.zitadel.orgId' "$CONFIG")
@@ -267,6 +280,10 @@ replace_all() {
 
 # Replace a string in all tfvars files under the project's terraform layer
 # environment directories (e.g., 03-infrastructure/terraform/environments/sbx/)
+# plus the repository-root common.auto.tfvars, which carries cross-layer values
+# such as acr_registry_url. The root file must be covered too: the ECR
+# pull-through cache entries in 05-compute only take effect when they match
+# acr_registry_url exactly, so the two have to be rewritten in lockstep.
 PROJECT_ROOT="$(cd "$BASE_DIR/.." && pwd)"
 replace_all_tfvars() {
   local old="$1"
@@ -284,7 +301,12 @@ replace_all_tfvars() {
     if grep -qF "$old" "$file"; then
       do_sed "s|${old_escaped}|${new_escaped}|g" "$file"
     fi
-  done < <(find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0)
+  done < <(
+    find "$PROJECT_ROOT" -path "*/terraform/environments/$ENV/*.auto.tfvars" -print0
+    if [[ -f "$PROJECT_ROOT/common.auto.tfvars" ]]; then
+      printf '%s\0' "$PROJECT_ROOT/common.auto.tfvars"
+    fi
+  )
 }
 
 # ------------------------------------------------------------------
@@ -390,6 +412,16 @@ replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
 # 9. VPC ID
 echo "  VPC ID ..."
 replace_all "$FROM_VPC_ID" "$TO_VPC_ID"
+
+# 9a. Conduct sandbox pod VM placement
+echo "  sandbox pod VM subnet, security group, AMI ..."
+replace_all "$FROM_SANDBOX_SUBNET_ID" "$TO_SANDBOX_SUBNET_ID"
+replace_all "$FROM_PEER_PODS_SG_ID" "$TO_PEER_PODS_SG_ID"
+replace_all "$FROM_PODVM_AMI_ID" "$TO_PODVM_AMI_ID"
+
+# 9b. EFS Docling models file system ID
+echo "  EFS Docling models ID ..."
+replace_all "$FROM_EFS_DOCLING_MODELS_ID" "$TO_EFS_DOCLING_MODELS_ID"
 
 # 10. Zitadel IDs
 echo "  Zitadel project ID ..."

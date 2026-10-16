@@ -18,7 +18,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
 
     # Narrow the OIDC subject claim from "any context" (StringLike with :*) to
     # an explicit allowlist of refs/events. Reduces blast radius of a stolen
-    # or forged OIDC token — only push to deploy/sbx, push to main, and
+    # or forged OIDC token — only push to deploy, push to main, and
     # pull_request events can assume this role.
     #
     # Format reference:
@@ -27,7 +27,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repository}:ref:refs/heads/deploy/sbx",
+        "repo:${var.github_repository}:ref:refs/heads/deploy",
         "repo:${var.github_repository}:ref:refs/heads/main",
         "repo:${var.github_repository}:pull_request",
       ]

@@ -1,0 +1,38 @@
+# sbx-gateway — the egress proxy Conduct sandboxes are forced through at
+# sbx-gateway.sbx.svc:3128; without it they have no outbound path.
+
+image:
+  # Split explicitly: the chart defaults registry to the ACR host.
+  registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+  repository: unique/sbx-gateway
+  # By tag: the chart's digest names the ACR path, not the ECR one. The tag
+  # itself is release content and lives in the app spec.
+  useDigest: false
+
+# Nodes authenticate to ECR by IAM.
+imagePullSecrets: []
+
+replicaCount: 2
+
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
+
+# Suppresses the chart's minAvailable: 1, which blocks node drains; it rejects
+# both fields set. Carried forward unverified since 2026.37.0 — see the release notes.
+pdb:
+  minAvailable: null
+  maxUnavailable: 1
+
+# Chart-generated CA; sbx-templates mounts it. Rotate by deleting the Secret.
+mitmCa:
+  enabled: true
+  secretName: egress-mitm-ca
+  validityDays: 3650
+
+internalServices:
+  dependencies:
+    chat:
+      namespace: unique
+    ingestion:
+      namespace: unique

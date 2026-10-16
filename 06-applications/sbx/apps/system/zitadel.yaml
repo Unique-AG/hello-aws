@@ -2,17 +2,14 @@ spec:
   name: zitadel
   autoSync: false
   sources:
-    - repoURL: 'https://github.com/unique-ag/hello-aws'
-      targetRevision: deploy/sbx
-      ref: values
     - chart: zitadel
       repoURL: https://charts.zitadel.com
-      targetRevision: 8.13.1
+      targetRevision: 9.34.1
       helm:
         releaseName: zitadel
         valueFiles:
-          - $values/06-applications/sbx/values/zitadel/zitadel.yaml
-          - $values/06-applications/sbx/values/zitadel/zitadel-extra-manifests.yaml
+          - $values/06-applications/sbx/value-overlays/zitadel/zitadel.yaml
+          - $values/06-applications/sbx/value-overlays/zitadel/zitadel-extra-manifests.yaml
         valuesObject:
           zitadel:
             secretConfig:

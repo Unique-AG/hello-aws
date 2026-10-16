@@ -362,14 +362,32 @@ Each layer has comprehensive documentation covering design rationale, security p
 The compute layer (05-compute) configures an ECR pull-through cache that mirrors container images from Unique AI's Azure Container Registry (ACR). This allows your EKS cluster to pull application images without direct internet access to the ACR.
 
 To deploy the compute layer, you need ACR credentials:
-1. Contact [Unique AI](https://unique.ch) to obtain your ACR registry URL, username, and password
-2. Set the credentials as environment variables before running `deploy.sh`:
+
+1. Contact [Unique AI](https://unique.ch) to obtain your ACR registry URL, username, and password.
+2. Set the registry URL in `common.auto.tfvars`:
+   ```hcl
+   acr_registry_url = "<your-registry>.azurecr.io"
+   ```
+3. Deploy the compute layer. Terraform creates the Secrets Manager secret that the
+   pull-through cache rules authenticate with, named
+   `ecr-pullthroughcache/<your-registry>.azurecr.io`:
    ```bash
-   export TF_VAR_acr_registry_url="<your-registry>.azurecr.io"
-   export TF_VAR_acr_username="<your-username>"
-   export TF_VAR_acr_password="<your-password>"
    ./scripts/deploy.sh compute sbx
    ```
+4. Write the credentials into that secret. Terraform creates the container but never the
+   value, so the credentials stay out of Terraform state and plan files:
+   ```bash
+   aws secretsmanager put-secret-value \
+     --secret-id "ecr-pullthroughcache/<your-registry>.azurecr.io" \
+     --region eu-central-2 \
+     --secret-string '{"username":"<your-username>","password":"<your-password>"}'
+   ```
+
+Steps 3 and 4 are wrapped by `./scripts/deploy-with-acr.sh compute sbx`, which reads the
+credentials from 1Password instead of taking them on the command line.
+
+**Rotating the credentials** is step 4 on its own. `put-secret-value` adds a new version
+against the same ARN, so the cache rules keep resolving and no Terraform run is needed.
 
 ## Security
 
@@ -430,11 +448,18 @@ This repository includes a [gitleaks](https://github.com/gitleaks/gitleaks) conf
 
 **Installation**: `brew install gitleaks`
 
-The scan runs automatically as a pre-commit hook when Git hooks are configured. To set up the hooks, copy or symlink from `scripts/hooks/`:
+### Git Hooks
+
+The hooks live in `.githooks/` so every clone runs the same ones. Enable them once per clone:
 ```bash
-cp scripts/hooks/pre-commit .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
+./scripts/install-hooks.sh
 ```
+
+This points `core.hooksPath` at `.githooks/`. `pre-commit` scans staged changes for secrets and format-checks any modified Terraform layer; `pre-push` scans the branch history and format-checks every layer. Both skip gracefully if `gitleaks` or `terraform` is not installed, and CI enforces the secret scan regardless.
+
+The setting is local to your clone and is not itself version controlled, so re-run the script after cloning. `./scripts/install-hooks.sh --uninstall` reverts to `.git/hooks`.
+
+Full Terraform validation (`scripts/validate.sh`) is not run by the hooks: it requires `common.auto.tfvars`, which is gitignored and absent from a fresh clone. CI validates every layer on the pull request instead.
 
 ## Contributing
 

@@ -1,0 +1,22 @@
+{
+  "name": "hello-aws-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Self-contained browser + API end-to-end tests for a Unique deployment on AWS. Fork this repo, set your .env, and run against your own tenant.",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:watchdog": "playwright test --grep @watchdog",
+    "test:smoke": "playwright test --grep @smoke",
+    "test:browser": "playwright test --project=browser",
+    "test:api": "playwright test --project=api",
+    "report": "playwright show-report",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.0",
+    "@types/node": "^24.0.0",
+    "dotenv": "^17.0.0",
+    "typescript": "^5.7.0"
+  }
+}

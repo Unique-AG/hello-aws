@@ -1,0 +1,32 @@
+apiVersion: v2
+name: peerpods
+description: Cloud API Adaptor (Peerpods) Helm Chart
+type: application
+version: 0.4.0-hello-aws.1
+appVersion: "v0.22.0"
+
+keywords:
+  - confidential-containers
+  - peer-pods
+  - cloud-api-adaptor
+
+home: https://github.com/confidential-containers/cloud-api-adaptor
+
+sources:
+  - https://github.com/confidential-containers/cloud-api-adaptor
+
+maintainers:
+  - name: Confidential Containers Community
+    url: https://github.com/confidential-containers
+
+dependencies:
+  - name: peerpodctrl
+    version: "0.4.0"
+    repository: "file://../peerpodctrl"
+    alias: resourceCtrl
+    condition: resourceCtrl.enabled
+  - name: peerpods-webhook
+    version: "0.4.0"
+    repository: "file://../peerpods-webhook"
+    alias: webhook
+    condition: webhook.enabled

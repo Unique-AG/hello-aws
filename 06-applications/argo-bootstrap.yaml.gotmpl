@@ -19,7 +19,7 @@ releases:
     chart: argo/argo-cd
     version: 8.0.0
     values:
-      - {{ .Environment.Name }}/values/argo/argo.yaml
+      - {{ .Environment.Name }}/value-overlays/argo/argo.yaml
 
   - name: argo-appsets
     needs:
@@ -29,4 +29,4 @@ releases:
     chart: argo/argocd-apps
     version: 2.0.2
     values:
-      - {{ .Environment.Name }}/values/argo/argo-appsets.yaml
+      - {{ .Environment.Name }}/value-overlays/argo/argo-appsets.yaml

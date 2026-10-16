@@ -1,0 +1,21 @@
+# Single source of truth for suppressed trivy findings.
+# Rationale for every entry: docs/security-baseline.md
+#
+# `paths` are relative to the scanned directory, not the repository root,
+# because CI scans one layer at a time.
+misconfigurations:
+  - id: AVD-AWS-0053
+    paths:
+      - "alb-cloudfront.tf"
+    statement: Public-facing WebSocket ALB by design; see docs/security-baseline.md
+
+  - id: AVD-AWS-0054
+    paths:
+      - "alb-cloudfront.tf"
+    statement: TLS terminates at CloudFront VPC Origin; see docs/security-baseline.md
+
+  - id: AVD-AWS-0104
+    paths:
+      - "github-runners.tf"
+      - "eks.tf"
+    statement: Scoped to 443 for external endpoints unreachable via VPC endpoints; see docs/security-baseline.md

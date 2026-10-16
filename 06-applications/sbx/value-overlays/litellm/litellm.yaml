@@ -1,0 +1,191 @@
+# LiteLLM Proxy for AWS EKS
+# Uses AWS Bedrock via EKS Pod Identity (no static credentials)
+# Database: Aurora PostgreSQL, Cache: ElastiCache Redis (TLS)
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/berriai/litellm-database
+  tag: "litellm_stable_release_branch-v1.81.3-stable"
+  pullPolicy: IfNotPresent
+
+# Service account for Bedrock access (Pod Identity association managed by Terraform)
+serviceAccount:
+  create: true
+
+podAnnotations:
+  reloader.stakater.com/auto: "true"
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 500Mi
+  limits:
+    memory: 1Gi
+
+# Database config - secrets injected via secretFrom
+db:
+  deployStandalone: false
+  useExisting: false
+
+# Inject litellm K8s secret (DATABASE_URL, PROXY_MASTER_KEY, LITELLM_SALT_KEY)
+secretFrom:
+  name: litellm
+
+# Environment variables (ConfigMap)
+env:
+  LITELLM_LOG: "INFO"
+  LITELLM_MODE: PRODUCTION
+  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
+
+# Migration job for Prisma schema
+hooks:
+  migration:
+    enabled: true
+    command: |
+      python litellm/proxy/prisma_migration.py
+
+# Proxy configuration
+proxy_config:
+  model_list:
+    # Anthropic Claude models via AWS Bedrock cross-region inference profiles
+    # Uses eu.* inference profile IDs (required for on-demand invocation)
+    - model_name: anthropic-claude-sonnet-4-5
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    - model_name: anthropic-claude-opus-4-6
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-opus-4-6-v1
+        aws_region_name: eu-central-2
+        max_tokens: 20000
+
+    - model_name: anthropic-claude-haiku-4-5
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-haiku-4-5-20251001-v1:0
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    - model_name: anthropic-claude-sonnet-4-6
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-sonnet-4-6
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    # Claude Sonnet 5 via the EU Bedrock cross-region inference profile
+    # (eu.anthropic.claude-sonnet-5) — current EU-resident frontier model,
+    # verified available in eu-central-2 (aws bedrock list-inference-profiles).
+    - model_name: anthropic-claude-sonnet-5
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-sonnet-5
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    - model_name: amazon-titan-embed-text-v2
+      litellm_params:
+        model: bedrock/amazon.titan-embed-text-v2:0
+        aws_region_name: eu-central-2
+
+    # MiniMax M2.5 via AWS Bedrock — not available in eu-central-2; pinned to
+    # eu-central-1 (no EU CRI exists for MiniMax). Cross-region invocation
+    # leaves Switzerland; acceptable for hello-aws reference deployment only.
+    - model_name: minimax-m2-5
+      litellm_params:
+        model: bedrock/minimax.minimax-m2.5
+        aws_region_name: eu-central-1
+        max_tokens: 8192
+
+    # Qwen3.6-35B-A3B (MoE) self-hosted on a SageMaker real-time endpoint in
+    # ap-northeast-2, same sagemaker_chat (vLLM, OpenAI-compatible) pattern as
+    # gemma above — cross-region from eu-central-2, sandbox/reference only.
+    # Runs on ml.g6e.24xlarge with tensor_parallel=4 and a pinned 131072-token
+    # window (SM_VLLM_MAX_MODEL_LEN), so max_tokens can be generous. Tool calling
+    # IS enabled: the endpoint starts vLLM with --enable-auto-tool-choice
+    # --tool-call-parser qwen3_coder --reasoning-parser qwen3 (verified 2026-06-03,
+    # structured tool_calls returned), so tools/tool_choice are NOT dropped here.
+    # *_cost_per_token: amortized placeholder (no LiteLLM price map for a
+    # self-hosted endpoint). IAM: the litellm Pod Identity role's sagemaker invoke
+    # statement is scoped to endpoint/* in this region (05-compute iam.tf).
+    - model_name: qwen3-6-35b-a3b
+      litellm_params:
+        model: sagemaker_chat/qwen3-6-35b
+        aws_region_name: ap-northeast-2
+        max_tokens: 8192
+        input_cost_per_token: 0.000001
+        output_cost_per_token: 0.000001
+
+    # GPT-4o via Azure AI Foundry. api_base and api_key come from K8s env vars
+    # set by the `litellm` ExternalSecret (sourced from AWS Secrets Manager,
+    # populated by the Azure GHA workflow's push-to-aws-secrets job).
+    - model_name: gpt-4o
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: gpt-4o-2024-11-20
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: azure-gpt-4o
+      litellm_params:
+        model: azure/gpt-4o
+        api_base: os.environ/AZURE_FOUNDRY_ENDPOINT
+        api_key: os.environ/AZURE_FOUNDRY_API_KEY
+        api_version: "2024-10-21"
+
+    - model_name: gpt-4-turbo
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    - model_name: gpt-4-32k
+      litellm_params:
+        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: eu-central-2
+        max_tokens: 10000
+
+    # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
+    # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
+    # model: sets provider mapping, model_id: sets Bedrock inference profile ARN
+    - model_name: text-embedding-ada-002
+      litellm_params:
+        model: bedrock/cohere.embed-v4:0
+        model_id: arn:aws:bedrock:eu-central-2:217381566492:application-inference-profile/rzhpiygtmfxm
+        aws_region_name: eu-central-2
+
+  general_settings:
+    master_key: os.environ/PROXY_MASTER_KEY
+    alerting: []
+    proxy_batch_write_at: 60
+    database_connection_pool_limit: 10
+    disable_spend_logs: false
+    disable_error_logs: false
+
+  litellm_settings:
+    modify_params: true
+    drop_params: true
+    turn_off_message_logging: false
+    max_budget: 10000
+    budget_duration: 30d
+    json_logs: true
+    cache: true
+    cache_params:
+      type: redis
+      namespace: "litellm.caching.caching"
+    redact_messages_in_exceptions: true
+    request_timeout: 600
+    set_verbose: false
+
+securityContext:
+  allowPrivilegeEscalation: false
+
+ingress:
+  enabled: false

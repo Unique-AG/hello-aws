@@ -199,6 +199,12 @@ variable "zitadel_master_key_secret_name" {
   default     = "zitadel-master-key"
 }
 
+variable "zitadel_firstinstance_password_secret_name" {
+  description = "Secret name for the Zitadel FirstInstance bootstrap admin password"
+  type        = string
+  default     = "zitadel-firstinstance-password"
+}
+
 variable "zitadel_pat_secret_name" {
   description = "Secret name for Zitadel PAT"
   type        = string

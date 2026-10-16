@@ -9,7 +9,9 @@
 # 3. Infrastructure (VPC, subnets, endpoints, KMS)
 # 4. Data and AI (Aurora, ElastiCache, S3, Bedrock)
 # 5. Compute (EKS, ECR)
-# 6. Applications (ArgoCD, Helmfile)
+#
+# Note: 06-applications (ArgoCD/Helmfile) is not a Terraform layer and is
+# bootstrapped separately after these layers complete.
 #
 # Usage:
 #   ./scripts/deploy-dependency-sequence.sh <environment> [--auto-approve] [--skip-plan]
@@ -58,13 +60,14 @@ if [[ ! "$ENV" =~ ^(dev|test|prod|sbx)$ ]]; then
 fi
 
 # Layer deployment order
+# NOTE: 06-applications is NOT a Terraform layer. ArgoCD/helmfile bootstrap is a
+# separate step run after these Terraform layers (see 06-applications/README.md).
 LAYERS=(
   "bootstrap"
   "governance"
   "infrastructure"
   "data-and-ai"
   "compute"
-  "applications"
 )
 
 TOTAL=${#LAYERS[@]}
