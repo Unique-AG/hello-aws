@@ -47,7 +47,7 @@ aws:
   sandbox:
     subnetId: subnet-0077a59d31fe5e775
     securityGroupId: sg-0be1640509df0d481
-    podvmAmiId: ami-07edd3eda11acfd0a
+    podvmAmiId: ami-02349021139c26544
   efs:
     doclingModelsId: fs-070ce1b868e568369
 zitadel:

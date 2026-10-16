@@ -11,7 +11,7 @@ providerConfigs:
     # pod-network tunnel, the adaptor channel and its image pull.
     AWS_SG_IDS: "sg-0be1640509df0d481"
     # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
-    PODVM_AMI_ID: "ami-07edd3eda11acfd0a"
+    PODVM_AMI_ID: "ami-02349021139c26544"
     # m6a is not offered in eu-central-2; m6i matches the sandbox node pool.
     PODVM_INSTANCE_TYPE: "m6i.large"
     # The tag the IAM policy conditions on for both launch and termination.
