@@ -99,7 +99,7 @@ scan_ami() {
     # The error below asks for a review, so leave something to review: the
     # report is JSON on disk, not the table trivy would have printed.
     jq -r '.Results[]? | (.Vulnerabilities[]? | "  \(.Severity) \(.VulnerabilityID) \(.PkgName) \(.InstalledVersion) -> \(.FixedVersion // "no fix")"), (.Secrets[]? | "  SECRET \(.RuleID) \(.Title)")' \
-      "$report" 2>/dev/null | sort -u | head -40
+      "$report" 2>/dev/null | sort -u | head -40 || true
     warn "Full report kept at ${report}"
     error "${ami} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
   fi
