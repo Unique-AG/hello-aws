@@ -19,6 +19,7 @@
 #   -o, --out DIR         Where to place the image (default: $TMPDIR/podvm-build)
 #       --debug-image     Build upstream's debug variant instead
 #       --go-version VER  Build with this Go toolchain instead of the pinned one
+#       --go-mod-bump M@V Raise one Go module before building (repeatable)
 #       --no-verify-provenance
 #                         Skip attestation checks on upstream's binaries
 #       --check           Check host prerequisites and exit
@@ -57,6 +58,9 @@ VERIFY_PROVENANCE="yes"
 # Empty means upstream's versions.yaml pin. Set it to remediate stdlib CVEs
 # without waiting for upstream to move; it is recorded in the provenance file.
 GO_VERSION=""
+# Modules raised in the CAA source before building, as module@version. For
+# clearing a CVE upstream has already fixed on main but not yet released.
+GO_MOD_BUMPS=()
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,6 +69,7 @@ while [[ $# -gt 0 ]]; do
     --debug-image)  MAKE_TARGET="debug"; shift ;;
     --no-verify-provenance) VERIFY_PROVENANCE="no"; shift ;;
     --go-version)   need_value "$@"; GO_VERSION="$2"; shift 2 ;;
+    --go-mod-bump)  need_value "$@"; GO_MOD_BUMPS+=("$2"); shift 2 ;;
     --check)        CHECK_ONLY=true; shift ;;
     -h|--help)      print_help "${BASH_SOURCE[0]}"; exit 0 ;;
     *)              error "Unknown option: $1 (try --help)" ;;
@@ -144,6 +149,25 @@ PODVM_DIR="${SRC_DIR}/src/cloud-api-adaptor/podvm"
 # Build
 #######################################
 
+# Applied in a container of the same Go toolchain, so the host needs no Go and
+# the resolver behaves as the build's will. Recorded in the provenance file:
+# this is the one place the source stops being upstream's exactly.
+if ((${#GO_MOD_BUMPS[@]})); then
+  # Mount all of src/, not just cloud-api-adaptor: its go.mod replaces sibling
+  # modules with ../ paths, which do not resolve from a narrower mount.
+  CAA_SRC="${SRC_DIR}/src"
+  GO_IMAGE="golang:${GO_VERSION:-$(yq -e '.tools.golang' "${CAA_SRC}/cloud-api-adaptor/versions.yaml")}"
+  for bump in "${GO_MOD_BUMPS[@]}"; do
+    [[ "$bump" == *@* ]] || error "--go-mod-bump expects module@version, got '${bump}'"
+    info "Raising ${bump}"
+    docker run --rm -v "${CAA_SRC}:/src" -w /src/cloud-api-adaptor "$GO_IMAGE" \
+      go get "$bump" || error "Could not raise ${bump}"
+  done
+  # go get runs as root in the container; hand the tree back to the caller.
+  docker run --rm -v "${CAA_SRC}:/src" -w /src "$GO_IMAGE" \
+    chown -R "$(id -u):$(id -g)" /src
+fi
+
 # TEE_PLATFORM is left at its default of "none": the overlay sets
 # DISABLECVM=true, so no attester beyond the filesystem one is needed.
 MKOSI_VERSION=$(yq -e '.tools.mkosi' "${SRC_DIR}/src/cloud-api-adaptor/versions.yaml")
@@ -188,6 +212,7 @@ make_target=${MAKE_TARGET}
 verify_provenance=${VERIFY_PROVENANCE}
 tee_platform=none
 go_version=${GO_VERSION:-$(yq -e '.tools.golang' "${SRC_DIR}/src/cloud-api-adaptor/versions.yaml")}
+go_mod_bumps=${GO_MOD_BUMPS[*]:-none}
 sha256=${SHA}
 built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 PROV
