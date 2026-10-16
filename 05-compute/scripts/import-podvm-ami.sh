@@ -79,26 +79,40 @@ CALLER_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 scan_ami() {
   local ami="$1"
   [[ "$SKIP_SCAN" == false ]] || return 0
-  if ! command -v trivy >/dev/null 2>&1; then
-    warn "trivy not installed; the image is unscanned"
+  # Both are needed to reach a verdict; missing either leaves the image
+  # unscanned, which is reported the same way rather than as a scan failure.
+  local missing=()
+  command -v trivy >/dev/null 2>&1 || missing+=("trivy")
+  command -v jq >/dev/null 2>&1 || missing+=("jq")
+  if ((${#missing[@]})); then
+    warn "${missing[*]} not installed; the image is unscanned"
     return 0
   fi
   info "Scanning ${ami} for vulnerabilities (trivy vm is experimental)"
   local report os_family rc=0
   report=$(mktemp)
+
   trivy vm --aws-region "$TARGET_REGION" --scanners vuln,secret --severity HIGH,CRITICAL \
     --exit-code 1 --format json --output "$report" "ami:${ami}" || rc=$?
-  os_family=$(jq -r '.Metadata.OS.Family // ""' "$report" 2>/dev/null || true)
-  rm -f "$report"
 
   if (( rc != 0 )); then
-    warn "The scan found HIGH/CRITICAL findings, or could not read the image."
-    warn "See the pod VM image section of 05-compute/README.md."
+    # The error below asks for a review, so leave something to review: the
+    # report is JSON on disk, not the table trivy would have printed.
+    jq -r '.Results[]? | (.Vulnerabilities[]? | "  \(.Severity) \(.VulnerabilityID) \(.PkgName) \(.InstalledVersion) -> \(.FixedVersion // "no fix")"), (.Secrets[]? | "  SECRET \(.RuleID) \(.Title)")' \
+      "$report" 2>/dev/null | sort -u | head -40
+    warn "Full report kept at ${report}"
     error "${ami} is registered but did not pass its scan. Review it, then re-run with --skip-scan to accept."
   fi
+
   # trivy vm exits 0 having found nothing when it cannot parse the layout, so an
   # undetected OS means the image is unscanned, not clean.
-  [[ -n "$os_family" ]] || error "${ami} is UNSCANNED: trivy detected no OS in it. See 05-compute/README.md."
+  os_family=$(jq -r '.Metadata.OS.Family // ""' "$report")
+  if [[ -z "$os_family" ]]; then
+    warn "Full report kept at ${report}"
+    error "${ami} is UNSCANNED: trivy detected no OS in it. See 05-compute/README.md."
+  fi
+
+  rm -f "$report"
   log "No HIGH/CRITICAL vulnerabilities or secrets found (${os_family})"
 }
 

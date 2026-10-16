@@ -101,7 +101,8 @@ This is acceptable for `sbx`, where the value is verifying that the peer-pods pa
 # From anywhere with credentials for this account. Use deploy.sh, not a bare
 # terraform apply: the layer needs both tfvars files, and neither is auto-loaded.
 TF_VAR_enable_podvm_image_import=true ./scripts/deploy.sh compute sbx
-./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.22.0-x86_64.raw"
+# --skip-scan: trivy vm cannot read this image's squashfs root (see below).
+./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.22.0-x86_64.raw" --skip-scan
 ./scripts/deploy.sh compute sbx
 ```
 
@@ -117,7 +118,11 @@ The registered AMI is UEFI with `TpmSupport=v2.0`, IMDSv2-only, and encrypted un
 
 Debug builds are kept separate end to end: the output file, the AMI name and the `Provenance` tag all carry the variant, so a debug image cannot occupy the release name or be mistaken for one.
 
-**Assurance on the result.** `trivy vm ami:<id>` scans the registered image for vulnerabilities and secrets, and the import runs it automatically (`--skip-scan` to opt out). This only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all. Note `trivy vm` is EXPERIMENTAL, supports only VMDK for local files (so scan the AMI, not the disk file), and cannot read LVM layouts.
+**Assurance on the result.** The import runs `trivy vm ami:<id>` automatically (`--skip-scan` to opt out), and it only works on an image we own — trivy cannot read public snapshots, so the upstream AMI cannot be scanned in place at all.
+
+**`trivy vm` cannot read a pod VM image, so expect to pass `--skip-scan`.** The root filesystem is a squashfs partition under dm-verity. `trivy vm` reports `OS is not detected`, scans nothing and exits 0 — so the import now rejects an undetected OS rather than reporting a clean image it never read. `trivy vm` is EXPERIMENTAL, supports only VMDK for local files, and cannot read LVM layouts either.
+
+Scan it this way instead, which does work: attach the image (a volume from its snapshot, or `losetup -P` on the raw), mount the squashfs root read-only and run `trivy rootfs` against the mount. That identifies the Ubuntu release and the Go binaries. Two limits to know: the image carries **no dpkg database**, so OS packages cannot be enumerated by any scanner and an `os-pkgs` count of zero means unknown rather than clean; and `kata-agent` is a Rust binary, outside trivy's Go analyzer.
 
 **Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it, naming the raw after the qcow2's digest so a leftover conversion of a different image cannot be reused. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
 
