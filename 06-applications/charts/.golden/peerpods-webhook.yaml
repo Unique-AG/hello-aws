@@ -1,0 +1,357 @@
+---
+# Source: peerpods-webhook/templates/namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: peer-pods-webhook-system
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-controller-manager
+  namespace: peer-pods-webhook-system
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: metrics-auth-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-metrics-auth-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-metrics-reader
+rules:
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
+---
+# Source: peerpods-webhook/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peer-pods-webhook-manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - pods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: peer-pods-webhook-manager-role
+subjects:
+- kind: ServiceAccount
+  name: peer-pods-webhook-controller-manager
+  namespace: peer-pods-webhook-system
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/instance: metrics-auth-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-metrics-auth-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: peer-pods-webhook-metrics-auth-role
+subjects:
+- kind: ServiceAccount
+  name: peer-pods-webhook-controller-manager
+  namespace: peer-pods-webhook-system
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: role
+    app.kubernetes.io/instance: leader-election-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-leader-election-role
+  namespace: peer-pods-webhook-system
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+# Source: peerpods-webhook/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/instance: leader-election-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/part-of: peerpods-webhook
+  name: peer-pods-webhook-leader-election-rolebinding
+  namespace: peer-pods-webhook-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: peer-pods-webhook-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: peer-pods-webhook-controller-manager
+  namespace: peer-pods-webhook-system
+---
+# Source: peerpods-webhook/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: peer-pods-webhook-webhook-service
+  namespace: peer-pods-webhook-system
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  - name: webhook
+    port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
+    control-plane: controller-manager
+---
+# Source: peerpods-webhook/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: peerpods-webhook
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: peerpods-webhook
+    control-plane: controller-manager
+  name: peer-pods-webhook-controller-manager
+  namespace: peer-pods-webhook-system
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      securityContext:
+        runAsNonRoot: true
+      containers:
+      - name: manager
+        command:
+        - /manager
+        args:
+        - --leader-elect
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=:8443
+        image: quay.io/confidential-containers/peer-pods-webhook:61b1aba91df646a663e60ab6b55c6a7dc93cd167@sha256:9189d5b10ddafe1c280495220866d32cafbbf006167231049314621a4272dd88
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        env:
+        - name: TARGET_RUNTIMECLASS
+          value: kata-remote
+        - name: POD_VM_EXTENDED_RESOURCE
+          value: kata.peerpods.io/vm
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          tcpSocket:
+            port: 9443
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+      serviceAccountName: peer-pods-webhook-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: webhook-server-cert
+---
+# Source: peerpods-webhook/templates/webhook-config.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: peer-pods-webhook-system/peer-pods-webhook-serving-cert
+  name: peer-pods-webhook-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: peer-pods-webhook-webhook-service
+      namespace: peer-pods-webhook-system
+      path: /mutate-v1-pod
+  failurePolicy: Fail
+  name: mwebhook.peerpods.io
+  namespaceSelector:
+    matchExpressions:
+    - key: kubernetes.io/metadata.name
+      operator: NotIn
+      values:
+      - peer-pods-webhook-system
+      - kube-system
+  reinvocationPolicy: IfNeeded
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    resources:
+    - pods
+    scope: Namespaced
+  sideEffects: None
+---
+# Source: peerpods-webhook/templates/rbac.yaml
+# TODO: Investigate if this RBAC is actually needed.
+# It's unclear why these pod permissions exist - the webhook code doesn't seem
+# to call the k8s API to manipulate pods. This might be leftover from scaffolding.
+# Keeping this for parity with kustomize deployment until we can investigate further.
+---
+# Source: peerpods-webhook/templates/webhook-config.yaml
+# AUTO-GENERATED by controller-gen. DO NOT EDIT.
+---
+# Source: peerpods-webhook/templates/certmanager.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: peer-pods-webhook-serving-cert
+  namespace: peer-pods-webhook-system
+spec:
+  dnsNames:
+  - peer-pods-webhook-webhook-service.peer-pods-webhook-system.svc
+  - peer-pods-webhook-webhook-service.peer-pods-webhook-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: peer-pods-webhook-selfsigned-issuer
+  secretName: webhook-server-cert
+---
+# Source: peerpods-webhook/templates/certmanager.yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: peer-pods-webhook-selfsigned-issuer
+  namespace: peer-pods-webhook-system
+spec:
+  selfSigned: {}
