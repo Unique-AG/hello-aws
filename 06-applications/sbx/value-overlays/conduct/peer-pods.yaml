@@ -12,7 +12,8 @@ providerConfigs:
     AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
     # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
     PODVM_AMI_ID: "<PODVM_AMI_ID>"
-    PODVM_INSTANCE_TYPE: "m6a.large"
+    # m6a is not offered in eu-central-2; m6i matches the sandbox node pool.
+    PODVM_INSTANCE_TYPE: "m6i.large"
     # The tag the IAM policy conditions on for both launch and termination.
     TAGS: "PeerPod=true"
     # The boundary here is the VM, not memory encryption; CVM needs SEV-SNP
