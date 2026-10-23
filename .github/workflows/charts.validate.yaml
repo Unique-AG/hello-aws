@@ -15,6 +15,9 @@ env:
   KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
   # The cluster these charts are rendered for.
   KUBERNETES_VERSION: 1.35.0
+  # Pinned like every other dependency here: an unpinned catalog can change
+  # what validates without a change in this repository.
+  CRD_CATALOG_REF: 501527ab9c40c827144c8f45945b25a023e344ce
 
 jobs:
   render:
@@ -22,13 +25,11 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
-      # Pinned to the version that produced the golden files: rendered output
-      # differs between helm minors, so an unpinned bump fails them spuriously.
+      # Must match the version that produced the golden files.
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
           version: v4.0.4
 
-      # Lints and renders every chart, diffing against the committed output.
       # Also exercises values.schema.json, which helm enforces while templating.
       - name: Install kubeconform
         run: |
@@ -43,14 +44,13 @@ jobs:
         working-directory: 06-applications
         run: ./scripts/test-charts.sh
 
-      # Validates the rendered manifests against the target cluster's API
-      # schemas. The CRD catalog covers cert-manager's Certificate and Issuer,
-      # so no kind is skipped and an unrecognised one fails rather than passing.
+      # The CRD catalog covers cert-manager, so no kind is skipped and an
+      # unrecognised one fails rather than passing quietly.
       - name: Validate against the Kubernetes API
         working-directory: 06-applications
         run: |
           set -euo pipefail
           kubeconform -kubernetes-version "${KUBERNETES_VERSION}" -strict -summary \
             -schema-location default \
-            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            -schema-location "https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRD_CATALOG_REF}/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
             charts/.golden/*.yaml
