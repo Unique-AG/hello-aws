@@ -84,7 +84,8 @@ All parameters in `<env>/instance-config.yaml`:
 ├── instance-config.yaml.template    # Configuration template (copy into env dir)
 ├── scripts/
 │   ├── configure-instance.sh        # Replace placeholders (env-scoped)
-│   └── validate-instance.sh         # Verify no placeholders remain (env-scoped)
+│   ├── validate-instance.sh         # Verify no placeholders remain (env-scoped)
+│   └── test-charts.sh               # Lint, render and verify the vendored charts
 ├── defaults/                        # Base app configurations (env-independent)
 │   ├── ai-services/
 │   ├── backend-services/
@@ -257,3 +258,4 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 |--------|---------|
 | `scripts/configure-instance.sh <env>` | Replace `<PLACEHOLDER>` tokens with real values from `<env>/instance-config.yaml`. Only modifies files under `<env>/`. Idempotent — tracks applied state in `<env>/.instance-applied.yaml`. |
 | `scripts/validate-instance.sh <env>` | Verify no placeholder tokens remain in `<env>/` YAML files. Exit 0 = clean, exit 1 = tokens found. |
+| `scripts/test-charts.sh [--update]` | Lint and render every chart under `charts/`, diff the result against the committed output in `charts/.golden/`, and verify each packaged subchart still matches its source. `--update` rewrites the golden files after an intended change. Exit 0 = matches, exit 1 = drifted. Runs in CI on every chart or overlay change. |

@@ -43,7 +43,7 @@ for case in "${CASES[@]}"; do
   [[ -n "$values" ]] && lint_args+=(-f "$values")
   if ! helm lint "${lint_args[@]}" >"$actual.lint" 2>&1; then
     echo "FAIL: $chart did not lint"
-    sed 's/^/    /' "$actual.lint" | head -6
+    sed 's/^/    /' "$actual.lint" | head -6 || true
     FAILED=1
     rm -f "$actual" "$actual.lint"
     continue
@@ -52,7 +52,7 @@ for case in "${CASES[@]}"; do
 
   if ! helm template "${args[@]}" > "$actual" 2>"$actual.err"; then
     echo "FAIL: $chart did not render"
-    sed 's/^/    /' "$actual.err" | head -5
+    sed 's/^/    /' "$actual.err" | head -5 || true
     FAILED=1
     rm -f "$actual" "$actual.err"
     continue
@@ -71,22 +71,18 @@ for case in "${CASES[@]}"; do
     rm -f "$actual"
   else
     echo "FAIL: $chart rendered output drifted"
-    diff -u "$golden" "$actual" | head -25 | sed 's/^/    /'
+    diff -u "$golden" "$actual" | head -25 | sed 's/^/    /' || true
     FAILED=1
     rm -f "$actual"
   fi
 done
 
-# ------------------------------------------------------------------
-# Packaged subcharts must match their source directories. helm resolves
-# dependencies from the .tgz, so an edited source directory that was never
-# repackaged is silently ignored at render time.
-# ------------------------------------------------------------------
+# Packaged subcharts must match their sources: helm resolves dependencies from
+# the .tgz, so an unrepackaged source edit is ignored at render time.
 for tgz in "$CHARTS_DIR"/peerpods/charts/*.tgz; do
   [[ -e "$tgz" ]] || continue
   packaged=$(basename "$tgz" .tgz)
-  name="${packaged%-*}"
-  src="$CHARTS_DIR/$name"
+  src="$CHARTS_DIR/${packaged%-*}"
 
   if [[ ! -d "$src" ]]; then
     echo "FAIL: $packaged has no source directory at $src"
@@ -94,32 +90,36 @@ for tgz in "$CHARTS_DIR"/peerpods/charts/*.tgz; do
     continue
   fi
 
-  extracted=$(mktemp -d)
-  tar xzf "$tgz" -C "$extracted"
-  drift=0
+  work=$(mktemp -d)
+  # Repackaging and comparing both archives covers files added or removed on
+  # either side, and applies .helmignore exactly as a real dependency build would.
+  if ! helm package "$src" -d "$work" >/dev/null 2>&1; then
+    echo "FAIL: $packaged could not be repackaged from $src"
+    FAILED=1
+    rm -rf "$work"
+    continue
+  fi
 
-  while IFS= read -r rel; do
-    a="$extracted/$name/$rel"
-    b="$src/$rel"
-    if [[ ! -e "$b" ]]; then
-      echo "FAIL: $packaged ships $rel, which the source directory does not have"
-      drift=1
-    elif [[ "$rel" == "Chart.yaml" ]]; then
-      # helm package rewrites Chart.yaml (key order, quoting, blank lines),
-      # so compare the parsed document rather than the bytes.
-      if ! diff <(yq -P 'sort_keys(..)' "$a") <(yq -P 'sort_keys(..)' "$b") >/dev/null; then
-        echo "FAIL: $packaged Chart.yaml differs from source beyond formatting"
-        diff <(yq -P 'sort_keys(..)' "$a") <(yq -P 'sort_keys(..)' "$b") | head -10 | sed 's/^/    /'
-        drift=1
-      fi
-    elif ! diff -q "$a" "$b" >/dev/null; then
-      echo "FAIL: $packaged $rel differs from source — repackage with 'helm dependency update'"
-      drift=1
-    fi
-  done < <(cd "$extracted/$name" && find . -type f | sed 's|^\./||')
+  fresh=$(find "$work" -maxdepth 1 -name '*.tgz' | head -1)
+  if [[ "$(basename "$fresh" .tgz)" != "$packaged" ]]; then
+    echo "FAIL: $packaged is stale — the source now packages as $(basename "$fresh" .tgz)"
+    FAILED=1
+    rm -rf "$work"
+    continue
+  fi
 
-  (( drift )) && FAILED=1 || echo "ok:     ${packaged}.tgz matches ./$name"
-  rm -rf "$extracted"
+  mkdir -p "$work/committed" "$work/rebuilt"
+  tar xzf "$tgz" -C "$work/committed"
+  tar xzf "$fresh" -C "$work/rebuilt"
+
+  if diff -r "$work/committed" "$work/rebuilt" >/dev/null 2>&1; then
+    echo "ok:     ${packaged}.tgz matches ./$(basename "$src")"
+  else
+    echo "FAIL: ${packaged}.tgz differs from its source — run 'helm dependency update'"
+    diff -r "$work/committed" "$work/rebuilt" 2>&1 | head -12 | sed 's/^/    /' || true
+    FAILED=1
+  fi
+  rm -rf "$work"
 done
 
 exit $FAILED
