@@ -1,0 +1,56 @@
+name: '[charts] Validate'
+on:
+  pull_request:
+    paths:
+      - '06-applications/charts/**'
+      - '06-applications/sbx/value-overlays/conduct/**'
+      - '06-applications/scripts/test-charts.sh'
+      - '.github/workflows/charts.validate.yaml'
+
+permissions:
+  contents: read
+
+env:
+  KUBECONFORM_VERSION: v0.8.0
+  KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+  # The cluster these charts are rendered for.
+  KUBERNETES_VERSION: 1.35.0
+  # Pinned like every other dependency here: an unpinned catalog can change
+  # what validates without a change in this repository.
+  CRD_CATALOG_REF: 501527ab9c40c827144c8f45945b25a023e344ce
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # Must match the version that produced the golden files.
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.0.4
+
+      # Also exercises values.schema.json, which helm enforces while templating.
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          curl -fsSL -o kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          tar xzf kubeconform.tar.gz kubeconform
+          sudo install -m 0755 kubeconform /usr/local/bin/kubeconform
+
+      - name: Lint and verify rendered output
+        working-directory: 06-applications
+        run: ./scripts/test-charts.sh
+
+      # The CRD catalog covers cert-manager, so no kind is skipped and an
+      # unrecognised one fails rather than passing quietly.
+      - name: Validate against the Kubernetes API
+        working-directory: 06-applications
+        run: |
+          set -euo pipefail
+          kubeconform -kubernetes-version "${KUBERNETES_VERSION}" -strict -summary \
+            -schema-location default \
+            -schema-location "https://raw.githubusercontent.com/datreeio/CRDs-catalog/${CRD_CATALOG_REF}/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json" \
+            charts/.golden/*.yaml

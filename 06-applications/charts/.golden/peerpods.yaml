@@ -1,0 +1,687 @@
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: serviceaccount
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-controller-manager
+  namespace: sbx
+---
+# Source: peerpods/templates/rbac.yaml
+# when owner reference is both object must be on the same namespace, hence,
+# caa should have cluster-wide permissions to support any pod namespace
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cloud-api-adaptor
+  namespace: sbx
+---
+# Source: peerpods/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: peer-pods-secret
+  namespace: sbx
+  labels:
+    app.kubernetes.io/name: peerpods
+    app.kubernetes.io/instance: peerpods
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+stringData:
+---
+# Source: peerpods/templates/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: peer-pods-cm
+  namespace: sbx
+  labels:
+    app.kubernetes.io/name: peerpods
+    app.kubernetes.io/instance: peerpods
+    app.kubernetes.io/managed-by: Helm
+data:
+  CLOUD_PROVIDER: "aws"
+  AWS_REGION: "<AWS_REGION>"
+  AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
+  AWS_SUBNET_ID: "<SANDBOX_SUBNET_ID>"
+  DISABLECVM: "true"
+  PEERPODS_LIMIT_PER_NODE: "10"
+  PODVM_AMI_ID: "<PODVM_AMI_ID>"
+  PODVM_INSTANCE_TYPE: "m6a.large"
+  TAGS: "PeerPod=true"
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: proxy-role
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-proxy-role
+rules:
+- apiGroups:
+  - authentication.k8s.io
+  resources:
+  - tokenreviews
+  verbs:
+  - create
+- apiGroups:
+  - authorization.k8s.io
+  resources:
+  - subjectaccessreviews
+  verbs:
+  - create
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: metrics-reader
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-metrics-reader
+rules:
+- nonResourceURLs:
+  - "/metrics"
+  verbs:
+  - get
+---
+# Source: peerpods/charts/resourceCtrl/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpodctrl-manager-role
+rules:
+- apiGroups:
+  - ""
+  resourceNames:
+  - byom-ip-pool-state
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resourceNames:
+  - peer-pods-cm
+  - peer-pods-secret
+  resources:
+  - configmaps
+  - secrets
+  verbs:
+  - get
+- apiGroups:
+  - confidentialcontainers.org
+  resources:
+  - peerpods
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - confidentialcontainers.org
+  resources:
+  - peerpods/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - confidentialcontainers.org
+  resources:
+  - peerpods/status
+  verbs:
+  - get
+  - patch
+  - update
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpods-pod-viewer
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+- apiGroups: [""]
+  resources: ["serviceaccounts"]
+  verbs: ["get", "list"]
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpods-peerpod-editor
+rules:
+- apiGroups: ["confidentialcontainers.org"]
+  resources: ["peerpods"]
+  verbs: ["create", "patch", "update"]
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpods-node-viewer
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get"]
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpods-node-status-patcher
+rules:
+- apiGroups: [""]
+  resources: ["nodes/status"]
+  verbs: ["patch"]
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: peerpods-cm-editor
+rules:
+# Create is need for initial creation of the ConfigMap. It can't
+# be using resourceNames because it doesn't exist yet.
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resourceNames: ["byom-ip-pool-state"]
+  resources: ["configmaps"]
+  verbs: ["delete", "patch", "update", "get", "watch"]
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/instance: manager-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-manager-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: peerpodctrl-manager-role
+subjects:
+- kind: ServiceAccount
+  name: peerpodctrl-controller-manager
+  namespace: sbx
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrolebinding
+    app.kubernetes.io/instance: proxy-rolebinding
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-proxy-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: peerpodctrl-proxy-role
+subjects:
+- kind: ServiceAccount
+  name: peerpodctrl-controller-manager
+  namespace: sbx
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpods-pod-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: ClusterRole
+  name: peerpods-pod-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpods-peerpod-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: ClusterRole
+  name: peerpods-peerpod-editor
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpods-node-viewer
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: ClusterRole
+  name: peerpods-node-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpods-node-status-patcher
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: ClusterRole
+  name: peerpods-node-status-patcher
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: peerpods-cm-editor
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: ClusterRole
+  name: peerpods-cm-editor
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+# permissions to do leader election.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  labels:
+    app.kubernetes.io/name: role
+    app.kubernetes.io/instance: leader-election-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-leader-election-role
+  namespace: sbx
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pp-secrets
+  namespace: sbx
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["delete", "create", "patch", "update", "get", "watch", "list"]
+---
+# Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  labels:
+    app.kubernetes.io/name: rolebinding
+    app.kubernetes.io/instance: leader-election-rolebinding
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/part-of: peerpodctrl
+  name: peerpodctrl-leader-election-rolebinding
+  namespace: sbx
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: peerpodctrl-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: peerpodctrl-controller-manager
+  namespace: sbx
+---
+# Source: peerpods/templates/rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pp-secrets
+  namespace: sbx
+subjects:
+- kind: ServiceAccount
+  name: cloud-api-adaptor
+  namespace: sbx
+roleRef:
+  kind: Role
+  name: pp-secrets
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: peerpods/charts/resourceCtrl/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: kube-rbac-proxy
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/instance: controller-manager-metrics-service
+    app.kubernetes.io/name: service
+    app.kubernetes.io/part-of: peerpodctrl
+    control-plane: controller-manager
+  name: peerpodctrl-controller-manager-metrics-service
+  namespace: sbx
+spec:
+  ports:
+  - name: https
+    port: 8443
+    protocol: TCP
+    targetPort: https
+  selector:
+    control-plane: controller-manager
+---
+# Source: peerpods/templates/daemonset.yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: cloud-api-adaptor
+  name: cloud-api-adaptor-daemonset
+  namespace: sbx
+spec:
+  selector:
+    matchLabels:
+      app: cloud-api-adaptor
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: cloud-api-adaptor
+    spec:
+      serviceAccountName: cloud-api-adaptor
+      containers:
+      - command:
+        - /usr/local/bin/entrypoint.sh
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        envFrom:
+        - secretRef:
+            name: peer-pods-secret
+        - configMapRef:
+            name: peer-pods-cm
+        image: quay.io/confidential-containers/cloud-api-adaptor:61b1aba91df646a663e60ab6b55c6a7dc93cd167@sha256:43d7e37f6c063c110ba1890e43ab43918393d18de85e833c87e264aa20647d20
+        imagePullPolicy: Always
+        name: cloud-api-adaptor-con
+        securityContext:
+          capabilities:
+            add:
+            - NET_ADMIN
+            - SYS_ADMIN
+        startupProbe:
+          httpGet:
+            path: /startup
+            port: 8000
+            host: 127.0.0.1
+          failureThreshold: 30
+          periodSeconds: 20
+          initialDelaySeconds: 20
+        # TODO: We should think about a better patch strategy for keeping per provider
+        # patches in different files, otherwise this template might get bloated.
+        volumeMounts:
+        - mountPath: /run/peerpod
+          name: pods-dir
+        - mountPath: /run/netns
+          mountPropagation: HostToContainer
+          name: netns
+        - mountPath: /run/xtables.lock
+          name: xtables-lock
+        - mountPath: /lib/modules
+          name: lib-modules
+          readOnly: true
+        # # setting for cloud provider external plugin
+        # - mountPath: /cloud-providers
+        #   name: provider-dir
+        # # setting for cloud provider external plugin
+        - mountPath: /run/kata-containers/shared/direct-volumes
+          name: kata-direct-volumes-dir
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      nodeSelector:
+        workload: sandbox
+      tolerations:
+        - effect: NoSchedule
+          key: workload
+          value: sandbox
+      volumes:
+      - hostPath:
+          path: /run/peerpod
+        name: pods-dir
+      - hostPath:
+          path: /run/netns
+        name: netns
+      - hostPath:
+          path: /run/xtables.lock
+          type: FileOrCreate
+        name: xtables-lock
+      - hostPath:
+          path: /lib/modules
+          type: ""
+        name: lib-modules
+      # # setting for cloud provider external plugin
+      # - hostPath:
+      #     path: /opt/cloud-api-adaptor/plugins
+      #     type: Directory
+      #   name: provider-dir
+      # # setting for cloud provider external plugin
+      - name: kata-direct-volumes-dir
+        hostPath:
+          path: /run/kata-containers/shared/direct-volumes
+          type: DirectoryOrCreate
+---
+# Source: peerpods/charts/resourceCtrl/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: peerpodctrl
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/name: deployment
+    app.kubernetes.io/part-of: peerpodctrl
+    control-plane: controller-manager
+  name: peerpodctrl-controller-manager
+  namespace: sbx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        control-plane: controller-manager
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - amd64
+                - arm64
+                - ppc64le
+                - s390x
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+      containers:
+      - name: kube-rbac-proxy
+        image: registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.0@sha256:e2670fb55b3211fb101f17afa3d81ba816d7c0b76ed31bd3d93fa2affb491595
+        args:
+        - --secure-listen-address=0.0.0.0:8443
+        - --upstream=http://127.0.0.1:8080/
+        - --logtostderr=true
+        - --v=0
+        ports:
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 5m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+      - name: manager
+        command:
+        - /manager
+        args:
+        - --health-probe-bind-address=:8081
+        - --metrics-bind-address=127.0.0.1:8080
+        - --leader-elect
+        image: quay.io/confidential-containers/peerpod-ctrl:61b1aba91df646a663e60ab6b55c6a7dc93cd167@sha256:88e2b55b05de646579ced2fe7e4ec7d603d90d3b99cc80526edc7671d4761e62
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: PEERPODS_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        envFrom:
+        - secretRef:
+            name: peer-pods-secret
+            optional: true
+        - configMapRef:
+            name: peer-pods-cm
+            optional: true
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 500m
+            memory: 128Mi
+          requests:
+            cpu: 10m
+            memory: 64Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+        volumeMounts:
+        - mountPath: /root/.ssh/
+          name: ssh
+          readOnly: true
+      securityContext:
+        runAsNonRoot: false
+      serviceAccountName: peerpodctrl-controller-manager
+      terminationGracePeriodSeconds: 10
+      volumes:
+      - name: ssh
+        secret:
+          defaultMode: 384
+          optional: true
+          secretName: ssh-key-secret
+---
+# Source: peerpods/charts/resourceCtrl/templates/rbac.yaml
+# AUTO-GENERATED by controller-gen. DO NOT EDIT.
+---
+# Source: peerpods/templates/secrets.yaml
+# This template creates K8s Secrets when secrets.mode is "create".
+# For production, use secrets.mode: "reference" to reference pre-existing secrets
+# managed externally (kubectl, Vault, External Secrets Operator, etc.).
+
+# TODO: Provider-specific secrets like this libvirt SSH key should ideally be in
+# separate files to avoid bloat. See daemonset.yaml for the same concern.
+#
+# ssh-key-secret (libvirt and byom):
+# SSH keys for CAA to connect via SSH.
+# - libvirt: private key (id_rsa) to connect to the hypervisor via qemu+ssh://
+#            This is NOT for connecting to the pod VM. Mounted to /root/.ssh/, consumed by
+#            libvirt C library (not Go code).
+# - byom: private and public keys (id_rsa, id_rsa.pub) to connect to pre-created VMs
+#         Mounted to /root/.ssh/ in the CAA container.
+# peer-pods-secret (all providers):
+# Cloud provider credentials (e.g., AZURE_CLIENT_ID, AWS_ACCESS_KEY_ID).
+# Injected as environment variables into the CAA container.

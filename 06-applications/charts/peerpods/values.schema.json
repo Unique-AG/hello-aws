@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "peerpods values",
+  "type": "object",
+  "properties": {
+    "provider": { "type": "string", "enum": ["aws", "azure", "gcp", "ibmcloud", "vsphere", "libvirt", "docker"] },
+    "providerConfigs": {
+      "type": "object",
+      "properties": {
+        "aws": {
+          "type": "object",
+          "properties": {
+            "AWS_REGION":    { "$ref": "#/definitions/region" },
+            "AWS_SUBNET_ID": { "$ref": "#/definitions/subnetId" },
+            "AWS_SG_IDS":    { "$ref": "#/definitions/sgIds" },
+            "PODVM_AMI_ID":  { "$ref": "#/definitions/amiId" },
+            "PODVM_INSTANCE_TYPE": { "$ref": "#/definitions/instanceType" },
+            "PEERPODS_LIMIT_PER_NODE": { "$ref": "#/definitions/positiveIntString" },
+            "DISABLECVM": { "type": "string", "enum": ["true", "false"] }
+          },
+          "required": ["PODVM_AMI_ID"]
+        }
+      }
+    }
+  },
+  "definitions": {
+    "region": {
+      "type": "string",
+      "oneOf": [
+        { "const": "<AWS_REGION>" },
+        { "pattern": "^[a-z]{2}(-gov)?-[a-z]+-[0-9]$" }
+      ]
+    },
+    "subnetId": {
+      "type": "string",
+      "oneOf": [
+        { "const": "<SANDBOX_SUBNET_ID>" },
+        { "pattern": "^subnet-[0-9a-f]{8}([0-9a-f]{9})?$" }
+      ]
+    },
+    "sgIds": {
+      "type": "string",
+      "oneOf": [
+        { "const": "<PEER_PODS_SECURITY_GROUP_ID>" },
+        { "pattern": "^sg-[0-9a-f]{8}([0-9a-f]{9})?(,sg-[0-9a-f]{8}([0-9a-f]{9})?)*$" }
+      ]
+    },
+    "amiId": {
+      "type": "string",
+      "oneOf": [
+        { "const": "<PODVM_AMI_ID>" },
+        { "pattern": "^ami-[0-9a-f]{8}([0-9a-f]{9})?$" }
+      ]
+    },
+    "instanceType": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*\\.[a-z0-9]+$"
+    },
+    "positiveIntString": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*$"
+    }
+  }
+}
