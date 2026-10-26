@@ -1,0 +1,21 @@
+# The managed-isolation sandbox template: pods run on Fargate, each in its own
+# AWS-managed Firecracker microVM. Inert until a claim asks for this template by
+# name, so it can coexist with the peer-pods one.
+spec:
+  name: sbx-templates-fargate
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: uniquecr.azurecr.io
+      chart: helm/sbx-templates
+      targetRevision: "2026.40.4"
+      helm:
+        releaseName: sbx-templates-fargate
+        skipSchemaValidation: true
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/sbx-templates.yaml
+          - $values/06-applications/sbx/value-overlays/conduct/sbx-templates-fargate.yaml
+        valuesObject:
+          image:
+            tag: "2026.40.4"
