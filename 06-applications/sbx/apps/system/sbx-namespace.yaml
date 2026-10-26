@@ -17,11 +17,12 @@ spec:
                 name: sbx
                 labels:
                   kubernetes.io/metadata.name: sbx
-            # kata-vm-isolation resolves to runc for now, so sandboxes are
-            # ordinary containers confined by NetworkPolicy, not a VM boundary.
-            # Repoint the handler once cloud-api-adaptor peer-pods are in place.
+            # Routes to the kata-remote shim that kata-deploy registers, so a
+            # sandbox gets its own VM. Never point this at runc: the name would
+            # assert a boundary the handler does not provide, and that is the one
+            # misconfiguration that looks like success.
             - apiVersion: node.k8s.io/v1
               kind: RuntimeClass
               metadata:
                 name: kata-vm-isolation
-              handler: runc
+              handler: kata-remote
