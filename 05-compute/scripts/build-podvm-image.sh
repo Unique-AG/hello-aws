@@ -133,7 +133,10 @@ SRC_DIR="${OUT_DIR}/cloud-api-adaptor"
 if [[ -d "$SRC_DIR/.git" ]]; then
   info "Reusing ${SRC_DIR}"
   git -C "$SRC_DIR" fetch --depth 1 origin "$CAA_REF" --quiet
-  git -C "$SRC_DIR" checkout --quiet FETCH_HEAD
+  # reset+clean, not checkout: an earlier --go-mod-bump edits tracked files, and
+  # checkout keeps them when the ref is unchanged, so the next build inherits them.
+  git -C "$SRC_DIR" reset --hard --quiet FETCH_HEAD
+  git -C "$SRC_DIR" clean -qfdx
 else
   info "Cloning ${CAA_REF}"
   git clone --depth 1 --branch "$CAA_REF" --quiet "$CAA_REPO" "$SRC_DIR"
@@ -150,13 +153,18 @@ PODVM_DIR="${SRC_DIR}/src/cloud-api-adaptor/podvm"
 #######################################
 
 # Applied in a container of the same Go toolchain, so the host needs no Go and
-# the resolver behaves as the build's will. Recorded in the provenance file:
-# this is the one place the source stops being upstream's exactly.
+# Recorded in the provenance file: the one place the source stops being
+# upstream's exactly.
 if ((${#GO_MOD_BUMPS[@]})); then
   # Mount all of src/, not just cloud-api-adaptor: its go.mod replaces sibling
   # modules with ../ paths, which do not resolve from a narrower mount.
   CAA_SRC="${SRC_DIR}/src"
   GO_IMAGE="golang:${GO_VERSION:-$(yq -e '.tools.golang' "${CAA_SRC}/cloud-api-adaptor/versions.yaml")}"
+  # Tags are mutable, so resolve once and run the digest for every step below.
+  docker pull --quiet "$GO_IMAGE" >/dev/null || error "Could not pull ${GO_IMAGE}"
+  GO_IMAGE=$(docker image inspect "$GO_IMAGE" --format '{{index .RepoDigests 0}}') \
+    || error "Could not resolve a digest for ${GO_IMAGE}"
+  info "Go toolchain ${GO_IMAGE}"
   for bump in "${GO_MOD_BUMPS[@]}"; do
     [[ "$bump" == *@* ]] || error "--go-mod-bump expects module@version, got '${bump}'"
     info "Raising ${bump}"
@@ -213,6 +221,7 @@ verify_provenance=${VERIFY_PROVENANCE}
 tee_platform=none
 go_version=${GO_VERSION:-$(yq -e '.tools.golang' "${SRC_DIR}/src/cloud-api-adaptor/versions.yaml")}
 go_mod_bumps=${GO_MOD_BUMPS[*]:-none}
+go_image=${GO_IMAGE:-none}
 sha256=${SHA}
 built_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 PROV
