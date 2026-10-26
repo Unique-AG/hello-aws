@@ -1,0 +1,23 @@
+# Managed-isolation variant: the same sandbox on EKS Fargate instead of peer pods.
+# Layered over sbx-templates.yaml, so only the differences appear here.
+sandboxTemplate:
+  # A distinct name so both templates can exist in one cluster; a claim selects
+  # which boundary it gets by asking for one or the other.
+  name: unique-polyagent-001-fargate
+
+  # MUST be "" and not null. The chart defaults this to kata-vm-isolation, which
+  # on Fargate gets the pod rejected: no such RuntimeClass exists there. Isolation
+  # is unconditional on Fargate, so nothing needs to request it.
+  runtimeClassName: ""
+
+  # No kata node pool to tolerate; placement is by Fargate profile.
+  tolerations: []
+
+  # What the Fargate profile and the SecurityGroupPolicy both select on.
+  podLabels:
+    app.kubernetes.io/name: sandbox-runtime
+
+  # NetworkPolicy is enforced by the VPC CNI, which does not govern Fargate pods,
+  # so the chart's policies would be silently inert. The per-pod security group is
+  # the L4 control and the sbx-gateway remains the L7 one.
+  networkPolicyManagement: Unmanaged
