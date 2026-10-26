@@ -14,6 +14,7 @@
 
 # Terraform plan files (binary, may contain sensitive data)
 **/tfplan*
+**/*.tfplan
 
 # Crash log files
 crash.log
