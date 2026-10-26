@@ -1,0 +1,11 @@
+# Raw manifests that have no chart of their own. Currently the SecurityGroupPolicy
+# that attaches the Fargate sandbox security group to sandbox pods.
+spec:
+  name: conduct-foundation
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: <GITHUB_REPO_URL>
+      targetRevision: <GIT_TARGET_REVISION>
+      path: 06-applications/sbx/conduct-manifests
