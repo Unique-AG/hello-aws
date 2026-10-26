@@ -122,4 +122,18 @@ for tgz in "$CHARTS_DIR"/peerpods/charts/*.tgz; do
   rm -rf "$work"
 done
 
+# A RuntimeClass named for a VM boundary must never resolve to runc: the name
+# would assert isolation the handler does not provide, and nothing would error.
+rc_files=$(grep -rlE 'kind:\s*RuntimeClass' "$BASE_DIR" --include='*.yaml' 2>/dev/null || true)
+rc_bad=0
+while IFS= read -r f; do
+  [[ -n "$f" && -e "$f" ]] || continue
+  if grep -qE '^\s*handler:\s*runc\s*$' "$f"; then
+    echo "FAIL: ${f#"$BASE_DIR"/} declares a RuntimeClass with handler runc"
+    rc_bad=1
+    FAILED=1
+  fi
+done <<< "$rc_files"
+(( rc_bad )) || [[ -z "$rc_files" ]] || echo "ok:     no RuntimeClass resolves to runc"
+
 exit $FAILED
