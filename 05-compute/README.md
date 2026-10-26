@@ -102,7 +102,7 @@ This is acceptable for `sbx`, where the value is verifying that the peer-pods pa
 # terraform apply: the layer needs both tfvars files, and neither is auto-loaded.
 TF_VAR_enable_podvm_image_import=true ./scripts/deploy.sh compute sbx
 # --skip-scan: trivy vm cannot read this image's squashfs root (see below).
-./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.22.0-x86_64.raw" --skip-scan
+./05-compute/scripts/import-podvm-ami.sh --image "$TMPDIR/podvm-build/podvm-v0.23.0-x86_64.raw" --skip-scan
 ./scripts/deploy.sh compute sbx
 ```
 
