@@ -137,13 +137,14 @@ resource "aws_lb_target_group" "ingress_nlb" {
   }
 }
 
-# Look up Ingress NLB network interfaces to get private IPs
-# NLBs create one ENI per subnet/AZ — filter by deterministic NLB name
-# Uses naming module output (known at plan time) instead of resource attribute
-# On first apply (NLB not yet created): returns empty → no target registrations
-# On second apply (NLB exists): finds ENIs → registers targets
-data "aws_network_interfaces" "ingress_nlb" {
-  count = var.enable_ingress_nlb ? 1 : 0
+# The Ingress NLB has one ENI per private subnet. Counting subnets keeps the count
+# known at plan time; each ENI's IP is read once the NLB exists.
+locals {
+  ingress_nlb_eni_count = var.enable_ingress_nlb ? length(aws_subnet.private) : 0
+}
+
+data "aws_network_interface" "ingress_nlb" {
+  count = local.ingress_nlb_eni_count
 
   filter {
     name   = "description"
@@ -151,21 +152,15 @@ data "aws_network_interfaces" "ingress_nlb" {
   }
 
   filter {
-    name   = "vpc-id"
-    values = [aws_vpc.main.id]
+    name   = "subnet-id"
+    values = [aws_subnet.private[count.index].id]
   }
 
-  # Read ENIs only after the NLB exists, so its interfaces can be discovered.
   depends_on = [aws_lb.ingress_nlb]
 }
 
-data "aws_network_interface" "ingress_nlb" {
-  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
-  id    = data.aws_network_interfaces.ingress_nlb[0].ids[count.index]
-}
-
 resource "aws_lb_target_group_attachment" "ingress_nlb" {
-  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
+  count = local.ingress_nlb_eni_count
 
   target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
   target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
@@ -339,7 +334,7 @@ resource "aws_lb_target_group" "websocket_ingress" {
 
 # Register Ingress NLB IPs as targets for WebSocket ALB
 resource "aws_lb_target_group_attachment" "websocket_ingress" {
-  count = var.enable_ingress_nlb ? length(try(data.aws_network_interfaces.ingress_nlb[0].ids, [])) : 0
+  count = local.ingress_nlb_eni_count
 
   target_group_arn = aws_lb_target_group.websocket_ingress[0].arn
   target_id        = data.aws_network_interface.ingress_nlb[count.index].private_ip
