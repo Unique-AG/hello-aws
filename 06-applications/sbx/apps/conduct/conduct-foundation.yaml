@@ -1,5 +1,5 @@
-# Raw manifests that have no chart of their own. Currently the SecurityGroupPolicy
-# that attaches the Fargate sandbox security group to sandbox pods.
+# Raw manifests with no chart of their own: the Fargate sandbox SecurityGroupPolicy
+# and the admission policy that keeps Fargate sandboxes on Fargate.
 spec:
   name: conduct-foundation
   autoSync: false

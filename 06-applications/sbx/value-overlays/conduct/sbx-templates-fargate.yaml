@@ -13,9 +13,10 @@ sandboxTemplate:
   # No kata node pool to tolerate; placement is by Fargate profile.
   tolerations: []
 
-  # What the Fargate profile and the SecurityGroupPolicy both select on.
+  # Overrides the chart default, which every template shares; the Fargate profile,
+  # SecurityGroupPolicy and placement policy select on this value.
   podLabels:
-    app.kubernetes.io/name: sandbox-runtime
+    unique.app/sandbox-template: unique-polyagent-001-fargate
 
   # NetworkPolicy is enforced by the VPC CNI, which does not govern Fargate pods,
   # so the chart's policies would be silently inert. The per-pod security group is

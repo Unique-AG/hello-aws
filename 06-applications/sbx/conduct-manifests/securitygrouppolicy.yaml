@@ -1,10 +1,4 @@
-# Pins sandbox pods to the Fargate sandbox security group created in 05-compute
-# (aws_security_group.fargate_sandbox, output fargate_sandbox_security_group_id).
-# Under the VPC CNI strict pod-SG mode a matched pod carries only this SG, so its
-# rules are the L4 floor that replaces NetworkPolicy, which does not apply on Fargate.
-#
-# Selects nothing until a sandbox template sets the matching label; the Fargate
-# profile in 05-compute selects on the same label.
+# Gives Fargate sandbox pods the 05-compute sandbox security group, their L4 control.
 apiVersion: vpcresources.k8s.aws/v1beta1
 kind: SecurityGroupPolicy
 metadata:
@@ -13,7 +7,7 @@ metadata:
 spec:
   podSelector:
     matchLabels:
-      app.kubernetes.io/name: sandbox-runtime
+      unique.app/sandbox-template: unique-polyagent-001-fargate
   securityGroups:
     groupIds:
       - <FARGATE_SANDBOX_SECURITY_GROUP_ID>
