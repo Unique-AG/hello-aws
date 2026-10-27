@@ -134,14 +134,12 @@ if [[ -z "$ACR_SECRET_ARN" || "$ACR_SECRET_ARN" == "null" ]]; then
   exit 1
 fi
 
-# JSON with "username" and "password" -- the shape ECR expects for a
-# pull-through cache credential (see 05-compute/terraform/ecr.tf).
-# Built with jq so credentials containing quotes or backslashes are escaped.
-ACR_SECRET_JSON=$(jq -n --arg u "$ACR_USERNAME" --arg p "$ACR_PASSWORD" '{username: $u, password: $p}')
-
+# ECR pull-through cache expects {"username", "accessToken"}; jq escapes the values,
+# and stdin keeps them out of the process list.
+jq -n --arg u "$ACR_USERNAME" --arg t "$ACR_PASSWORD" '{username: $u, accessToken: $t}' |
 aws secretsmanager put-secret-value \
   --secret-id "$ACR_SECRET_ARN" \
-  --secret-string "$ACR_SECRET_JSON" \
+  --secret-string file:///dev/stdin \
   --region "$AWS_REGION" \
   --output text --query 'VersionId' >/dev/null
 
