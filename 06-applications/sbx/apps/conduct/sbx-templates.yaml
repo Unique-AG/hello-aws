@@ -11,7 +11,7 @@ spec:
   sources:
     - repoURL: uniquecr.azurecr.io
       chart: helm/sbx-templates
-      targetRevision: "2026.40.4"
+      targetRevision: "2026.42.10"
       helm:
         releaseName: sbx-templates
         skipSchemaValidation: true
@@ -19,4 +19,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/conduct/sbx-templates.yaml
         valuesObject:
           image:
-            tag: "2026.40.4"
+            tag: "2026.42.10"

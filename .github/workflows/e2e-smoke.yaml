@@ -14,8 +14,10 @@ concurrency:
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 5 * * 1-5"   # 07:00 CEST (05:00 UTC), Mon–Fri
+  # Schedule paused: the sbx compute and data layers were destroyed, so every
+  # run fails against an environment that no longer exists. Restore on redeploy.
+  # schedule:
+  #   - cron: "0 5 * * 1-5"   # 07:00 CEST (05:00 UTC), Mon–Fri
 
 jobs:
   smoke:

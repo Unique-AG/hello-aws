@@ -1,0 +1,11 @@
+# Raw manifests with no chart of their own: the Fargate sandbox SecurityGroupPolicy
+# and the admission policy that keeps Fargate sandboxes on Fargate.
+spec:
+  name: conduct-foundation
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: https://github.com/unique-ag/hello-aws
+      targetRevision: deploy/sbx
+      path: 06-applications/sbx/conduct-manifests
