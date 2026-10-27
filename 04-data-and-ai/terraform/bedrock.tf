@@ -90,6 +90,17 @@ resource "aws_bedrock_model_invocation_logging_configuration" "main" {
   ]
 }
 
+locals {
+  # Bedrock's cross-region profile prefixes follow the region's geography; others fall back to global.
+  bedrock_geo_prefix = coalesce(var.bedrock_geo_prefix, lookup({ us = "us", eu = "eu", ap = "apac" }, split("-", var.aws_region)[0], "global"))
+
+  bedrock_profile_sources = {
+    for k, v in var.bedrock_inference_profiles : k => (
+      v.source_type == "inference-profile" ? "${coalesce(v.geo, local.bedrock_geo_prefix)}.${v.model_id}" : v.model_id
+    )
+  }
+}
+
 # Application Inference Profiles
 # Wrap system cross-region inference profiles for per-model cost tracking and CloudWatch metrics
 # LiteLLM and workloads can invoke these via the account-scoped ARN
@@ -99,12 +110,12 @@ resource "aws_bedrock_inference_profile" "model" {
   name = "${module.naming.id}-${each.key}"
 
   model_source {
-    copy_from = "arn:aws:bedrock:${var.aws_region}::${each.value.source_type}/${each.value.model_id}"
+    copy_from = "arn:aws:bedrock:${var.aws_region}::${each.value.source_type}/${local.bedrock_profile_sources[each.key]}"
   }
 
   tags = {
     Name  = "${module.naming.id}-${each.key}"
-    Model = each.value.model_id
+    Model = local.bedrock_profile_sources[each.key]
   }
 }
 

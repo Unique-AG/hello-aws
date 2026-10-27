@@ -45,7 +45,8 @@ aws:
     url: <REDIS_URL>                               # e.g. rediss://master.<cluster>.cache.amazonaws.com:6380/0
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"  # Application inference profile ID for Cohere Embed v4
-    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"                       # AWS region for MiniMax invocation (not in eu-central-2; e.g. eu-central-1)
+    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"                       # A region serving MiniMax natively (no cross-region profile); the deployment region if it does
+    geoPrefix: "<BEDROCK_GEO_PREFIX>"                               # Cross-region inference profile prefix: us, eu or apac (terraform output -raw bedrock_geo_prefix, data-and-ai layer)
   prometheus:
     workspaceId: "<AMP_WORKSPACE_ID>"                              # terraform output -raw prometheus_workspace_id (data-and-ai layer)
     remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"                       # terraform output -raw prometheus_workspace_endpoint (data-and-ai layer) + "api/v1/remote_write"

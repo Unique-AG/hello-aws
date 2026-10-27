@@ -30,9 +30,14 @@ mitmCa:
   secretName: egress-mitm-ca
   validityDays: 3650
 
+# The generic charts name these backend-service-<name>, on port 80; the defaults are node-*.
 internalServices:
   dependencies:
     chat:
+      name: backend-service-chat
       namespace: unique
+      servicePort: 80
     ingestion:
+      name: backend-service-ingestion
       namespace: unique
+      servicePort: 80

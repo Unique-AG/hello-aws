@@ -101,6 +101,9 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "budgets:*", "acm:*", "route53:*", "ram:*",
       "cloudfront:*", "bedrock:*", "aps:*", "grafana:*",
       "codebuild:*", "events:*", "ssm:*",
+      # ECR enhanced scanning (05-compute) turns Amazon Inspector on and off for ECR.
+      "inspector2:Enable", "inspector2:Disable", "inspector2:BatchGetAccountStatus",
+      "inspector2:ListAccountPermissions",
     ]
     resources = ["*"]
   }
