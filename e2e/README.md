@@ -62,12 +62,13 @@ key is exported too — add `SLACK_WEBHOOK_URL` to enable the failure alert.
 Create or rotate it from a populated `e2e/.env` with:
 
 ```bash
-aws secretsmanager create-secret --region eu-central-2 \
+aws secretsmanager create-secret --region "$AWS_REGION" \
   --name manual-e2e-aws-credentials --secret-string file://creds.json
 # later rotations: put-secret-value --secret-id manual-e2e-aws-credentials
 ```
 
-A fork points `AWS_ROLE_ARN` at its own OIDC role and creates the same secret in
+A fork points `AWS_ROLE_ARN` at its own OIDC role, sets the `AWS_REGION` repository
+variable when it deploys outside `eu-central-2`, and creates the same secret in
 its own account. The role already carries `secretsmanager:*` via the bootstrap
 deploy policy, so no extra IAM is needed.
 

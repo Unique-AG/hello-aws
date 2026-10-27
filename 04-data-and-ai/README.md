@@ -48,49 +48,28 @@ Application inference profiles wrap system-defined profiles or foundation models
 
 #### Profile Types
 
-There are three categories of source model, determined by the `source_type` field:
+There are two categories of source model, determined by the `source_type` field:
 
-- **`inference-profile`** (EU cross-region): Wraps a system-defined `eu.*` cross-region inference profile. Requests are routed across EU regions for availability and capacity. Data stays within EU but may leave Switzerland.
-- **`inference-profile`** (Global): Wraps a system-defined `global.*` inference profile. Used for models that don't have `eu.*` profiles (e.g., Cohere Embed v4). Requests may be routed globally.
-- **`foundation-model`** (Swiss-local): Wraps a foundation model natively deployed in `eu-central-2` (Zurich). Data stays in Switzerland. Use these when Swiss data residency is required.
+- **`inference-profile`** (default): wraps the system-defined cross-region profile `<geo>.<model_id>`. The geography follows the region (`us` for `us-*`, `eu` for `eu-*`, `apac` for `ap-*`, otherwise `global`), or `bedrock_geo_prefix`; an entry's `geo` overrides both. Requests stay within that geography. The prefix in use is the `bedrock_geo_prefix` output, which `instance-config.yaml` takes as `aws.bedrock.geoPrefix`.
+- **`foundation-model`**: wraps a model served natively in the deployment region; requests stay in the region.
 
-#### Model Availability in eu-central-2 (Zurich)
-
-Foundation models natively available (Swiss data residency):
-
-| Model ID | Provider | Type |
-|---|---|---|
-| `anthropic.claude-sonnet-4-5-20250929-v1:0` | Anthropic | Text |
-| `anthropic.claude-opus-4-5-20251101-v1:0` | Anthropic | Text |
-| `anthropic.claude-opus-4-6-v1` | Anthropic | Text |
-| `anthropic.claude-haiku-4-5-20251001-v1:0` | Anthropic | Text |
-| `anthropic.claude-3-haiku-20240307-v1:0` | Anthropic | Text |
-| `cohere.embed-v4:0` | Cohere | Embedding |
-| `amazon.titan-embed-text-v2:0` | Amazon | Embedding |
-
-Cross-region inference profiles available from eu-central-2:
-
-| Profile ID | Scope | Name |
-|---|---|---|
-| `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` | EU | EU Claude Sonnet 4.5 |
-| `eu.anthropic.claude-opus-4-5-20251101-v1:0` | EU | EU Claude Opus 4.5 |
-| `eu.anthropic.claude-opus-4-6-v1` | EU | EU Claude Opus 4.6 |
-| `eu.anthropic.claude-haiku-4-5-20251001-v1:0` | EU | EU Claude Haiku 4.5 |
-| `global.cohere.embed-v4:0` | Global | Cohere Embed v4 |
-
-> **Note**: Claude 3.5 Sonnet and Claude 3 Haiku do not have `eu.*` cross-region profiles in eu-central-2. They are only available as Swiss-local foundation models. Cohere Embed v4 requires a `global.*` inference profile for on-demand invocation — it cannot be called directly as a foundation model.
+Newer models are offered only through cross-region profiles. Check what a region offers with `aws bedrock list-inference-profiles --type-equals SYSTEM_DEFINED` and `aws bedrock list-foundation-models`.
 
 #### Default Application Inference Profiles
 
-| Profile Key | Source Model | Source Type | Data Residency |
-|---|---|---|---|
-| `claude-sonnet-4-5` | `eu.anthropic.claude-sonnet-4-5-20250929-v1:0` | EU cross-region | EU |
-| `claude-opus-4-5` | `eu.anthropic.claude-opus-4-5-20251101-v1:0` | EU cross-region | EU |
-| `claude-opus-4-6` | `eu.anthropic.claude-opus-4-6-v1` | EU cross-region | EU |
-| `claude-haiku-4-5` | `eu.anthropic.claude-haiku-4-5-20251001-v1:0` | EU cross-region | EU |
-| `claude-3-haiku` | `anthropic.claude-3-haiku-20240307-v1:0` | Swiss-local | Switzerland |
-| `titan-embed-text-v2` | `amazon.titan-embed-text-v2:0` | Swiss-local | Switzerland |
-| `cohere-embed-v4` | `global.cohere.embed-v4:0` | Global | Global |
+| Profile Key | Source Model (`<geo>` = region's prefix) | Source Type |
+|---|---|---|
+| `claude-opus-5-5` | `<geo>.anthropic.claude-opus-5-5` | cross-region |
+| `claude-opus-5` | `<geo>.anthropic.claude-opus-5` | cross-region |
+| `claude-opus-4-8` | `<geo>.anthropic.claude-opus-4-8` | cross-region |
+| `claude-sonnet-5-5` | `<geo>.anthropic.claude-sonnet-5-5` | cross-region |
+| `claude-sonnet-5` | `<geo>.anthropic.claude-sonnet-5` | cross-region |
+| `claude-sonnet-4-6` | `<geo>.anthropic.claude-sonnet-4-6` | cross-region |
+| `claude-haiku-5-5` | `<geo>.anthropic.claude-haiku-5-5` | cross-region |
+| `cohere-embed-v4` | `<geo>.cohere.embed-v4:0` | cross-region |
+| `titan-embed-text-v2` | `amazon.titan-embed-text-v2:0` | in-region |
+
+Anthropic models need their Bedrock Marketplace agreement accepted once per account; `06-applications/scripts/configure-instance.sh` accepts it for the models LiteLLM serves.
 
 Profiles are created as `aws_bedrock_inference_profile` resources with the naming convention `{naming-id}-{profile-key}`. Each profile is tagged with `Model = {source-model-id}` for cost allocation. Override the `bedrock_inference_profiles` variable to add, remove, or change profiles per environment.
 
@@ -167,7 +146,7 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 
 ### Bedrock
 
-- **Application Inference Profiles**: 8 profiles (4 EU cross-region Anthropic + 3 Swiss-local foundation models + 1 global embedding)
+- **Application Inference Profiles**: 9 profiles (8 cross-region for the region's geography: 7 Anthropic Claude + Cohere Embed v4; 1 in-region Titan embedding)
 - **Logging Configuration**: Account-level, CloudWatch Logs destination, text delivery enabled
 - **IAM Role**: `bedrock.amazonaws.com` service principal with confused deputy conditions
 - **CloudWatch Log Group**: Encrypted with CloudWatch Logs KMS key

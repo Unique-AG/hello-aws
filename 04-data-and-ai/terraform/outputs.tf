@@ -194,3 +194,8 @@ output "bedrock_inference_profile_arns" {
   description = "Map of application inference profile names to their ARNs"
   value       = { for k, v in aws_bedrock_inference_profile.model : k => v.arn }
 }
+
+output "bedrock_geo_prefix" {
+  description = "Prefix of the system cross-region inference profiles in use (us, eu, apac or global)"
+  value       = local.bedrock_geo_prefix
+}

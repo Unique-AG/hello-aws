@@ -1,5 +1,5 @@
 # Broader smoke: one check per area (browser + API). Self-contained — tests live in
-# ./e2e. A fork sets AWS_ROLE_ARN and creates its own credentials secret.
+# ./e2e. A fork sets AWS_ROLE_ARN (and AWS_REGION) and creates its own credentials secret.
 name: "e2e · AWS Smoke"
 
 permissions:
@@ -30,7 +30,8 @@ jobs:
     env:
       CI: "true"
       TEST_ENV: AWS
-      AWS_REGION: eu-central-2
+      # The AWS_REGION repository variable; unset keeps the Terraform default.
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
       E2E_SECRET_ID: manual-e2e-aws-credentials
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

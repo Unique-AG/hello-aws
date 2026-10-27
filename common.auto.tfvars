@@ -11,7 +11,7 @@
 #######################################
 
 # AWS Configuration (common across all layers)
-aws_region     = "eu-central-2"
+aws_region     = "us-east-1"
 aws_account_id = null # Will be auto-detected, set explicitly for deterministic naming in CI/CD
 
 # Organization configuration (common across all layers)
