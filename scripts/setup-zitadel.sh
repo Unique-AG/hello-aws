@@ -81,7 +81,7 @@ PROJECT_NAME="unique"
 APP_NAME="unique-app"
 
 # Read AWS region
-AWS_REGION=$(aws configure get region 2>/dev/null || echo "eu-central-2")
+AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo "eu-central-2")}}"
 
 info "Environment: ${ENV}"
 info "Zitadel host: ${ZITADEL_HOST}"
