@@ -85,3 +85,11 @@ ecr_pull_through_cache_upstream_registries = [
   "registry.k8s.io",
 ]
 
+
+# Fargate sandbox isolation, alongside peer pods; aws.sandbox.templateName picks which one runs.
+fargate_profiles = {
+  sandbox = {
+    namespace = "sbx"
+    labels    = { "unique.app/sandbox-template" = "unique-polyagent-001-fargate" }
+  }
+}

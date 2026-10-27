@@ -1,0 +1,32 @@
+# Refuses a Fargate sandbox pod that no Fargate profile matched, instead of letting
+# it run on an EC2 node; EKS sets this scheduler only on profile-matched pods.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: sbx-fargate-sandbox-placement
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE"]
+        resources: ["pods"]
+  validations:
+    - expression: "object.spec.schedulerName == 'fargate-scheduler'"
+      message: "No Fargate profile matches this Fargate sandbox pod; see fargate_profiles in 05-compute."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: sbx-fargate-sandbox-placement
+spec:
+  policyName: sbx-fargate-sandbox-placement
+  validationActions: [Deny]
+  matchResources:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: sbx
+    objectSelector:
+      matchLabels:
+        unique.app/sandbox-template: unique-polyagent-001-fargate

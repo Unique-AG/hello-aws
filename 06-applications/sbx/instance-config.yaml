@@ -48,6 +48,8 @@ aws:
     subnetId: subnet-0077a59d31fe5e775
     securityGroupId: sg-0be1640509df0d481
     podvmAmiId: ami-073b44d7aa320d2fd
+    fargateSecurityGroupId: <FARGATE_SANDBOX_SECURITY_GROUP_ID>  # set after 05 applies: terraform output -raw fargate_sandbox_security_group_id
+    templateName: unique-polyagent-001
   efs:
     doclingModelsId: fs-070ce1b868e568369
 zitadel:

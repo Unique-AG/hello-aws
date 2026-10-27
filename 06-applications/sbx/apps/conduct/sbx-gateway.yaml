@@ -3,10 +3,21 @@
 spec:
   name: sbx-gateway
   autoSync: false
+  # Argo CD cannot run the chart's helm lookup, so it would mint a new MITM CA on
+  # every render; keep the one in the cluster.
+  syncOptions:
+    - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    - group: ""
+      kind: Secret
+      name: egress-mitm-ca
+      jsonPointers:
+        - /data/tls.crt
+        - /data/tls.key
   sources:
     - repoURL: uniquecr.azurecr.io
       chart: helm/sbx-gateway
-      targetRevision: "2026.40.4"
+      targetRevision: "2026.42.10"
       helm:
         releaseName: sbx-gateway
         skipSchemaValidation: true
@@ -14,4 +25,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/conduct/sbx-gateway.yaml
         valuesObject:
           image:
-            tag: "2026.40.4"
+            tag: "2026.42.10"
