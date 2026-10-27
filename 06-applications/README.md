@@ -198,8 +198,8 @@ The workaround uses `model` for provider mapping and `model_id` for the Bedrock 
     aws_region_name: <AWS_REGION>
 ```
 
-The application inference profile wraps the `global.cohere.embed-v4:0` system profile and
-is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
+The application inference profile wraps the region's `<geo>.cohere.embed-v4:0` system profile
+(see `bedrock_geo_prefix`) and is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
 and must be set per deployment.
 
 **Key settings:**
