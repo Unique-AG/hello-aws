@@ -28,7 +28,7 @@ AWS Budgets provides proactive cost management:
 - **Monthly Budgets**: Track spending against monthly limits
 - **Multi-Threshold Alerts**: Notifications at 80% and 100% of budget
 - **Forecast Alerts**: Early warning when spending is projected to exceed budget
-- **Email Notifications**: Direct alerts to stakeholders
+- **Email Notifications**: Direct alerts to stakeholders; without `budget_contact_emails` the budget tracks spend but sends none
 
 ### Config Rules (Optional)
 
@@ -44,7 +44,7 @@ Account-specific Config rules can be enabled when AWS Config is enabled at the o
 
 - **Monthly Cost Budget**: Tracks monthly spending
   - Configurable budget amount per environment
-  - Email notifications at 80% and 100% thresholds
+  - Email notifications at 80% (actual) and 100% (forecast), when `budget_contact_emails` is set
   - Forecast-based alerts for proactive management
 
 ### AWS Config Rules (Optional)
