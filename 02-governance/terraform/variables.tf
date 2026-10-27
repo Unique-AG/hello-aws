@@ -73,7 +73,7 @@ variable "budget_currency" {
 }
 
 variable "budget_contact_emails" {
-  description = "List of email addresses for budget notifications"
+  description = "Email addresses for budget notifications. Empty: no notifications."
   type        = list(string)
   default     = []
 }
