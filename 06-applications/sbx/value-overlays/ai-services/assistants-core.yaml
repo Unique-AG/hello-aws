@@ -36,3 +36,20 @@ nodeSelector: null
 
 extraEnvSecrets:
   - assistants-core-secrets
+
+# Turns Conduct on: assistants-core claims a sandbox per agent run.
+sandboxConfig:
+  enabled: true
+  namespace: sbx
+  # The boundary: unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate).
+  template: <SANDBOX_TEMPLATE_NAME>
+  router:
+    host:
+      fromKubernetesService:
+        name: agent-sandbox-controller-router-svc
+        namespace: unique
+        podPort: 8080
+        podSelectorLabels:
+          k8s:app.kubernetes.io/name: agent-sandbox-controller
+          k8s:app.kubernetes.io/component: router
+    port: 8080

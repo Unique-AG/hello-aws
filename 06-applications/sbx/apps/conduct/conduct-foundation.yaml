@@ -1,0 +1,11 @@
+# Raw manifests with no chart of their own: the Fargate sandbox SecurityGroupPolicy
+# and the admission policy that keeps Fargate sandboxes on Fargate.
+spec:
+  name: conduct-foundation
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: <GITHUB_REPO_URL>
+      targetRevision: <GIT_TARGET_REVISION>
+      path: 06-applications/sbx/conduct-manifests

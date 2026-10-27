@@ -126,6 +126,28 @@ Scan it this way instead, which does work: attach the image (a volume from its s
 
 **Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it, naming the raw after the qcow2's digest so a leftover conversion of a different image cannot be reused. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
 
+### Fargate Sandbox Isolation
+
+The alternative to peer pods: each Conduct sandbox pod runs in its own AWS-managed Firecracker microVM on EKS Fargate, with no node pool to operate. `var.fargate_profiles` turns it on; an empty map (the default) creates only the sandbox security group, unattached, so the layer-06 SecurityGroupPolicy always has an ID to reference. Only the sandbox pods belong there. `sbx-gateway` and the agent-sandbox controller share or serve the `sbx` namespace but stay on the EC2 node groups, so a profile must select by label, never by namespace alone (a validation enforces non-empty labels):
+
+```hcl
+fargate_profiles = {
+  sandbox = {
+    namespace = "sbx"
+    labels    = { "unique.app/sandbox-template" = "unique-polyagent-001-fargate" }
+  }
+}
+```
+
+That label is set only by the Fargate sandbox template, overriding the chart default that every template shares. Then set `aws.sandbox.templateName` to `unique-polyagent-001-fargate` in `instance-config.yaml`.
+
+Network controls differ from the EC2 node groups:
+
+- **No Kubernetes NetworkPolicy.** The VPC CNI does not govern Fargate pods, so policies would be inert. The `fargate_sandbox` security group is the L4 control instead, attached per pod by the SecurityGroupPolicy in `06-applications/sbx/conduct-manifests/`. It allows egress to `sbx-gateway`, DNS, in-VPC HTTPS and the S3 gateway endpoint (ECR image layers), plus ingress from the sandbox router and the control plane (logs and exec).
+- **`sbx-gateway` remains the L7 control** for all sandbox egress.
+
+A ValidatingAdmissionPolicy in the same directory rejects a Fargate sandbox pod that no profile matched, instead of letting it run on an EC2 node.
+
 ### ECR
 
 ECR provides **secure container image storage** with automated vulnerability scanning:
