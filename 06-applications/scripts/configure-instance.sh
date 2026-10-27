@@ -102,6 +102,7 @@ aws:
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
     minimaxRegion: "<BEDROCK_MINIMAX_REGION>"
+    geoPrefix: "<BEDROCK_GEO_PREFIX>"
   prometheus:
     workspaceId: "<AMP_WORKSPACE_ID>"
     remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"
@@ -172,6 +173,7 @@ FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
 FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
 FROM_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion // "<BEDROCK_MINIMAX_REGION>"' "$FROM")
+FROM_BEDROCK_GEO_PREFIX=$(yq '.aws.bedrock.geoPrefix // "<BEDROCK_GEO_PREFIX>"' "$FROM")
 FROM_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$FROM")
 FROM_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$FROM")
 FROM_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$FROM")
@@ -230,6 +232,7 @@ TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
 TO_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion' "$CONFIG")
+TO_BEDROCK_GEO_PREFIX=$(yq '.aws.bedrock.geoPrefix // "<BEDROCK_GEO_PREFIX>"' "$CONFIG")
 TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$CONFIG")
 TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$CONFIG")
 TO_OBSERVABILITY_S3_BUCKET=$(yq '.aws.observability.s3BucketName // "<OBSERVABILITY_S3_BUCKET_NAME>"' "$CONFIG")
@@ -355,6 +358,11 @@ replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
 # at step 6; placeholder is region-shaped but distinct from <AWS_REGION>).
 echo "  Bedrock MiniMax region ..."
 replace_all "$FROM_BEDROCK_MINIMAX_REGION" "$TO_BEDROCK_MINIMAX_REGION"
+
+# 3b-3. Bedrock cross-region profile prefix, in context: the bare value (us, eu) is too
+# short to substitute on its own.
+echo "  Bedrock cross-region profile prefix ..."
+replace_all "bedrock/${FROM_BEDROCK_GEO_PREFIX}.anthropic." "bedrock/${TO_BEDROCK_GEO_PREFIX}.anthropic."
 
 # 3c. Prometheus / Observability (before region and account, since URLs contain both)
 echo "  AMP remote write URL ..."
@@ -491,10 +499,14 @@ replace_all_tfvars "$TFVARS_FROM_ACR_ALIAS" "$TO_ACR_ALIAS"
 echo ""
 echo "Enabling Bedrock marketplace model agreements ..."
 BEDROCK_MODELS_REQUIRING_AGREEMENT=(
-  "anthropic.claude-3-5-sonnet-20240620-v1:0"
-  "anthropic.claude-3-haiku-20240307-v1:0"
+  "anthropic.claude-opus-5-5"
+  "anthropic.claude-opus-5"
+  "anthropic.claude-opus-4-8"
+  "anthropic.claude-sonnet-5-5"
+  "anthropic.claude-sonnet-5"
+  "anthropic.claude-sonnet-4-6"
   "anthropic.claude-sonnet-4-5-20250929-v1:0"
-  "anthropic.claude-opus-4-5-20251101-v1:0"
+  "anthropic.claude-haiku-5-5"
   "anthropic.claude-haiku-4-5-20251001-v1:0"
   "cohere.embed-v4:0"
 )

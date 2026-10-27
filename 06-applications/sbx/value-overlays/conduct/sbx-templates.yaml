@@ -26,6 +26,10 @@ sandboxTemplate:
     mountPath: /etc/ssl/egress-mitm
     fileName: ca-cert.pem
     optional: true
+  # The agent reaches models through sbx-gateway and chat's Anthropic proxy (then LiteLLM).
+  extraEnv:
+    - name: UNIQUE_API_BASE
+      value: http://backend-service-chat.unique.svc.cluster.local/public
   # Never enable: ships unredacted customer data to the log store.
   allowInsecureLogging: false
   insecureVerboseLogging: {}

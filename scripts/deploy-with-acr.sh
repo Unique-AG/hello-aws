@@ -17,7 +17,9 @@ set -euo pipefail
 # docs/security-baseline.md.
 #
 # Because Terraform creates the container, the value is written AFTER the
-# deploy completes -- on a first deploy the secret does not exist beforehand.
+# deploy -- on a first deploy the secret does not exist beforehand. ECR reads it
+# when creating the ACR pull-through rules, so a first deploy stops there; the
+# value is still written, and a second run completes the layer.
 # Re-running this is how the credentials are rotated: put-secret-value adds a
 # new version against the same ARN, so the pull-through cache rules keep
 # working without any Terraform change.
@@ -108,18 +110,19 @@ fi
 echo -e "${GREEN}ACR credentials retrieved successfully${NC}"
 
 # Run the deploy first: Terraform creates the secret container, and on a first
-# deploy it does not exist until then.
+# deploy it does not exist until then. A failed deploy still writes the value.
 #
 # Deliberately not `exec` -- the credential write below has to happen after
 # deploy.sh returns. Previously this exported TF_VAR_acr_username /
 # TF_VAR_acr_password and exec'd; deploy.sh turns every TF_VAR_* into an
 # explicit -var=, and neither variable is declared in 05-compute, so Terraform
 # rejected them and this script could not even plan.
-"${SCRIPT_DIR}/deploy.sh" "$LAYER" "$ENV" "${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}"
+DEPLOY_RC=0
+"${SCRIPT_DIR}/deploy.sh" "$LAYER" "$ENV" "${DEPLOY_ARGS[@]+"${DEPLOY_ARGS[@]}"}" || DEPLOY_RC=$?
 
 # Only the compute layer owns the ACR secret.
 if [[ "$LAYER" != "compute" ]]; then
-  exit 0
+  exit "$DEPLOY_RC"
 fi
 
 echo -e "${YELLOW}Writing ACR credentials to Secrets Manager ...${NC}"
@@ -144,3 +147,9 @@ aws secretsmanager put-secret-value \
   --output text --query 'VersionId' >/dev/null
 
 echo -e "${GREEN}ACR credentials written to ${ACR_SECRET_ARN}${NC}"
+
+if [[ "$DEPLOY_RC" -ne 0 ]]; then
+  echo -e "${RED}Deploy failed (exit ${DEPLOY_RC}).${NC}"
+  echo -e "${YELLOW}On a first deploy the ACR pull-through rules need these credentials: re-run this script.${NC}"
+  exit "$DEPLOY_RC"
+fi

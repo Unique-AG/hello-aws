@@ -174,14 +174,20 @@ client-insights-exporter
 LiteLLM proxies all LLM and embedding traffic through AWS Bedrock. Models are configured
 in `value-overlays/litellm/litellm.yaml` under `proxy_config.model_list`.
 
-**Chat/completion models** use EU cross-region inference profiles (`eu.*` prefix) directly:
+**Chat/completion models** use the region's cross-region inference profiles directly. The
+prefix (`us`, `eu` or `apac`) is `aws.bedrock.geoPrefix` in `instance-config.yaml`:
 ```yaml
-model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5
 ```
+
+Every Claude model is served twice: as `anthropic-claude-*`, the name Unique's model lists and
+Conduct spaces use, and under its native Anthropic ID (`claude-opus-5`,
+`claude-haiku-4-5-20251001`, ...), because Claude Code in a Conduct sandbox calls its sub-agents
+and background tasks by those IDs. Both names share one YAML anchor.
 
 **Embedding models** require an application inference profile because:
 1. Cohere Embed v4 requires an inference profile for on-demand invocation
-2. LiteLLM's provider mapping (`model.split(".")[0]`) breaks with the `eu.*` prefix for embeddings
+2. LiteLLM's provider mapping (`model.split(".")[0]`) breaks with a geo prefix (`us.*`, `eu.*`) for embeddings
 
 The workaround uses `model` for provider mapping and `model_id` for the Bedrock API call:
 ```yaml
@@ -192,8 +198,8 @@ The workaround uses `model` for provider mapping and `model_id` for the Bedrock 
     aws_region_name: <AWS_REGION>
 ```
 
-The application inference profile wraps the `global.cohere.embed-v4:0` system profile and
-is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
+The application inference profile wraps the region's `<geo>.cohere.embed-v4:0` system profile
+(see `bedrock_geo_prefix`) and is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
 and must be set per deployment.
 
 **Key settings:**

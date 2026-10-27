@@ -77,23 +77,31 @@ variable "enable_bedrock_logging" {
   default     = true
 }
 
+variable "bedrock_geo_prefix" {
+  description = "Prefix of the system cross-region inference profiles: us, eu, apac or global. Null derives it from aws_region."
+  type        = string
+  default     = null
+}
+
 variable "bedrock_inference_profiles" {
-  description = "Application inference profiles for cost tracking and CloudWatch metrics. source_type is 'inference-profile' (cross-region) or 'foundation-model' (single-region)."
+  description = "Application inference profiles for cost tracking and CloudWatch metrics. source_type 'inference-profile' wraps the <geo>.<model_id> cross-region profile (geo overrides bedrock_geo_prefix per entry); 'foundation-model' wraps an in-region model."
   type = map(object({
     model_id    = string
     source_type = optional(string, "inference-profile")
+    geo         = optional(string)
   }))
   default = {
-    # EU cross-region inference profiles (Anthropic Claude via LiteLLM)
-    "claude-sonnet-4-5" = { model_id = "eu.anthropic.claude-sonnet-4-5-20250929-v1:0" }
-    "claude-opus-4-5"   = { model_id = "eu.anthropic.claude-opus-4-5-20251101-v1:0" }
-    "claude-opus-4-6"   = { model_id = "eu.anthropic.claude-opus-4-6-v1" }
-    "claude-haiku-4-5"  = { model_id = "eu.anthropic.claude-haiku-4-5-20251001-v1:0" }
-    # Swiss-local foundation models (run natively in eu-central-2, no cross-region)
-    "claude-3-haiku"      = { model_id = "anthropic.claude-3-haiku-20240307-v1:0", source_type = "foundation-model" }
+    # Anthropic Claude via LiteLLM, through the region's cross-region profiles
+    "claude-opus-5-5"   = { model_id = "anthropic.claude-opus-5-5" }
+    "claude-opus-5"     = { model_id = "anthropic.claude-opus-5" }
+    "claude-opus-4-8"   = { model_id = "anthropic.claude-opus-4-8" }
+    "claude-sonnet-5-5" = { model_id = "anthropic.claude-sonnet-5-5" }
+    "claude-sonnet-5"   = { model_id = "anthropic.claude-sonnet-5" }
+    "claude-sonnet-4-6" = { model_id = "anthropic.claude-sonnet-4-6" }
+    "claude-haiku-5-5"  = { model_id = "anthropic.claude-haiku-5-5" }
+    # Embeddings: Cohere Embed v4 (via LiteLLM) and Titan Text Embeddings v2 (in-region)
+    "cohere-embed-v4"     = { model_id = "cohere.embed-v4:0" }
     "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
-    # Global inference profile (Cohere Embed v4 via LiteLLM)
-    "cohere-embed-v4" = { model_id = "global.cohere.embed-v4:0" }
   }
 }
 

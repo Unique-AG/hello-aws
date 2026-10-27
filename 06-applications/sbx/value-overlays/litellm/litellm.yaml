@@ -48,49 +48,87 @@ hooks:
 # Proxy configuration
 proxy_config:
   model_list:
-    # Anthropic Claude models via AWS Bedrock cross-region inference profiles
-    # Uses eu.* inference profile IDs (required for on-demand invocation)
-    - model_name: anthropic-claude-sonnet-4-5
-      litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: <AWS_REGION>
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-opus-4-6
-      litellm_params:
-        model: bedrock/eu.anthropic.claude-opus-4-6-v1
+    # Anthropic Claude via the region's Bedrock cross-region inference profiles
+    # (<BEDROCK_GEO_PREFIX>.*). Opus 4.7+ and Sonnet 5+ reject the sampling params.
+    - model_name: anthropic-claude-opus-5-5
+      litellm_params: &claude-opus-5-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
         aws_region_name: <AWS_REGION>
         max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
 
-    - model_name: anthropic-claude-haiku-4-5
-      litellm_params:
-        model: bedrock/eu.anthropic.claude-haiku-4-5-20251001-v1:0
+    - model_name: anthropic-claude-opus-5
+      litellm_params: &claude-opus-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5
+        aws_region_name: <AWS_REGION>
+        max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: anthropic-claude-opus-4-8
+      litellm_params: &claude-opus-4-8
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-4-8
+        aws_region_name: <AWS_REGION>
+        max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: anthropic-claude-sonnet-5-5
+      litellm_params: &claude-sonnet-5-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-sonnet-5-5
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: anthropic-claude-sonnet-5
+      litellm_params: &claude-sonnet-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-sonnet-5
+        aws_region_name: <AWS_REGION>
+        max_tokens: 10000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
 
     - model_name: anthropic-claude-sonnet-4-6
-      litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-6
+      litellm_params: &claude-sonnet-4-6
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-sonnet-4-6
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
 
-    # Claude Sonnet 5 via the EU Bedrock cross-region inference profile
-    # (eu.anthropic.claude-sonnet-5) — current EU-resident frontier model,
-    # verified available in <AWS_REGION> (aws bedrock list-inference-profiles).
-    - model_name: anthropic-claude-sonnet-5
-      litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-5
+    - model_name: anthropic-claude-haiku-5-5
+      litellm_params: &claude-haiku-5-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-haiku-5-5
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
+
+    - model_name: anthropic-claude-haiku-4-5
+      litellm_params: &claude-haiku-4-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-haiku-4-5-20251001-v1:0
+        aws_region_name: <AWS_REGION>
+        max_tokens: 10000
+
+    # Native Anthropic IDs: Claude Code in Conduct sandboxes calls its sub-agents and
+    # background tasks by these, through chat's Anthropic proxy.
+    - model_name: claude-opus-5-5
+      litellm_params: *claude-opus-5-5
+    - model_name: claude-opus-5
+      litellm_params: *claude-opus-5
+    - model_name: claude-opus-4-8
+      litellm_params: *claude-opus-4-8
+    - model_name: claude-sonnet-5-5
+      litellm_params: *claude-sonnet-5-5
+    - model_name: claude-sonnet-5
+      litellm_params: *claude-sonnet-5
+    - model_name: claude-sonnet-4-6
+      litellm_params: *claude-sonnet-4-6
+    - model_name: claude-haiku-5-5
+      litellm_params: *claude-haiku-5-5
+    - model_name: claude-haiku-4-5-20251001
+      litellm_params: *claude-haiku-4-5
 
     - model_name: amazon-titan-embed-text-v2
       litellm_params:
         model: bedrock/amazon.titan-embed-text-v2:0
         aws_region_name: <AWS_REGION>
 
-    # MiniMax M2.5 via AWS Bedrock — not available in <AWS_REGION>; pinned to
-    # <BEDROCK_MINIMAX_REGION> (no EU CRI exists for MiniMax). Cross-region invocation
-    # leaves Switzerland; acceptable for hello-aws reference deployment only.
+    # MiniMax M2.5 has no cross-region profile: <BEDROCK_MINIMAX_REGION> is a region that
+    # serves it natively (the deployment region where possible).
     - model_name: minimax-m2-5
       litellm_params:
         model: bedrock/minimax.minimax-m2.5
@@ -142,13 +180,13 @@ proxy_config:
 
     - model_name: gpt-4-turbo
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-sonnet-4-5-20250929-v1:0
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
 
     - model_name: gpt-4-32k
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-sonnet-4-5-20250929-v1:0
         aws_region_name: <AWS_REGION>
         max_tokens: 10000
 

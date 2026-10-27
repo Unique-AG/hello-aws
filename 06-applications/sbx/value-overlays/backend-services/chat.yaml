@@ -11,7 +11,7 @@ env:
   # below. Users hit ModelRestrictedException 400 ("not available on the
   # cluster").
   LITELLM_ENABLED: "true"
-  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-4-6,litellm:anthropic-claude-sonnet-4-6,litellm:qwen-3-235B-A22B,litellm:minimax-m2-5,litellm:gemma-4-31b-it,litellm:qwen3-6-35b-a3b,gpt-4o-2024-11-20"
+  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-5-5,litellm:anthropic-claude-opus-5,litellm:anthropic-claude-opus-4-8,litellm:anthropic-claude-sonnet-5-5,litellm:anthropic-claude-sonnet-5,litellm:anthropic-claude-sonnet-4-6,litellm:anthropic-claude-haiku-5-5,litellm:minimax-m2-5,litellm:qwen3-6-35b-a3b,gpt-4o-2024-11-20"
   MAX_HEAP_MB: "3700"
   PUBSUB_REDIS_DB: "2"
   MCP_POLICY_MODE: "UNRESTRICTED"

@@ -235,7 +235,6 @@ data "aws_iam_policy_document" "assistants_core" {
     ]
     resources = [
       "arn:aws:bedrock:*::foundation-model/*",
-      "arn:aws:bedrock:*::inference-profile/eu.*",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/*",
     ]
   }
@@ -299,8 +298,6 @@ data "aws_iam_policy_document" "litellm" {
     ]
     resources = [
       "arn:aws:bedrock:*::foundation-model/*",
-      "arn:aws:bedrock:*::inference-profile/eu.*",
-      "arn:aws:bedrock:*::inference-profile/global.*",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/*",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:application-inference-profile/*",
     ]
@@ -408,7 +405,6 @@ data "aws_iam_policy_document" "ingestion_worker" {
     ]
     resources = [
       "arn:aws:bedrock:*::foundation-model/*",
-      "arn:aws:bedrock:*::inference-profile/eu.*",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/*",
     ]
   }
