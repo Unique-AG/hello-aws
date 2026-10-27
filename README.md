@@ -379,12 +379,15 @@ To deploy the compute layer, you need ACR credentials:
    ```bash
    aws secretsmanager put-secret-value \
      --secret-id "ecr-pullthroughcache/<your-registry>.azurecr.io" \
-     --region eu-central-2 \
-     --secret-string '{"username":"<your-username>","password":"<your-password>"}'
+     --region <your-region> \
+     --secret-string '{"username":"<your-username>","accessToken":"<your-token>"}'
    ```
+   On a new account, step 3 stops at the ACR pull-through rules: ECR reads these
+   credentials when it creates them. Run step 3 again once they are written.
 
 Steps 3 and 4 are wrapped by `./scripts/deploy-with-acr.sh compute sbx`, which reads the
-credentials from 1Password instead of taking them on the command line.
+credentials from 1Password instead of taking them on the command line. It writes them even
+when the deploy stops at the pull-through rules, so on a new account run it twice.
 
 **Rotating the credentials** is step 4 on its own. `put-secret-value` adds a new version
 against the same ARN, so the cache rules keep resolving and no Terraform run is needed.

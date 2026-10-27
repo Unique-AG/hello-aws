@@ -96,6 +96,8 @@ resource "aws_eks_access_policy_association" "management_server" {
     type       = "cluster"
     namespaces = []
   }
+
+  depends_on = [aws_eks_access_entry.management_server]
 }
 
 # EKS Access Entry for Sandbox Administrator

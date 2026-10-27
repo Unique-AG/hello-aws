@@ -24,7 +24,7 @@ elasticache_automatic_failover_enabled = false
 elasticache_multi_az_enabled           = false
 elasticache_snapshot_retention_limit   = 1
 
-# Disable Grafana (not available in eu-central-2)
+# Disable Grafana: it needs SAML set up first (and eu-central-2 does not offer it)
 enable_managed_grafana = false
 
 # S3 VPC-only policy (disable when deploying from outside VPC, re-enable from bastion)

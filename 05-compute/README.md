@@ -62,7 +62,7 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 | Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
-Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), cross-region inference profiles (`eu.*` and `global.*`), and account-scoped inference profiles (both `inference-profile/*` and `application-inference-profile/*`).
+Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), and inference profiles in the deployment region: the system cross-region profiles (`inference-profile/*`, whose ARNs carry the account) and, for LiteLLM, the application profiles (`application-inference-profile/*`).
 
 ### Conduct Pod VM Image
 
@@ -161,7 +161,7 @@ ECR provides **secure container image storage** with automated vulnerability sca
 Pull-through cache reduces external registry dependencies and egress costs. For authenticated registries (Docker Hub, GHCR), creating pull-through cache rules with credentials is the recommended approach — it avoids rate limits and provides reliable, cached access to upstream images.
 
 - **Supported Upstream Registries**: Docker Hub, ECR Public, Quay.io, GCR, GHCR, Azure Container Registry (ACR). Enabled registries are configured via `ecr_pull_through_cache_upstream_registries`.
-- **ACR Credentials**: Terraform creates the secret *container* only — `aws_secretsmanager_secret.acr_credentials`, named `ecr-pullthroughcache/<registry-url>` — and never the value, so the credentials never enter Terraform state or a plan file. The value is a JSON object with `username` and `accessToken`, written by `scripts/deploy-with-acr.sh` (which reads them from 1Password) or by the secret-seeding script. A resource policy grants the ECR service-linked role access to the secret.
+- **ACR Credentials**: Terraform creates the secret *container* only — `aws_secretsmanager_secret.acr_credentials`, named `ecr-pullthroughcache/<registry-url>` — and never the value, so the credentials never enter Terraform state or a plan file. The value is a JSON object with `username` and `accessToken`, written by `scripts/deploy-with-acr.sh` (which reads them from 1Password) or by the secret-seeding script. A resource policy grants the ECR service-linked role access to the secret. ECR reads the secret when it creates a pull-through rule, so on a fresh account the first apply creates the secret and then fails creating the `uniquecr` rules: write the credential and re-run the layer.
 - **Rotating ACR credentials**: re-run `./scripts/deploy-with-acr.sh compute <env>`, or write the value directly. Either way `put-secret-value` adds a new version against the same ARN, so the pull-through cache rules keep resolving and **no Terraform change is needed**.
 - **ACR Alias**: Automatically extracted from `acr_registry_url` (e.g., `myregistry` from `myregistry.azurecr.io`), registered as both the full URL and the short alias
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty

@@ -15,8 +15,8 @@ single_nat_gateway = true
 
 # Terraform State Configuration (from bootstrap layer)
 # These are computed dynamically from naming module (same as bootstrap layer)
-# Format: s3-{id_short}-tfstate (e.g., s3-uq-dogfood-x-euc2-tfstate)
-# Format: alias/kms-{id}-tfstate (e.g., alias/kms-uq-dogfood-sbx-euc2-tfstate)
+# Format: s3-{id_short}-tfstate (e.g., s3-uq-dogfood-x-use1-tfstate)
+# Format: alias/kms-{id}-tfstate (e.g., alias/kms-uq-dogfood-sbx-use1-tfstate)
 # Uncomment and set manually if you need to override the computed values:
 # terraform_state_bucket     = ""
 # terraform_state_kms_key_id = ""
