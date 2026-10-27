@@ -284,8 +284,9 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
    (`git tag -a 202X.XX.X -m 202X.XX.X <merge-sha> && git push origin 202X.XX.X`) or run
    the **`[rel] Release`** workflow from the Actions tab with the version, which tags the tip
    of `main`. The workflow (`.github/workflows/release.yaml`) refuses a tag that is not on
-   `main` or whose app specs pin a different version, then **publishes the GitHub Release**:
-   the upgrade notes, a component version table diffed against the previous release
+   `main` or whose app specs pin a different version, then **publishes the GitHub Release**
+   titled `Release 202X.XX.X`: a link to that Unique release's notes on docs.unique.ai, the
+   upgrade notes, a component version table diffed against the previous release
    (`scripts/release-notes.sh`), and the merged pull requests.
 
 ### Part B — Adopt a release in an environment (on `deploy`)

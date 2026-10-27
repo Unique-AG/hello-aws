@@ -14,8 +14,8 @@ fi
 #######################################
 #
 # Renders the body of a GitHub Release for a release tag:
-# 1. Upgrade notes from docs/releases/<tag>.md at the tag, when that file exists
-# 2. The Unique platform release the tag corresponds to
+# 1. The release line and the link to that Unique release's notes on docs.unique.ai
+# 2. Upgrade notes from docs/releases/<tag>.md at the tag, when that file exists
 # 3. A component version table from the app specs, diffed against the previous tag
 #
 # The pull-request changelog is appended by GitHub (gh release create --generate-notes).
@@ -54,16 +54,20 @@ components_at() {
   done
 }
 
+echo "Release ${TAG}"
+echo
+# 2026.42.10 -> .../release-notes-2026/release-2026-42 (week zero-padded, as on docs.unique.ai).
+if [[ "$TAG" =~ ^(20[0-9]{2})\.([0-9]{1,2})\.[0-9]+$ ]]; then
+  printf 'Full Changelog: https://docs.unique.ai/it-operators/installing-and-upgrading-unique/release-notes-and-calendar/release-notes-%s/release-%s-%02d\n\n' \
+    "${BASH_REMATCH[1]}" "${BASH_REMATCH[1]}" "$((10#${BASH_REMATCH[2]}))"
+fi
+
 # Read from the tag, like the app specs, so the output does not depend on the checkout.
 if git cat-file -e "${TAG}:docs/releases/${TAG}.md" 2>/dev/null; then
   git show "${TAG}:docs/releases/${TAG}.md"
   echo
 fi
 
-echo "## Unique platform"
-echo
-echo "Unique \`${TAG}\` — see the [Unique Release Notes & Calendar](https://docs.unique.ai/it-operators/installing-and-upgrading-unique/release-notes-and-calendar) for application changes."
-echo
 echo "## Component versions"
 echo
 if [[ -n "$PREV" ]]; then
