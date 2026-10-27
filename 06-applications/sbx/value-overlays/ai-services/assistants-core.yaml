@@ -37,15 +37,11 @@ nodeSelector: null
 extraEnvSecrets:
   - assistants-core-secrets
 
-# Turns Conduct on: assistants-core asks the controller for a sandbox per agent
-# run. Without this it never claims one and no sandbox is ever created.
+# Turns Conduct on: assistants-core claims a sandbox per agent run.
 sandboxConfig:
   enabled: true
   namespace: sbx
-  # Which isolation boundary a sandbox gets, chosen by naming its template:
-  #   unique-polyagent-001          peer pods, a VM on its own EC2 instance
-  #   unique-polyagent-001-fargate  Fargate, an AWS-managed microVM
-  # The named template must be synced, or every claim fails.
+  # The boundary: unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate).
   template: <SANDBOX_TEMPLATE_NAME>
   router:
     host:

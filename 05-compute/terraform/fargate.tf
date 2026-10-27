@@ -1,18 +1,5 @@
 #######################################
-# EKS Fargate — sandbox isolation
-#######################################
-#
-# Conduct's per-session sandbox pods run untrusted model-generated code, so they
-# need a kernel boundary. On Fargate each pod gets its own AWS-managed Firecracker
-# microVM, without operating a node pool. Only the ephemeral sandbox pods land
-# here, selected by namespace + label; long-running components (sbx-gateway, the
-# agent-sandbox controller) stay on the EC2 node groups.
-#
-# Fargate pods are not governed by the VPC CNI, so Kubernetes NetworkPolicy does
-# not apply to them. The security group below is the L4 floor that replaces it,
-# attached to the pods by a SecurityGroupPolicy in layer 06. The mitmproxy
-# sbx-gateway remains the primary L7 control.
-#
+# EKS Fargate — sandbox isolation (README: "Fargate Sandbox Isolation")
 # Gated on var.fargate_profiles — an empty map creates nothing.
 #######################################
 
@@ -96,6 +83,12 @@ resource "aws_eks_fargate_profile" "this" {
   }
 
   tags = merge(module.naming.tags, { Name = "${module.naming.id}-${each.key}" })
+
+  # EKS checks the role's permissions when it creates the profile.
+  depends_on = [
+    aws_iam_role_policy_attachment.fargate_pod_execution,
+    aws_iam_role_policy.fargate_logging,
+  ]
 }
 
 # The L4 floor for sandbox pods: gateway, DNS, in-VPC pull, S3 layers; router in.

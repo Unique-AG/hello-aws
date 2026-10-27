@@ -17,10 +17,7 @@ spec:
                 name: sbx
                 labels:
                   kubernetes.io/metadata.name: sbx
-            # Routes to the kata-remote shim that kata-deploy registers, so a
-            # sandbox gets its own VM. Never point this at runc: the name would
-            # assert a boundary the handler does not provide, and that is the one
-            # misconfiguration that looks like success.
+            # kata-remote is the shim kata-deploy registers; test-charts.sh rejects runc here.
             - apiVersion: node.k8s.io/v1
               kind: RuntimeClass
               metadata:

@@ -86,9 +86,7 @@ aws:
     subnetId: "<SANDBOX_SUBNET_ID>"
     nodeSecurityGroupId: "<EKS_NODE_SECURITY_GROUP_ID>"
     fargateSecurityGroupId: "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"
-    # Which isolation boundary sandboxes get, named by template. One of:
-    #   unique-polyagent-001          peer pods (VM on its own EC2 instance)
-    #   unique-polyagent-001-fargate  Fargate (AWS-managed microVM)
+    # unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate)
     templateName: "<SANDBOX_TEMPLATE_NAME>"
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
