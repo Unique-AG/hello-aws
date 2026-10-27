@@ -1,6 +1,8 @@
 name: '[charts] Validate'
 on:
   pull_request:
+    # The golden files hold the template's placeholders; a deploy branch carries real values.
+    branches: [main]
     paths:
       - '06-applications/charts/**'
       - '06-applications/sbx/value-overlays/conduct/**'
