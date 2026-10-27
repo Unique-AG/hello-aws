@@ -70,11 +70,16 @@ resource "aws_secretsmanager_secret" "psql_password" {
 }
 
 resource "aws_secretsmanager_secret_version" "psql_password" {
-  count     = var.set_aurora_master_password ? 1 : 0
   secret_id = aws_secretsmanager_secret.psql_password.id
 
-  secret_string_wo         = var.aurora_master_password
-  secret_string_wo_version = 1 # Bump when rotating the password
+  # Same value and version as the cluster's master_password_wo, so both change together.
+  secret_string_wo         = local.aurora_master_password
+  secret_string_wo_version = var.aurora_master_password_version
+}
+
+moved {
+  from = aws_secretsmanager_secret_version.psql_password[0]
+  to   = aws_secretsmanager_secret_version.psql_password
 }
 
 # ---------------------------------------------------------------------------

@@ -47,10 +47,10 @@ aws:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"  # Application inference profile ID for Cohere Embed v4
     minimaxRegion: "<BEDROCK_MINIMAX_REGION>"                       # AWS region for MiniMax invocation (not in eu-central-2; e.g. eu-central-1)
   prometheus:
-    workspaceId: "<AMP_WORKSPACE_ID>"                              # terraform output -raw amp_workspace_id (data-and-ai layer)
-    remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"                       # terraform output -raw amp_remote_write_url (data-and-ai layer)
+    workspaceId: "<AMP_WORKSPACE_ID>"                              # terraform output -raw prometheus_workspace_id (data-and-ai layer)
+    remoteWriteUrl: "<AMP_REMOTE_WRITE_URL>"                       # terraform output -raw prometheus_workspace_endpoint (data-and-ai layer) + "api/v1/remote_write"
   observability:
-    s3BucketName: "<OBSERVABILITY_S3_BUCKET_NAME>"                 # terraform output -raw observability_s3_bucket_name (data-and-ai layer)
+    s3BucketName: "<OBSERVABILITY_S3_BUCKET_NAME>"                 # terraform output -raw s3_bucket_observability_id (data-and-ai layer)
   ecr:
     primary:                            # ECR for Unique application images
       accountId: "000000000000"

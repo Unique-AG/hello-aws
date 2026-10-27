@@ -16,7 +16,3 @@ elasticache_automatic_failover_enabled = true
 elasticache_multi_az_enabled           = true
 elasticache_snapshot_retention_limit   = 5
 secrets_recovery_window_days           = 30
-
-# Not a component: a supplied master password is the relaxation, a generated
-# one is the default. Left off so the scan checks the default path.
-set_aurora_master_password = false

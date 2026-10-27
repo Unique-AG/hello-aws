@@ -90,7 +90,6 @@ variable "bedrock_inference_profiles" {
     "claude-opus-4-6"   = { model_id = "eu.anthropic.claude-opus-4-6-v1" }
     "claude-haiku-4-5"  = { model_id = "eu.anthropic.claude-haiku-4-5-20251001-v1:0" }
     # Swiss-local foundation models (run natively in eu-central-2, no cross-region)
-    "claude-3-5-sonnet"   = { model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0", source_type = "foundation-model" }
     "claude-3-haiku"      = { model_id = "anthropic.claude-3-haiku-20240307-v1:0", source_type = "foundation-model" }
     "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
     # Global inference profile (Cohere Embed v4 via LiteLLM)
@@ -314,17 +313,17 @@ variable "rds_ca_bundle_secret_name" {
 }
 
 variable "aurora_master_password" {
-  description = "Aurora master password (ephemeral — never stored in state or plan output)"
+  description = "Aurora master password (ephemeral — never stored in state or plan output). Unset: Terraform generates one."
   type        = string
   sensitive   = true
   ephemeral   = true
   default     = null
 }
 
-variable "set_aurora_master_password" {
-  description = "Set to true when providing aurora_master_password to update the password"
-  type        = bool
-  default     = false
+variable "aurora_master_password_version" {
+  description = "Bump to write a new master password to Aurora and the psql-password secret together"
+  type        = number
+  default     = 1
 }
 
 variable "aurora_instance_class" {

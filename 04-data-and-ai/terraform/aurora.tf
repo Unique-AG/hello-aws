@@ -48,6 +48,17 @@ resource "aws_vpc_security_group_egress_rule" "aurora_to_vpc" {
   cidr_ipv4         = data.aws_vpc.main.cidr_block
 }
 
+# Opened on every run but sent only when aurora_master_password_version changes; never stored.
+# Alphanumeric because the seeded connection strings embed it.
+ephemeral "random_password" "aurora_master" {
+  length  = 32
+  special = false
+}
+
+locals {
+  aurora_master_password = coalesce(var.aurora_master_password, ephemeral.random_password.aurora_master.result)
+}
+
 # Aurora PostgreSQL Cluster
 resource "aws_rds_cluster" "postgres" {
   #checkov:skip=CKV_AWS_162: see docs/security-baseline.md
@@ -58,8 +69,8 @@ resource "aws_rds_cluster" "postgres" {
   engine_version               = var.aurora_engine_version
   database_name                = var.aurora_database_name
   master_username              = "dbadmin"
-  master_password_wo           = var.set_aurora_master_password ? var.aurora_master_password : null
-  master_password_wo_version   = var.set_aurora_master_password ? 1 : null # Bump when rotating
+  master_password_wo           = local.aurora_master_password
+  master_password_wo_version   = var.aurora_master_password_version
   backup_retention_period      = var.aurora_backup_retention_period
   preferred_backup_window      = var.aurora_preferred_backup_window
   preferred_maintenance_window = var.aurora_preferred_maintenance_window
