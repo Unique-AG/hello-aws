@@ -12,6 +12,8 @@ at your own tenant, and run.**
 | Browser (Chromium) | `@smoke` | broader per-area UI checks (KB, spaces, chat variants) |
 | API (GraphQL) | `@watchdog` | service-user token → ingestion + chat critical path |
 | API (GraphQL) | `@smoke` | scope-management, generate API token, broader API checks |
+| API (GraphQL) | `@smoke @conduct` | Conduct: code runs in the sandbox, the workspace persists across turns, a generated file is stored |
+| Browser (Chromium) | `@smoke @conduct` | Conduct: the answer renders a code-execution card |
 
 ## Prerequisites on your tenant
 
@@ -20,6 +22,12 @@ at your own tenant, and run.**
 3. A **Zitadel service account** (client-credentials) for API tests
    (`SERVICE_USER_CLIENT_ID` / `SERVICE_USER_CLIENT_SECRET`), plus the app
    **project id** (`ZITADEL_UNIQUE_APP_PROJECT_ID`).
+4. For the `@conduct` tests: Conduct enabled (assistants-core `sandboxConfig`, with
+   the SandboxTemplate it names synced), and both users allowed to create spaces.
+   The tests create Conduct spaces on the deployment's own Conduct defaults. The
+   default Claude model must be one your LiteLLM serves; otherwise set
+   `CONDUCT_MODEL`. A cold sandbox can take minutes, so each turn waits up to
+   six.
 
 ## Run locally
 
@@ -30,6 +38,7 @@ npx playwright install chromium
 cp .env.example .env      # then fill in the blanks
 npm run test:watchdog     # critical path (browser + api)
 npm run test:smoke        # broader coverage
+npm run test:conduct      # only the Conduct sandbox checks
 npm run test:browser      # only UI tests
 npm run test:api          # only API tests
 npm test                  # everything

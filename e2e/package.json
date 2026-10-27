@@ -8,6 +8,7 @@
     "test": "playwright test",
     "test:watchdog": "playwright test --grep @watchdog",
     "test:smoke": "playwright test --grep @smoke",
+    "test:conduct": "playwright test --grep @conduct",
     "test:browser": "playwright test --project=browser",
     "test:api": "playwright test --project=api",
     "report": "playwright show-report",
