@@ -128,7 +128,7 @@ Scan it this way instead, which does work: attach the image (a volume from its s
 
 ### Fargate Sandbox Isolation
 
-The alternative to peer pods: each Conduct sandbox pod runs in its own AWS-managed Firecracker microVM on EKS Fargate, with no node pool to operate. `var.fargate_profiles` turns it on; an empty map (the default) creates nothing. Only the sandbox pods belong there. `sbx-gateway` and the agent-sandbox controller share or serve the `sbx` namespace but stay on the EC2 node groups, so a profile must select by label, never by namespace alone (a validation enforces non-empty labels):
+The alternative to peer pods: each Conduct sandbox pod runs in its own AWS-managed Firecracker microVM on EKS Fargate, with no node pool to operate. `var.fargate_profiles` turns it on; an empty map (the default) creates only the sandbox security group, unattached, so the layer-06 SecurityGroupPolicy always has an ID to reference. Only the sandbox pods belong there. `sbx-gateway` and the agent-sandbox controller share or serve the `sbx` namespace but stay on the EC2 node groups, so a profile must select by label, never by namespace alone (a validation enforces non-empty labels):
 
 ```hcl
 fargate_profiles = {

@@ -1,6 +1,6 @@
 #######################################
 # EKS Fargate — sandbox isolation (README: "Fargate Sandbox Isolation")
-# Gated on var.fargate_profiles — an empty map creates nothing.
+# Gated on var.fargate_profiles; an empty map creates only the unattached sandbox SG.
 #######################################
 
 locals {
@@ -92,10 +92,9 @@ resource "aws_eks_fargate_profile" "this" {
 }
 
 # The L4 floor for sandbox pods: gateway, DNS, in-VPC pull, S3 layers; router in.
-# Inert until layer 06 attaches it with a SecurityGroupPolicy.
+# Always created, so the layer-06 SecurityGroupPolicy has an ID; inert until attached.
 resource "aws_security_group" "fargate_sandbox" {
   #checkov:skip=CKV2_AWS_5:Attached to pods by a Kubernetes SecurityGroupPolicy in layer 06, which checkov cannot see.
-  count       = local.fargate_count
   name        = "${module.naming.id}-fargate-sandbox"
   description = "Sandbox pods on Fargate - egress to sbx-gateway, DNS, in-VPC and S3 pull only"
   vpc_id      = local.infrastructure.vpc_id
@@ -108,8 +107,7 @@ resource "aws_security_group" "fargate_sandbox" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_gateway" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "Sandbox HTTP(S) egress funneled through the sbx-gateway proxy"
   from_port         = 3128
   to_port           = 3128
@@ -118,8 +116,7 @@ resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_gateway" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_dns_udp" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "DNS (UDP) to in-cluster CoreDNS"
   from_port         = 53
   to_port           = 53
@@ -128,8 +125,7 @@ resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_dns_udp" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_dns_tcp" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "DNS (TCP) to in-cluster CoreDNS"
   from_port         = 53
   to_port           = 53
@@ -138,8 +134,7 @@ resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_dns_tcp" {
 }
 
 resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_https_invpc" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "In-VPC HTTPS for image pull (ECR interface endpoints) and the EKS API"
   from_port         = 443
   to_port           = 443
@@ -150,8 +145,7 @@ resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_https_invpc" {
 # ECR image layers come from S3 via the gateway endpoint, reached by prefix list
 # rather than an in-VPC address, so the rule above does not cover them.
 resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_s3" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "HTTPS to the S3 gateway endpoint (ECR image layers)"
   from_port         = 443
   to_port           = 443
@@ -160,8 +154,7 @@ resource "aws_vpc_security_group_egress_rule" "fargate_sandbox_s3" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "fargate_sandbox_runtime" {
-  count             = local.fargate_count
-  security_group_id = aws_security_group.fargate_sandbox[0].id
+  security_group_id = aws_security_group.fargate_sandbox.id
   description       = "Sandbox runtime port from the in-cluster sandbox-router"
   from_port         = 8888
   to_port           = 8888
@@ -172,8 +165,7 @@ resource "aws_vpc_security_group_ingress_rule" "fargate_sandbox_runtime" {
 # Under strict pod-SG mode the pod carries only this SG, so the control plane
 # cannot reach its kubelet and logs/exec time out without this.
 resource "aws_vpc_security_group_ingress_rule" "fargate_sandbox_kubelet" {
-  count                        = local.fargate_count
-  security_group_id            = aws_security_group.fargate_sandbox[0].id
+  security_group_id            = aws_security_group.fargate_sandbox.id
   description                  = "Allow the EKS control plane to reach the sandbox pod kubelet for logs/exec"
   from_port                    = 10250
   to_port                      = 10250
@@ -189,11 +181,11 @@ resource "aws_vpc_security_group_ingress_rule" "eks_cluster_from_fargate_sandbox
   from_port                    = 443
   to_port                      = 443
   ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.fargate_sandbox[0].id
+  referenced_security_group_id = aws_security_group.fargate_sandbox.id
 }
 
 # Consumed by the layer-06 SecurityGroupPolicy that pins sandbox pods to this SG.
 output "fargate_sandbox_security_group_id" {
   description = "Security group ID for sandbox pods on Fargate (referenced by the layer-06 SecurityGroupPolicy)"
-  value       = local.fargate_enabled ? aws_security_group.fargate_sandbox[0].id : null
+  value       = aws_security_group.fargate_sandbox.id
 }

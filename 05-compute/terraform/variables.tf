@@ -227,7 +227,7 @@ variable "enable_podvm_image_import" {
 
 # Sandbox isolation mode: managed per-pod microVMs on AWS Fargate.
 variable "fargate_profiles" {
-  description = "EKS Fargate profiles for isolating untrusted workloads (Conduct sandbox pods) on AWS-managed Firecracker microVMs. Map key = profile name; each selects pods by namespace + labels, e.g. namespace \"sbx\" with labels { \"unique.app/sandbox-template\" = \"unique-polyagent-001-fargate\" }. Empty map (default) creates no Fargate infrastructure."
+  description = "EKS Fargate profiles for isolating untrusted workloads (Conduct sandbox pods) on AWS-managed Firecracker microVMs. Map key = profile name; each selects pods by namespace + labels, e.g. namespace \"sbx\" with labels { \"unique.app/sandbox-template\" = \"unique-polyagent-001-fargate\" }. Empty map (default) creates only the unattached sandbox security group."
   type = map(object({
     namespace = string
     labels    = optional(map(string), {})
