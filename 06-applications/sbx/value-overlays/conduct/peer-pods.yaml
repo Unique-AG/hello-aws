@@ -3,6 +3,11 @@
 
 provider: aws
 
+# Through the ECR pull-through cache: the S3 gateway endpoint policy admits
+# ECR's layer bucket, not the upstream registries' own S3 blob stores.
+image:
+  name: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/confidential-containers/cloud-api-adaptor
+
 providerConfigs:
   aws:
     AWS_REGION: "us-east-1"
@@ -39,6 +44,10 @@ kata-deploy:
 # EC2 instances. Has its own service account, hence the second association.
 resourceCtrl:
   enabled: true
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/confidential-containers/peerpod-ctrl
+  authProxy:
+    image: 217381566492.dkr.ecr.us-east-1.amazonaws.com/registry.k8s.io/kubebuilder/kube-rbac-proxy:v0.14.0@sha256:e2670fb55b3211fb101f17afa3d81ba816d7c0b76ed31bd3d93fa2affb491595
 
 # Off: a cluster-wide MutatingWebhookConfiguration with failurePolicy Fail on
 # every pod CREATE outside kube-system. Nothing here needs its extended-resource
