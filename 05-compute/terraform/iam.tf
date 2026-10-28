@@ -1079,14 +1079,9 @@ resource "aws_iam_role_policy" "peer_pods_ec2" {
   policy = data.aws_iam_policy_document.peer_pods.json
 }
 
-# Two service accounts: peerpod-ctrl reclaims pod VMs on its own.
-resource "aws_eks_pod_identity_association" "peer_pods" {
-  cluster_name    = aws_eks_cluster.main.name
-  namespace       = "sbx"
-  service_account = "cloud-api-adaptor"
-  role_arn        = aws_iam_role.peer_pods.arn
-}
-
+# Only peerpod-ctrl, which reclaims pod VMs on its own. The adaptor is left to
+# the OIDC provider: an association here would win over it, and EKS would stop
+# injecting the two variables the adaptor insists on.
 resource "aws_eks_pod_identity_association" "peer_pods_ctrl" {
   cluster_name    = aws_eks_cluster.main.name
   namespace       = "sbx"
