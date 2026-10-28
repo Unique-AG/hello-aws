@@ -8,6 +8,11 @@ shims:
   remote:
     enabled: true
 
+# The chart's default is the qemu shim, which disableAll has just removed; it
+# refuses to start unless the default is one of the enabled shims.
+defaultShim:
+  amd64: remote
+
 # Confined to the sandbox pool: it host-mounts /etc/containerd and /opt/kata
 # and restarts the CRI runtime.
 nodeSelector:
