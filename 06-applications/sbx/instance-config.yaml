@@ -11,32 +11,33 @@ domain:
   argocd: argo.hello.aws.unique.dev
   dnsZone: aws.unique.dev
 aws:
-  region: eu-central-2
+  region: us-east-1
   accountId: "217381566492"
   hostedZoneID: Z03833732DAIIS62GPG8S
   kms:
-    keyArn: "arn:aws:kms:eu-central-2:217381566492:key/30d4470d-c11f-4890-b17a-4077c7e2976d"
+    keyArn: "arn:aws:kms:us-east-1:217381566492:key/13428ba6-4203-405a-b69a-edb2124b6c21"
   eks:
-    clusterName: eks-uq-dogfood-sbx-euc2
+    clusterName: eks-uq-dogfood-sbx-use1
   vpc:
-    id: vpc-0e4a169431f5a73c4
+    id: vpc-07f206251370e1b6f
   route53:
     privateZoneId: Z05798252TZLW3XWZUQE0
   connectivity:
     accountId: "198666613175"
   nlb:
-    targetGroupHttpArn: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-http/a3cbcfd07210e844
-    targetGroupHttpsArn: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-https/2ca633353a952ea7
+    targetGroupHttpArn: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-http/6c196a801484bb2f
+    targetGroupHttpsArn: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-https/764a80968a0ef4a7
   redis:
-    url: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
+    url: "rediss://master.redis-uq-dogfood-sbx-use1.o9swgn.use1.cache.amazonaws.com:6380/0"
   bedrock:
-    cohereEmbedV4ProfileId: "rzhpiygtmfxm"
-    minimaxRegion: "eu-central-1"
+    cohereEmbedV4ProfileId: "n8ogrl4txi7n"
+    minimaxRegion: "us-east-1"
+    geoPrefix: us
   prometheus:
-    workspaceId: "ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4"
-    remoteWriteUrl: "https://aps-workspaces.eu-central-2.amazonaws.com/workspaces/ws-ebc19a41-6d41-4e0b-b356-96f2b54057a4/api/v1/remote_write"
+    workspaceId: "ws-cd0a107f-0f97-4aa5-a81b-4da50a68276d"
+    remoteWriteUrl: "https://aps-workspaces.us-east-1.amazonaws.com/workspaces/ws-cd0a107f-0f97-4aa5-a81b-4da50a68276d/api/v1/remote_write"
   observability:
-    s3BucketName: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
+    s3BucketName: "s3-uq-dogfood-sbx-use1-observability-fnw0wi8z"
   ecr:
     primary:
       accountId: "217381566492"
@@ -45,13 +46,13 @@ aws:
       accountId: "217381566492"
       prefix: uniquecr
   sandbox:
-    subnetId: subnet-0077a59d31fe5e775
-    securityGroupId: sg-0be1640509df0d481
-    podvmAmiId: ami-073b44d7aa320d2fd
-    fargateSecurityGroupId: <FARGATE_SANDBOX_SECURITY_GROUP_ID>  # set after 05 applies: terraform output -raw fargate_sandbox_security_group_id
+    subnetId: subnet-0e11bb790e4d989fc
+    securityGroupId: sg-05a7811bba23514c9
+    podvmAmiId: ami-051f1906ef8ed2590
+    fargateSecurityGroupId: sg-0ae138073e0e8e533 # set after 05 applies: terraform output -raw fargate_sandbox_security_group_id
     templateName: unique-polyagent-001
   efs:
-    doclingModelsId: fs-070ce1b868e568369
+    doclingModelsId: fs-0bb15a45019d0527b
 zitadel:
   projectId: "368533034342811339"
   clientId: "368533034594535115"

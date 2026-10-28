@@ -8,10 +8,10 @@ tempo:
     trace:
       backend: s3
       s3:
-        bucket: "s3-uq-dogfood-sbx-euc2-observability-v9ovd74d"
+        bucket: "s3-uq-dogfood-sbx-use1-observability-fnw0wi8z"
         prefix: tempo/
-        endpoint: s3.eu-central-2.amazonaws.com
-        region: eu-central-2
+        endpoint: s3.us-east-1.amazonaws.com
+        region: us-east-1
         forcepathstyle: true
   retention: 720h # 30 days
   resources:

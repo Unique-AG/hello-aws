@@ -8,7 +8,7 @@ env:
   APP_REPOSITORY_BACKEND_API_URL: https://api.hello.aws.unique.dev/apps
   CHAT_APP_URL: https://hello.aws.unique.dev/chat
   CHAT_BACKEND_API_URL: https://api.hello.aws.unique.dev/chat
-  CONTENT_SECURITY_POLICY_VALUE: "default-src 'self'; img-src https: blob: data: *.s3.eu-central-2.amazonaws.com; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' blob: *.hello.aws.unique.dev wss://*.hello.aws.unique.dev *.s3.eu-central-2.amazonaws.com; media-src 'self' *.s3.eu-central-2.amazonaws.com; frame-ancestors 'self'; frame-src 'self' https://*.hello.aws.unique.dev;"
+  CONTENT_SECURITY_POLICY_VALUE: "default-src 'self'; img-src https: blob: data: *.s3.us-east-1.amazonaws.com; script-src 'self' 'unsafe-inline' blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self' blob: *.hello.aws.unique.dev wss://*.hello.aws.unique.dev *.s3.us-east-1.amazonaws.com; media-src 'self' *.s3.us-east-1.amazonaws.com; frame-ancestors 'self'; frame-src 'self' https://*.hello.aws.unique.dev;"
   USER_API_KEY_GENERATION_ENABLED: "true"
   FEATURE_FLAG_ENABLE_SPACE_LANDING_PAGE_UN_9930: "true"
   FEATURE_FLAG_ABOUT_SPACE_SECTION_UN_10270: "true"
