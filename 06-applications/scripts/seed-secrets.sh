@@ -427,13 +427,20 @@ while read -r e; do
   [[ -n "$sid" ]] && has_value "$sid" || STILL_EMPTY+=("$name")
 done < <(entries)
 
-if [[ -z "$ONLY" ]]; then
+# Scoped the same way as check mode, so the two never disagree about whether a
+# run was complete.
+if wanted psql-connection-strings; then
   for db in $(echo "$PG_DATABASES" | jq -r 'keys[]'); do
     arn=$(echo "$CONN_ARNS" | jq -r --arg k "$db" '.[$k] // empty')
     [[ -n "$arn" ]] && has_value "$arn" || STILL_EMPTY+=("psql-connection-string-${db}")
   done
+fi
+if wanted azure-openai-endpoint-definitions; then
   has_value "$ENDPOINT_ARN" || STILL_EMPTY+=("azure-openai-endpoint-definitions")
-  has_value "$S3_KEY_ARN"   || STILL_EMPTY+=("s3-access-key-id")
+fi
+if wanted s3-access-key; then
+  has_value "$S3_KEY_ARN"    || STILL_EMPTY+=("s3-access-key-id")
+  has_value "$S3_SECRET_ARN" || STILL_EMPTY+=("s3-secret-access-key")
 fi
 
 echo ""
