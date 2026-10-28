@@ -26,10 +26,22 @@ cd ..
 git add -A && git commit -m "configure: apply sbx instance values"
 git push -u origin deploy
 
-# 6. Bootstrap ArgoCD
+# 6. Give every secret a value
+#    Terraform creates the secrets and fills in the ones it knows. The rest are
+#    credentials, which cannot live in state. Nothing starts without them.
 cd 06-applications
-helmfile -e sbx -f argo-bootstrap.yaml sync
+cp secrets-sources.yaml.template sbx/secrets-sources.yaml
+# Point each entry at your credential store, then:
+./scripts/seed-secrets.sh sbx
+./scripts/seed-secrets.sh sbx --check   # confirm none were missed
+
+# 7. Bootstrap ArgoCD
+helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
 ```
+
+`seed-secrets.sh --check` writes nothing and exits non-zero while any required
+secret is still empty, so it also answers "was this environment ever seeded?"
+long after the fact.
 
 ## Branch Model
 
@@ -80,7 +92,7 @@ All parameters in `<env>/instance-config.yaml`:
 
 ```
 06-applications/
-├── argo-bootstrap.yaml              # Helmfile: bootstraps ArgoCD + ApplicationSets
+├── argo-bootstrap.yaml.gotmpl      # Helmfile: bootstraps ArgoCD + ApplicationSets
 ├── instance-config.yaml.template    # Configuration template (copy into env dir)
 ├── scripts/
 │   ├── configure-instance.sh        # Replace placeholders (env-scoped)
@@ -125,7 +137,7 @@ Bootstrap ArgoCD and ApplicationSets on the deployment branch:
 
 ```bash
 cd 06-applications
-helmfile -e sbx -f argo-bootstrap.yaml sync
+helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
 ```
 
 This deploys:

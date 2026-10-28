@@ -118,6 +118,7 @@ title = "Hello AWS Secret Detection"
     regexes = [
       '''^\$\{?[A-Za-z_][A-Za-z0-9_]*\}?$''',  # e.g. "$ACR_PASSWORD"
       '''\.tfstate$''',                        # e.g. "${LAYER_SHORT}/terraform.tfstate"
+      '''^op://''',                            # a credential-store reference, not a credential
     ]
     stopwords = [
       "topology.kubernetes.io/zone",   # Kubernetes topology spread constraint
