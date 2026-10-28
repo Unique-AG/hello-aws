@@ -25,3 +25,10 @@ deploymentMode: daemonset
 # Detects TEE hardware; the guest runs in a separate instance, so it is moot.
 node-feature-discovery:
   enabled: false
+
+# Through the ECR pull-through cache: the S3 gateway endpoint policy admits
+# ECR's layer bucket, not quay.io's own S3 blob store.
+image:
+  reference: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/kata-containers/kata-deploy
+kubectlImage:
+  reference: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/kata-containers/kubectl
