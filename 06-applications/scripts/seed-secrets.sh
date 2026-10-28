@@ -84,6 +84,14 @@ info "Region: ${AWS_REGION}   Env: ${ENV}   Mode: $( $CHECK && echo check || { $
 #######################################
 # Inventory
 #######################################
+# Secrets the derived steps write, resolved up front so check mode can see them.
+ENDPOINT_ARN=$(echo "$SECRET_ARNS" | jq -r '.azure_openai_endpoint_definitions // empty')
+S3_KEY_ARN=$(echo "$SECRET_ARNS" | jq -r '.s3_access_key_id // empty')
+S3_SECRET_ARN=$(echo "$SECRET_ARNS" | jq -r '.s3_secret_access_key // empty')
+
+# A derived entry stands for several secrets; --only matches its manifest name.
+wanted() { [[ -z "$ONLY" || "$ONLY" == "$1" ]]; }
+
 entries() { yq -o=json '.secrets' "$MANIFEST" | jq -c '.[]'; }
 field()   { echo "$1" | jq -r "$2 // empty"; }
 
@@ -171,8 +179,8 @@ while read -r e; do
   [[ -n "$ONLY" && "$ONLY" != "$name" ]] && continue
 
   # Deriers that fan out to several secrets report themselves.
+  # Derived entries are reported by expansion below, not as one opaque row.
   if [[ "$kind" == "derive" ]]; then
-    PLAN+=("${name}|derive|-|pending|required")
     continue
   fi
 
@@ -221,12 +229,22 @@ if $CHECK; then
       missing=$((missing+1))
     fi
   done
-  # Connection strings are one plan row but several secrets.
-  for db in $(echo "$PG_DATABASES" | jq -r 'keys[]'); do
-    arn=$(echo "$CONN_ARNS" | jq -r --arg k "$db" '.[$k] // empty')
+  # The derived rows above stand in for real secrets; report those.
+  report_one() {
+    local label="$1" arn="$2" st
     if [[ -n "$arn" ]] && has_value "$arn"; then st=populated; else st=empty; missing=$((missing+1)); fi
-    printf "%-42s %-9s %s\n" "psql-connection-string-${db}" "derive" "$st"
-  done
+    printf "%-42s %-9s %s\n" "$label" "derive" "$st"
+  }
+  if wanted psql-connection-strings; then
+    for db in $(echo "$PG_DATABASES" | jq -r 'keys[]'); do
+      report_one "psql-connection-string-${db}" "$(echo "$CONN_ARNS" | jq -r --arg k "$db" '.[$k] // empty')"
+    done
+  fi
+  wanted azure-openai-endpoint-definitions && report_one "azure-openai-endpoint-definitions" "$ENDPOINT_ARN"
+  if wanted s3-access-key; then
+    report_one "s3-access-key-id"     "$S3_KEY_ARN"
+    report_one "s3-secret-access-key" "$S3_SECRET_ARN"
+  fi
   echo ""
   if (( missing > 0 )); then
     error "${missing} secret(s) have no value. Run without --check to seed them."
@@ -303,6 +321,7 @@ done < <(entries)
 #######################################
 # Derived: PostgreSQL connection strings
 #######################################
+if wanted psql-connection-strings; then
 info "Connection strings ..."
 AURORA_PASSWORD=$(aws secretsmanager get-secret-value --secret-id "$AURORA_PW_ARN" \
   --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo "")
@@ -332,14 +351,15 @@ for db in $(echo "$PG_DATABASES" | jq -r 'keys[]'); do
   SEEDED=$((SEEDED+1))
 done
 unset AURORA_PASSWORD
+fi
 
 #######################################
 # Derived: LiteLLM endpoint definitions
 #######################################
 # The model names come from the litellm overlay, so this cannot drift from what
 # the proxy actually serves.
+if wanted azure-openai-endpoint-definitions; then
 LITELLM_OVERLAY="${APPS_DIR}/${ENV}/value-overlays/litellm/litellm.yaml"
-ENDPOINT_ARN=$(echo "$SECRET_ARNS" | jq -r '.azure_openai_endpoint_definitions')
 if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
   if has_value "$ENDPOINT_ARN" && [[ "$FORCE" == "false" ]]; then
     info "azure-openai-endpoint-definitions: already set"; SKIPPED=$((SKIPPED+1))
@@ -361,6 +381,7 @@ else
   warn "azure-openai-endpoint-definitions: needs the litellm master key and ${LITELLM_OVERLAY#$PROJECT_ROOT/} — left empty"
   LEFT_EMPTY=$((LEFT_EMPTY+1))
 fi
+fi
 unset LITELLM_MASTER_KEY
 
 #######################################
@@ -368,9 +389,9 @@ unset LITELLM_MASTER_KEY
 #######################################
 # Creating a key invalidates the one in use, so this only runs when the secret
 # is empty, or when a rotation was asked for explicitly.
-S3_KEY_ARN=$(echo "$SECRET_ARNS" | jq -r '.s3_access_key_id')
-S3_SECRET_ARN=$(echo "$SECRET_ARNS" | jq -r '.s3_secret_access_key')
-if has_value "$S3_KEY_ARN" && has_value "$S3_SECRET_ARN" && [[ "$FORCE" == "false" ]]; then
+if ! wanted s3-access-key; then
+  :
+elif has_value "$S3_KEY_ARN" && has_value "$S3_SECRET_ARN" && [[ "$FORCE" == "false" ]]; then
   info "s3-access-key: already set"; SKIPPED=$((SKIPPED+1))
 else
   $FORCE && warn "Rotating the S3 access key — the current one stops working."
