@@ -62,4 +62,7 @@ locals {
   # RunInstances is confined to it. First of the private subnets by default; the
   # sandbox pool spans all AZs, so pod-VM traffic may cross an AZ.
   peer_pods_subnet_id = local.infrastructure.private_subnet_ids[0]
+
+  # The issuer without its scheme, which is how IAM names the condition keys.
+  eks_oidc_host = replace(aws_eks_cluster.main.identity[0].oidc[0].issuer, "https://", "")
 }

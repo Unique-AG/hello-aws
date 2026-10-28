@@ -88,6 +88,7 @@ aws:
     fargateSecurityGroupId: "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"
     # unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate)
     templateName: "<SANDBOX_TEMPLATE_NAME>"
+    peerPodsRoleArn: "<PEER_PODS_ROLE_ARN>"
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
   route53:
@@ -165,6 +166,7 @@ FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_
 FROM_FARGATE_SG_ID=$(yq '.aws.sandbox.fargateSecurityGroupId // "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"' "$FROM")
 FROM_SANDBOX_TEMPLATE=$(yq '.aws.sandbox.templateName // "<SANDBOX_TEMPLATE_NAME>"' "$FROM")
 FROM_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$FROM")
+FROM_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$FROM")
 FROM_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$FROM")
 FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
 FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
@@ -224,6 +226,7 @@ TO_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GR
 TO_FARGATE_SG_ID=$(yq '.aws.sandbox.fargateSecurityGroupId // "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"' "$CONFIG")
 TO_SANDBOX_TEMPLATE=$(yq '.aws.sandbox.templateName // "<SANDBOX_TEMPLATE_NAME>"' "$CONFIG")
 TO_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$CONFIG")
+TO_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$CONFIG")
 TO_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$CONFIG")
 TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
 TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
@@ -435,6 +438,7 @@ replace_all "$FROM_PEER_PODS_SG_ID" "$TO_PEER_PODS_SG_ID"
 replace_all "$FROM_FARGATE_SG_ID" "$TO_FARGATE_SG_ID"
 replace_all "$FROM_SANDBOX_TEMPLATE" "$TO_SANDBOX_TEMPLATE"
 replace_all "$FROM_PODVM_AMI_ID" "$TO_PODVM_AMI_ID"
+replace_all "$FROM_PEER_PODS_ROLE_ARN" "$TO_PEER_PODS_ROLE_ARN"
 
 # 9b. EFS Docling models file system ID
 echo "  EFS Docling models ID ..."
