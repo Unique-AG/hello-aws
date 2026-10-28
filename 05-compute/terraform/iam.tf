@@ -918,9 +918,49 @@ resource "aws_eks_pod_identity_association" "tempo" {
 # One EC2 instance per Conduct sandbox. Pod Identity, not the node role: that
 # role is shared by every pool and reachable from any pod via IMDS.
 
+# cloud-api-adaptor refuses to start unless it is handed a role ARN and a web
+# identity token file, which Pod Identity does not set.
+resource "aws_iam_openid_connect_provider" "eks" {
+  url            = aws_eks_cluster.main.identity[0].oidc[0].issuer
+  client_id_list = ["sts.amazonaws.com"]
+
+  tags = {
+    Name = "${module.naming.id}-eks-oidc"
+  }
+}
+
+# Both paths on one role: the adaptor assumes it through the OIDC provider, the
+# reclaimer keeps using Pod Identity.
+data "aws_iam_policy_document" "peer_pods_assume" {
+  source_policy_documents = [data.aws_iam_policy_document.pod_identity_assume.json]
+
+  statement {
+    sid     = "CloudApiAdaptorWebIdentity"
+    effect  = "Allow"
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.eks.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.eks_oidc_host}:sub"
+      values   = ["system:serviceaccount:sbx:cloud-api-adaptor"]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "${local.eks_oidc_host}:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+  }
+}
+
 resource "aws_iam_role" "peer_pods" {
   name               = "${module.naming.id}-peer-pods"
-  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+  assume_role_policy = data.aws_iam_policy_document.peer_pods_assume.json
 
   tags = {
     Name = "${module.naming.id}-peer-pods"

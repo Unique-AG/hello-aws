@@ -27,6 +27,11 @@ providerConfigs:
     PEERPODS_LIMIT_PER_NODE: "10"
 
 daemonset:
+  # The adaptor's entrypoint requires a role ARN and a web identity token file;
+  # EKS injects both from this annotation. Pod Identity alone does not set them.
+  serviceAccount:
+    annotations:
+      eks.amazonaws.com/role-arn: <PEER_PODS_ROLE_ARN>
   # Upstream hardcodes node.kubernetes.io/worker, which EKS will not set.
   nodeSelector:
     workload: sandbox
