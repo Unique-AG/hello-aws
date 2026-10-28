@@ -526,6 +526,20 @@ resource "aws_launch_template" "eks_nodes" {
     http_put_response_hop_limit = 2
   }
 
+  # Multipart because EKS appends its own node configuration to this.
+  user_data = each.value.install_fuse ? base64encode(<<-EOT
+    MIME-Version: 1.0
+    Content-Type: multipart/mixed; boundary="//"
+
+    --//
+    Content-Type: text/x-shellscript; charset="us-ascii"
+
+    #!/bin/bash
+    dnf install -y fuse
+    --//--
+  EOT
+  ) : null
+
   # Propagate tags to instances and volumes to satisfy SCP cost-tag requirements
   tag_specifications {
     resource_type = "instance"

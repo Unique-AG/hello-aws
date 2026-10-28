@@ -135,6 +135,9 @@ variable "eks_node_groups" {
       { key = "scalability", value = "rapid", effect = "NO_SCHEDULE" },
       { key = "lifecycle", value = "ephemeral", effect = "NO_SCHEDULE" }
     ])
+    # Peer-pod image snapshots are mounted over FUSE; the EKS AL2023 image
+    # carries the driver but not the mount helper that invokes it.
+    install_fuse = optional(bool, false)
   }))
 }
 
