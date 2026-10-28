@@ -66,6 +66,8 @@ common.auto.tfvars
 06-applications/.instance-applied.yaml
 06-applications/*/instance-config.yaml
 06-applications/*/.instance-applied.yaml
+# Names locations in a credential store; per-deployment, never committed.
+06-applications/*/secrets-sources.yaml
 
 # Pod VM build output — multi-GB disk images
 podvm-build/
