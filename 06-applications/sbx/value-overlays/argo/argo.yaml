@@ -3,6 +3,13 @@
 nameOverride: argo
 global:
   domain: hello.aws.unique.dev
+  # Through the ECR pull-through cache: the S3 gateway endpoint policy admits
+  # ECR's layer bucket, not the upstream registries' own S3 blob stores.
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/argoproj/argocd
+redis:
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/public.ecr.aws/docker/library/redis
 repoServer:
   extraArgs:
     - --repo-cache-expiration=15m
