@@ -7,7 +7,7 @@ spec:
   sources:
     - repoURL: oci://ghcr.io/unique-ag/helm-charts/agent-sandbox-controller
       chart: "."
-      targetRevision: sha256:cb1bbacda71ca8d86078d8b019f1e3efcb8883e5245ffd57472a6f7c66158717
+      targetRevision: "1.0.1"
       helm:
         releaseName: agent-sandbox-controller
         valueFiles:

@@ -32,6 +32,7 @@ aws:
     podvmAmiId: <PODVM_AMI_ID>             # ./05-compute/scripts/copy-podvm-ami.sh (read the caveats in 05-compute/README.md)
     fargateSecurityGroupId: <FARGATE_SANDBOX_SECURITY_GROUP_ID>  # terraform output -raw fargate_sandbox_security_group_id (compute layer)
     templateName: <SANDBOX_TEMPLATE_NAME>  # unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate)
+    peerPodsRoleArn: <PEER_PODS_ROLE_ARN>  # terraform output -raw peer_pods_role_arn (compute layer)
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
   route53:

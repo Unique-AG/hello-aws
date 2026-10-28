@@ -20,6 +20,8 @@ kind: ServiceAccount
 metadata:
   name: cloud-api-adaptor
   namespace: sbx
+  annotations:
+    eks.amazonaws.com/role-arn: <PEER_PODS_ROLE_ARN>
 ---
 # Source: peerpods/templates/secrets.yaml
 apiVersion: v1
