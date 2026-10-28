@@ -83,7 +83,7 @@ gateway:
         serviceRef:
           name: kong-gateway-proxy
           port: 80
-        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-http/a3cbcfd07210e844
+        targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-http/6c196a801484bb2f
         targetType: ip
     - apiVersion: elbv2.k8s.aws/v1beta1
       kind: TargetGroupBinding
@@ -93,5 +93,5 @@ gateway:
         serviceRef:
           name: kong-gateway-proxy
           port: 443
-        targetGroupARN: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-https/2ca633353a952ea7
+        targetGroupARN: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-https/764a80968a0ef4a7
         targetType: ip

@@ -10,4 +10,4 @@ spec:
       unique.app/sandbox-template: unique-polyagent-001-fargate
   securityGroups:
     groupIds:
-      - <FARGATE_SANDBOX_SECURITY_GROUP_ID>
+      - sg-0ae138073e0e8e533

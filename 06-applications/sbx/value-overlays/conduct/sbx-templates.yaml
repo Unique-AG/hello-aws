@@ -4,7 +4,7 @@
 
 image:
   # Split explicitly: the chart defaults registry to the ACR host.
-  registry: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr
+  registry: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr
   repository: unique/unique-polyagent-001
   # By tag: the chart's digest names the ACR path, not the ECR one. The tag
   # itself is release content and lives in the app spec.

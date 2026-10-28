@@ -5,14 +5,14 @@ provider: aws
 
 providerConfigs:
   aws:
-    AWS_REGION: "eu-central-2"
-    AWS_SUBNET_ID: "subnet-0077a59d31fe5e775"
+    AWS_REGION: "us-east-1"
+    AWS_SUBNET_ID: "subnet-0e11bb790e4d989fc"
     # The pod VM group, not the node group: the VM's own ENI needs only the
     # pod-network tunnel, the adaptor channel and its image pull.
-    AWS_SG_IDS: "sg-0be1640509df0d481"
+    AWS_SG_IDS: "sg-05a7811bba23514c9"
     # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
-    PODVM_AMI_ID: "ami-073b44d7aa320d2fd"
-    # m6a is not offered in eu-central-2; m6i matches the sandbox node pool.
+    PODVM_AMI_ID: "ami-051f1906ef8ed2590"
+    # Matches the sandbox node pool.
     PODVM_INSTANCE_TYPE: "m6i.large"
     # The tag the IAM policy conditions on for both launch and termination.
     TAGS: "PeerPod=true"

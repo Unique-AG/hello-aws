@@ -36,7 +36,7 @@ secretFrom:
 env:
   LITELLM_LOG: "INFO"
   LITELLM_MODE: PRODUCTION
-  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
+  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-use1.o9swgn.use1.cache.amazonaws.com:6380/0"
 
 # Migration job for Prisma schema
 hooks:
@@ -52,54 +52,52 @@ proxy_config:
     # Uses eu.* inference profile IDs (required for on-demand invocation)
     - model_name: anthropic-claude-sonnet-4-5
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: us-east-1
         max_tokens: 10000
 
     - model_name: anthropic-claude-opus-4-6
       litellm_params:
-        model: bedrock/eu.anthropic.claude-opus-4-6-v1
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-opus-4-6-v1
+        aws_region_name: us-east-1
         max_tokens: 20000
 
     - model_name: anthropic-claude-haiku-4-5
       litellm_params:
-        model: bedrock/eu.anthropic.claude-haiku-4-5-20251001-v1:0
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0
+        aws_region_name: us-east-1
         max_tokens: 10000
 
     - model_name: anthropic-claude-sonnet-4-6
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-6
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-sonnet-4-6
+        aws_region_name: us-east-1
         max_tokens: 10000
 
-    # Claude Sonnet 5 via the EU Bedrock cross-region inference profile
-    # (eu.anthropic.claude-sonnet-5) — current EU-resident frontier model,
-    # verified available in eu-central-2 (aws bedrock list-inference-profiles).
+    # Claude Sonnet 5 via the US cross-region inference profile, verified
+    # present in us-east-1 (aws bedrock list-inference-profiles).
     - model_name: anthropic-claude-sonnet-5
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-5
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-sonnet-5
+        aws_region_name: us-east-1
         max_tokens: 10000
 
     - model_name: amazon-titan-embed-text-v2
       litellm_params:
         model: bedrock/amazon.titan-embed-text-v2:0
-        aws_region_name: eu-central-2
+        aws_region_name: us-east-1
 
-    # MiniMax M2.5 via AWS Bedrock — not available in eu-central-2; pinned to
-    # eu-central-1 (no EU CRI exists for MiniMax). Cross-region invocation
-    # leaves Switzerland; acceptable for hello-aws reference deployment only.
+    # MiniMax M2.5 via AWS Bedrock — served natively in us-east-1, so it is
+    # invoked on the model id directly with no inference profile.
     - model_name: minimax-m2-5
       litellm_params:
         model: bedrock/minimax.minimax-m2.5
-        aws_region_name: eu-central-1
+        aws_region_name: us-east-1
         max_tokens: 8192
 
     # Qwen3.6-35B-A3B (MoE) self-hosted on a SageMaker real-time endpoint in
     # ap-northeast-2, same sagemaker_chat (vLLM, OpenAI-compatible) pattern as
-    # gemma above — cross-region from eu-central-2, sandbox/reference only.
+    # gemma above — cross-region from us-east-1, sandbox/reference only.
     # Runs on ml.g6e.24xlarge with tensor_parallel=4 and a pinned 131072-token
     # window (SM_VLLM_MAX_MODEL_LEN), so max_tokens can be generous. Tool calling
     # IS enabled: the endpoint starts vLLM with --enable-auto-tool-choice
@@ -142,14 +140,14 @@ proxy_config:
 
     - model_name: gpt-4-turbo
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: us-east-1
         max_tokens: 10000
 
     - model_name: gpt-4-32k
       litellm_params:
-        model: bedrock/eu.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: eu-central-2
+        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
+        aws_region_name: us-east-1
         max_tokens: 10000
 
     # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
@@ -158,8 +156,8 @@ proxy_config:
     - model_name: text-embedding-ada-002
       litellm_params:
         model: bedrock/cohere.embed-v4:0
-        model_id: arn:aws:bedrock:eu-central-2:217381566492:application-inference-profile/rzhpiygtmfxm
-        aws_region_name: eu-central-2
+        model_id: arn:aws:bedrock:us-east-1:217381566492:application-inference-profile/n8ogrl4txi7n
+        aws_region_name: us-east-1
 
   general_settings:
     master_key: os.environ/PROXY_MASTER_KEY

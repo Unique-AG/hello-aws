@@ -5,12 +5,12 @@ env:
   CORS_ALLOWED_ORIGINS: https://hello.aws.unique.dev
   ZITADEL_PROJECT_ID: "368533034342811339"
   UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
-  AWS_REGION: eu-central-2
+  AWS_REGION: us-east-1
   LLM_PROVIDER: bedrock
   STORAGE_PROVIDER: s3
 
 image:
-  repository: 217381566492.dkr.ecr.eu-central-2.amazonaws.com/uniquecr/ai-service-assistants-core
+  repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr/ai-service-assistants-core
 
 replicaCount: 1
 

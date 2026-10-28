@@ -21,7 +21,7 @@ resources:
                 # The role should be annotated on the cert-manager service account
                 # When using IRSA, cert-manager automatically uses the IAM role
                 # annotated on the service account (no need for accessKeyIDSecretRef)
-                region: eu-central-2
+                region: us-east-1
                 hostedZoneID: Z03833732DAIIS62GPG8S
             selector:
               dnsZones:
