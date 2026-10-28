@@ -51,6 +51,7 @@ aws:
     podvmAmiId: ami-051f1906ef8ed2590
     fargateSecurityGroupId: sg-0ae138073e0e8e533 # set after 05 applies: terraform output -raw fargate_sandbox_security_group_id
     templateName: unique-polyagent-001
+    peerPodsRoleArn: arn:aws:iam::217381566492:role/uq-dogfood-sbx-use1-peer-pods
   efs:
     doclingModelsId: fs-0bb15a45019d0527b
 zitadel:

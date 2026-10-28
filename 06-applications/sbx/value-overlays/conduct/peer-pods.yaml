@@ -31,7 +31,7 @@ daemonset:
   # EKS injects both from this annotation. Pod Identity alone does not set them.
   serviceAccount:
     annotations:
-      eks.amazonaws.com/role-arn: <PEER_PODS_ROLE_ARN>
+      eks.amazonaws.com/role-arn: arn:aws:iam::217381566492:role/uq-dogfood-sbx-use1-peer-pods
   # Upstream hardcodes node.kubernetes.io/worker, which EKS will not set.
   nodeSelector:
     workload: sandbox
