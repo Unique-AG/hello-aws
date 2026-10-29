@@ -1,0 +1,126 @@
+name: '[img] Pod VM image'
+
+# Builds the Conduct pod VM image from source and registers it as an AMI.
+# Manual only: it runs for tens of minutes and leaves an AMI behind.
+on:
+  workflow_dispatch:
+    inputs:
+      caa_ref:
+        description: 'cloud-api-adaptor ref to build (blank = the pinned one the chart expects)'
+        required: false
+        default: ''
+      skip_scan:
+        description: 'Skip the image scan (trivy cannot read this image''s squashfs root)'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  id-token: write
+  contents: read
+  attestations: write
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
+
+concurrency:
+  group: podvm-image
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_wrapper: false
+
+      # The build script checks for these and stops; it does not install them.
+      - name: Install the build dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq qemu-utils uidmap
+
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # The build is the long part and the import is what fails, so everything
+      # the import needs is settled first.
+      - name: Preflight
+        run: |
+          set -euo pipefail
+          ./05-compute/scripts/build-podvm-image.sh --check
+
+          terraform -chdir=05-compute/terraform init -input=false \
+            -backend-config=environments/sbx/backend-config.hcl >/dev/null
+          terraform -chdir=03-infrastructure/terraform init -input=false \
+            -backend-config=environments/sbx/backend-config.hcl >/dev/null
+
+          # -json rather than -raw: the output is null while the import is
+          # switched off, and -raw calls that an error, which would report the
+          # ordinary case as a broken read.
+          if ! OUT=$(terraform -chdir=05-compute/terraform output -json podvm_import_bucket 2>&1); then
+            echo "::error::Could not read the compute layer's outputs: ${OUT}"
+            exit 1
+          fi
+          BUCKET=$(printf '%s' "$OUT" | jq -r '. // empty')
+          if [ -z "$BUCKET" ]; then
+            echo "::error::No staging bucket, so the import would fail after the build."
+            echo "Apply the compute layer once with enable_podvm_image_import=true, then run this again."
+            exit 1
+          fi
+          echo "Staging bucket: ${BUCKET}"
+
+      # The runner has about 14 GB free; the builder images and the raw disk
+      # together need more.
+      - name: Make room for the build
+        run: |
+          df -h / | awk 'NR==2{print "before: "$4" free"}'
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /usr/local/share/boost "${AGENT_TOOLSDIRECTORY:-/opt/hostedtoolcache}"
+          sudo docker image prune --all --force >/dev/null 2>&1 || true
+          df -h / | awk 'NR==2{print "after:  "$4" free"}'
+
+      - name: Build the image
+        env:
+          # Through the environment, not interpolation: a dispatch input is
+          # attacker-controlled text and would otherwise be run as shell.
+          CAA_REF: ${{ inputs.caa_ref }}
+          OUT_DIR: ${{ runner.temp }}/podvm-build
+        run: |
+          set -euo pipefail
+          ARGS=(--out "$OUT_DIR")
+          [ -n "$CAA_REF" ] && ARGS+=(--ref "$CAA_REF")
+          ./05-compute/scripts/build-podvm-image.sh "${ARGS[@]}"
+          ls -la "$OUT_DIR"/*.raw "$OUT_DIR"/*.provenance
+
+      # Upstream publishes no attestation for the pod VM artifact, so the image
+      # this workflow produced gets one of its own.
+      - name: Attest the image
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: ${{ runner.temp }}/podvm-build/*.raw
+
+      - name: Import as an AMI
+        env:
+          OUT_DIR: ${{ runner.temp }}/podvm-build
+          SKIP_SCAN: ${{ inputs.skip_scan }}
+        run: |
+          set -euo pipefail
+          RAW=$(ls "$OUT_DIR"/*.raw)
+          ARGS=(--image "$RAW")
+          [ "$SKIP_SCAN" = "true" ] && ARGS+=(--skip-scan)
+          ./05-compute/scripts/import-podvm-ami.sh "${ARGS[@]}"
+
+      - name: Keep the provenance record
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: podvm-provenance
+          path: ${{ runner.temp }}/podvm-build/*.provenance
+          if-no-files-found: warn
