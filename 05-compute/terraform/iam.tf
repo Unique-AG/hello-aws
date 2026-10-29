@@ -978,6 +978,8 @@ data "aws_iam_policy_document" "peer_pods" {
       "ec2:DescribeInstances",
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeVolumes",
+      # Checked on teardown even when no address was ever allocated.
+      "ec2:DescribeAddresses",
     ]
     resources = ["*"]
   }
