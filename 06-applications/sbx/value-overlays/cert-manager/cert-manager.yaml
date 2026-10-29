@@ -49,3 +49,15 @@ resources:
 # Service account for cert-manager (Pod Identity association managed by Terraform)
 serviceAccount:
   create: true
+
+# Helm hook Job, enabled by default — a failed pull here fails the sync.
+startupapicheck:
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/jetstack/cert-manager-startupapicheck
+    tag: v1.17.2
+# Passed to the controller as --acme-http01-solver-image; unused by the Route53
+# DNS-01 issuer, but left on quay.io it would break any HTTP-01 challenge.
+acmesolver:
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/quay.io/jetstack/cert-manager-acmesolver
+    tag: v1.17.2
