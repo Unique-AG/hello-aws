@@ -94,3 +94,7 @@ fargate_profiles = {
     labels    = { "unique.app/sandbox-template" = "unique-polyagent-001-fargate" }
   }
 }
+
+# Staging for the pod VM image import. A deploy run applies without it set, so
+# the bucket and role only survive while this is committed here.
+enable_podvm_image_import = true
