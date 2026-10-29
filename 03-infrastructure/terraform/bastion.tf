@@ -95,6 +95,19 @@ resource "aws_vpc_security_group_egress_rule" "management_server_to_vpc" {
   cidr_ipv4         = each.value
 }
 
+# Package repositories answer on S3's own addresses, not the VPC's, so the rule
+# above does not reach them and dnf times out rather than failing.
+resource "aws_vpc_security_group_egress_rule" "management_server_to_s3" {
+  count = var.enable_s3_gateway_endpoint ? 1 : 0
+
+  security_group_id = aws_security_group.management_server.id
+  description       = "OS package repositories via the S3 gateway endpoint"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  prefix_list_id    = aws_vpc_endpoint.s3[0].prefix_list_id
+}
+
 # Get latest Amazon Linux 2023 AMI
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
