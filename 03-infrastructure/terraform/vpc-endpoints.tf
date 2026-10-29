@@ -126,6 +126,21 @@ resource "aws_vpc_endpoint" "s3" {
           "arn:aws:s3:::prod-${var.aws_region}-starport-layer-bucket",
           "arn:aws:s3:::prod-${var.aws_region}-starport-layer-bucket/*"
         ]
+      },
+      {
+        # Nodes install packages from a bucket in their own region, so the
+        # gateway endpoint sees the request and denies it unless named here.
+        Sid       = "AllowOSPackageRepos"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::al2023-repos-${var.aws_region}-*",
+          "arn:aws:s3:::al2023-repos-${var.aws_region}-*/*"
+        ]
       }
     ]
   })
