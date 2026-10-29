@@ -63,6 +63,7 @@ eks_node_groups = {
     taints = [
       { key = "workload", value = "sandbox", effect = "NO_SCHEDULE" }
     ]
+    install_fuse = true
   }
 }
 
