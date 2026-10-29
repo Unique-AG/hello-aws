@@ -61,12 +61,14 @@ jobs:
           terraform -chdir=03-infrastructure/terraform init -input=false \
             -backend-config=environments/sbx/backend-config.hcl >/dev/null
 
-          # Distinguished from an empty value: a broken read must not be
-          # reported as a missing bucket.
-          if ! BUCKET=$(terraform -chdir=05-compute/terraform output -raw podvm_import_bucket 2>&1); then
-            echo "::error::Could not read the compute layer's outputs: ${BUCKET}"
+          # -json rather than -raw: the output is null while the import is
+          # switched off, and -raw calls that an error, which would report the
+          # ordinary case as a broken read.
+          if ! OUT=$(terraform -chdir=05-compute/terraform output -json podvm_import_bucket 2>&1); then
+            echo "::error::Could not read the compute layer's outputs: ${OUT}"
             exit 1
           fi
+          BUCKET=$(printf '%s' "$OUT" | jq -r '. // empty')
           if [ -z "$BUCKET" ]; then
             echo "::error::No staging bucket, so the import would fail after the build."
             echo "Apply the compute layer once with enable_podvm_image_import=true, then run this again."
