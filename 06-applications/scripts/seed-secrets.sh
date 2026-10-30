@@ -121,9 +121,7 @@ put_value() {
 
 gen_password() { openssl rand -base64 48 | tr -d '/+=' | head -c 32; }
 gen_hex()      { openssl rand -hex 32; }
-# Zitadel rejects a password without an upper, lower, number and symbol.
-# gen_password is alphanumeric on purpose, so values that end up in a
-# connection string need no escaping; the entropy is the 28 random chars.
+# Zitadel needs a symbol; gen_password is alphanumeric so DSNs need no escaping.
 gen_complex()  { printf '%sAa1!' "$(openssl rand -base64 48 | tr -d '/+=' | head -c 28)"; }
 
 #######################################
