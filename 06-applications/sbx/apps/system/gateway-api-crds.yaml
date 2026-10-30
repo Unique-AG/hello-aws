@@ -1,0 +1,11 @@
+# Kong's ingress controller needs these CRDs before it will sync. Nothing
+# installed them: the gateway-api-crds release only writes a version marker.
+spec:
+  name: gateway-api-crds
+  autoSync: false
+  source:
+    repoURL: https://github.com/kubernetes-sigs/gateway-api
+    targetRevision: v1.2.1
+    path: config/crd/standard
+  syncOptions:
+    - ServerSideApply=true
