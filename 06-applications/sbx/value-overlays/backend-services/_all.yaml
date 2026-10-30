@@ -12,8 +12,8 @@ env:
   UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
   ZITADEL_HOST: https://id.hello.aws.unique.dev
   SCOPE_MANAGEMENT_API_URL: http://backend-service-scope-management.unique.svc
-  ZITADEL_PROJECT_ID: "368533034342811339"
-  ZITADEL_ROOT_ORG_ID: "368533034040821451"
+  ZITADEL_PROJECT_ID: "397413297122445183"
+  ZITADEL_ROOT_ORG_ID: "397413296350693247"
   # 2026.22+: shared FeatureFlagContextService reads remote feature-flag config
   # from configuration-backend at startup (onModuleInit). Required on every
   # backend service; missing → exits 1 with `Error: CONFIGURATION_BACKEND_URL not set`.

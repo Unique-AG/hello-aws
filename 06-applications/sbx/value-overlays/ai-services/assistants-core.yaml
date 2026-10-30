@@ -3,7 +3,7 @@
 
 env:
   CORS_ALLOWED_ORIGINS: https://hello.aws.unique.dev
-  ZITADEL_PROJECT_ID: "368533034342811339"
+  ZITADEL_PROJECT_ID: "397413297122445183"
   UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
   AWS_REGION: us-east-1
   LLM_PROVIDER: bedrock
