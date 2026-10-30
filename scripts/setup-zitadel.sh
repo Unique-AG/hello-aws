@@ -25,13 +25,11 @@
 #
 # Prerequisites:
 #   - aws CLI with valid credentials (AWS_PROFILE set)
-#   - curl, jq
+#   - curl, jq, yq
 #   - Zitadel deployed with a machine user that has IAM_OWNER
 #
-# Domain pattern: <env>.<DNS_ZONE>
-#   Identity: id.<env>.<DNS_ZONE>
-#   App:      <env>.<DNS_ZONE>
-#   API:      api.<env>.<DNS_ZONE>
+# Domains and region come from 06-applications/<env>/instance-config.yaml
+# (domain.identity, domain.base, aws.region).
 #
 # Examples:
 #   AWS_PROFILE=sandbox scripts/setup-zitadel.sh sbx wf7dDj...uUOEVBDaM5c
@@ -65,7 +63,7 @@ if [ -z "$ENV" ] || [ -z "$PAT" ]; then
 fi
 
 # Check prerequisites
-for cmd in aws curl jq; do
+for cmd in aws curl jq yq; do
   if ! command -v "$cmd" &>/dev/null; then
     error "$cmd is required but not found"
   fi
@@ -74,14 +72,30 @@ done
 #######################################
 # Configuration
 #######################################
-ZITADEL_HOST="https://id.${ENV}.<DNS_ZONE>"
-BASE_URL="https://${ENV}.<DNS_ZONE>"
+# Read from the instance config rather than a domain pattern: nothing
+# substitutes placeholders in this file, and the identity host is not always
+# id.<env>.<zone>.
+INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
+[ -f "$INSTANCE_CONFIG" ] || error "No instance config at ${INSTANCE_CONFIG}"
+
+DOMAIN_IDENTITY=$(yq -r '.domain.identity // ""' "$INSTANCE_CONFIG")
+DOMAIN_BASE=$(yq -r '.domain.base // ""' "$INSTANCE_CONFIG")
+CONFIG_REGION=$(yq -r '.aws.region // ""' "$INSTANCE_CONFIG")
+
+for v in DOMAIN_IDENTITY DOMAIN_BASE CONFIG_REGION; do
+  case "${!v}" in
+    ""|"<"*) error "${v} is unset or still a placeholder in ${INSTANCE_CONFIG##*/}" ;;
+  esac
+done
+
+ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
+BASE_URL="https://${DOMAIN_BASE}"
 AWS_SM_SECRET="manual-zitadel-scope-mgmt-pat"
 PROJECT_NAME="unique"
 APP_NAME="unique-app"
 
-# Read AWS region
-AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$(aws configure get region 2>/dev/null || echo "eu-central-2")}}"
+# The config is the environment's own record; an explicit export still wins.
+AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$CONFIG_REGION}}"
 
 info "Environment: ${ENV}"
 info "Zitadel host: ${ZITADEL_HOST}"
