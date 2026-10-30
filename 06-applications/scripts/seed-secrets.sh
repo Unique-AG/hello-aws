@@ -121,6 +121,10 @@ put_value() {
 
 gen_password() { openssl rand -base64 48 | tr -d '/+=' | head -c 32; }
 gen_hex()      { openssl rand -hex 32; }
+# Zitadel rejects a password without an upper, lower, number and symbol.
+# gen_password is alphanumeric on purpose, so values that end up in a
+# connection string need no escaping; the entropy is the 28 random chars.
+gen_complex()  { printf '%sAa1!' "$(openssl rand -base64 48 | tr -d '/+=' | head -c 28)"; }
 
 #######################################
 # External sources
@@ -280,8 +284,9 @@ seed_one() {
   case "$kind" in
     generate)
       case "$(field "$e" '.generator')" in
-        hex) value=$(gen_hex) ;;
-        *)   value=$(gen_password) ;;
+        hex)     value=$(gen_hex) ;;
+        complex) value=$(gen_complex) ;;
+        *)       value=$(gen_password) ;;
       esac
       ;;
     external)
