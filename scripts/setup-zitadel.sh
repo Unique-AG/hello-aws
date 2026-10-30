@@ -72,9 +72,7 @@ done
 #######################################
 # Configuration
 #######################################
-# Read from the instance config rather than a domain pattern: nothing
-# substitutes placeholders in this file, and the identity host is not always
-# id.<env>.<zone>.
+# From the instance config: nothing substitutes placeholders in this file.
 INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 [ -f "$INSTANCE_CONFIG" ] || error "No instance config at ${INSTANCE_CONFIG}"
 
@@ -94,7 +92,7 @@ AWS_SM_SECRET="manual-zitadel-scope-mgmt-pat"
 PROJECT_NAME="unique"
 APP_NAME="unique-app"
 
-# The config is the environment's own record; an explicit export still wins.
+# An explicit export still wins.
 AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$CONFIG_REGION}}"
 
 info "Environment: ${ENV}"
