@@ -1,9 +1,11 @@
-# Using public images for sbx - private ECR not accessible
+# The controller is mirrored; the gateway is a Docker Official Image.
+# controller and gateway are both aliases of the kong chart, so the ingress
+# controller's own image is under ingressController, not image.
 controller:
-  image:
-    repository: kong/kubernetes-ingress-controller
-    tag: 3.4.4
   ingressController:
+    image:
+      repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/kong/kubernetes-ingress-controller
+      tag: 3.4.4@sha256:cf74e0e1e54a5a96d7b48e1c02120369953d66126ff5763398372bce925b5d8e
     envFrom:
       - configMapRef:
           name: kong-controller-environment
@@ -33,8 +35,8 @@ controller:
         controllerName: konghq.com/kic-gateway-controller
 gateway:
   image:
-    repository: kong
-    tag: 3.9.0
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/public.ecr.aws/docker/library/kong
+    tag: 3.9.0@sha256:b2980ac91056bcc9cbf593b2b3d6a8c458cc134304b4d83bc4c93a6449f18df7
   # nodeSelector removed for sbx - nodes don't have these labels
   # nodeSelector:
   #   scalability: steady
