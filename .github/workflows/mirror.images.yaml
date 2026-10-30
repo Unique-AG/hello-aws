@@ -91,9 +91,7 @@ jobs:
               || aws ecr create-repository --repository-name "$REPO" --region "$AWS_REGION" \
                    --image-tag-mutability IMMUTABLE >/dev/null
 
-            # Tags are immutable, so a re-run must not push over itself. A tag
-            # already at the expected digest is done; a different one is a real
-            # conflict and should stop the run.
+            # Tags are immutable: skip one already at the digest, stop on a mismatch.
             HAVE=$(crane digest "${REGISTRY}/${TGT}" 2>/dev/null || true)
             if [ "$HAVE" = "$DIG" ]; then
               echo "    already present, skipping"
