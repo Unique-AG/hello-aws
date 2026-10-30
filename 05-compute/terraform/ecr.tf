@@ -182,6 +182,41 @@ resource "aws_secretsmanager_secret" "acr_credentials" {
 
 # Secret value is populated by seed-secrets.sh (reads ACR credentials from 1Password)
 
+# Docker Hub credentials for the pull-through cache. Docker Hub requires
+# authentication, so the rule cannot be created until this holds a value.
+resource "aws_secretsmanager_secret" "dockerhub_credentials" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  count = var.enable_dockerhub_pull_through ? 1 : 0
+
+  name        = "ecr-pullthroughcache/docker.io"
+  description = "Docker Hub credentials for ECR pull-through cache"
+  kms_key_id  = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = {
+    Name = "${module.naming.id}-dockerhub-credentials"
+  }
+}
+
+# Secret value is populated by seed-secrets.sh
+
+resource "aws_secretsmanager_secret_policy" "dockerhub_credentials" {
+  count = var.enable_dockerhub_pull_through ? 1 : 0
+
+  secret_arn = aws_secretsmanager_secret.dockerhub_credentials[0].arn
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowECRPullThroughCache"
+        Effect    = "Allow"
+        Principal = { Service = "pullthroughcache.ecr.amazonaws.com" }
+        Action    = "secretsmanager:GetSecretValue"
+        Resource  = aws_secretsmanager_secret.dockerhub_credentials[0].arn
+      }
+    ]
+  })
+}
+
 # Resource policy to allow ECR to access the secret
 resource "aws_secretsmanager_secret_policy" "acr_credentials" {
   count = var.acr_registry_url != "" ? 1 : 0
@@ -221,9 +256,18 @@ resource "aws_ecr_pull_through_cache_rule" "main" {
 
   # For authenticated registries (ACR), provide the credential ARN
   # Support both the full ACR URL and the short alias (extracted from ACR URL)
-  credential_arn = (each.value == var.acr_registry_url || each.value == local.acr_alias) && local.acr_configured ? aws_secretsmanager_secret.acr_credentials[0].arn : null
+  credential_arn = (
+    (each.value == var.acr_registry_url || each.value == local.acr_alias) && local.acr_configured
+    ? aws_secretsmanager_secret.acr_credentials[0].arn
+    : each.value == "docker.io" && var.enable_dockerhub_pull_through
+    ? aws_secretsmanager_secret.dockerhub_credentials[0].arn
+    : null
+  )
 
-  depends_on = [aws_secretsmanager_secret_policy.acr_credentials]
+  depends_on = [
+    aws_secretsmanager_secret_policy.acr_credentials,
+    aws_secretsmanager_secret_policy.dockerhub_credentials,
+  ]
 }
 
 # Guard against silently-dropped cache rules.

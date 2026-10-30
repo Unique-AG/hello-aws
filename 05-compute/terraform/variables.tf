@@ -189,6 +189,12 @@ variable "ecr_scanning_rules" {
 }
 
 # ECR Pull Through Cache Configuration
+variable "enable_dockerhub_pull_through" {
+  description = "Create the Secrets Manager entry Docker Hub's pull-through cache rule authenticates with. Set this and seed the value before adding docker.io to ecr_pull_through_cache_upstream_registries."
+  type        = bool
+  default     = false
+}
+
 variable "ecr_pull_through_cache_upstream_registries" {
   description = "List of upstream registry prefixes to cache (e.g., ['docker.io', 'public.ecr.aws', 'uniqueapp.azurecr.io'])"
   type        = list(string)

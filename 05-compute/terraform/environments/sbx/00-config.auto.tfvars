@@ -67,6 +67,9 @@ eks_node_groups = {
   }
 }
 
+# Docker Hub needs a credential; seed it before adding docker.io below.
+enable_dockerhub_pull_through = true
+
 # ECR Pull-Through Cache
 ecr_pull_through_cache_upstream_registries = [
   "public.ecr.aws",
