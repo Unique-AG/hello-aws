@@ -121,9 +121,7 @@ put_value() {
 
 gen_password() { openssl rand -base64 48 | tr -d '/+=' | head -c 32; }
 gen_hex()      { openssl rand -hex 32; }
-# Zitadel rejects a password without an upper, lower, number and symbol.
-# gen_password is alphanumeric on purpose, so values that end up in a
-# connection string need no escaping; the entropy is the 28 random chars.
+# Zitadel needs a symbol; gen_password is alphanumeric so DSNs need no escaping.
 gen_complex()  { printf '%sAa1!' "$(openssl rand -base64 48 | tr -d '/+=' | head -c 28)"; }
 
 #######################################
@@ -365,6 +363,13 @@ fi
 # the proxy actually serves.
 if wanted azure-openai-endpoint-definitions; then
 LITELLM_OVERLAY="${APPS_DIR}/${ENV}/value-overlays/litellm/litellm.yaml"
+# --only skips the loop that would have kept the key, so read it back here.
+if [[ -z "$LITELLM_MASTER_KEY" ]]; then
+  LITELLM_SID=$(target_id "$(entries | jq -c 'select(.name=="litellm-proxy-master-key")')")
+  [[ -n "$LITELLM_SID" ]] && LITELLM_MASTER_KEY=$(aws secretsmanager get-secret-value \
+    --secret-id "$LITELLM_SID" --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo "")
+  unset LITELLM_SID
+fi
 if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
   if has_value "$ENDPOINT_ARN" && [[ "$FORCE" == "false" ]]; then
     info "azure-openai-endpoint-definitions: already set"; SKIPPED=$((SKIPPED+1))
