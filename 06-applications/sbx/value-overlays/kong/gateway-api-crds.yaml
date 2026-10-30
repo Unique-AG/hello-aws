@@ -2,8 +2,8 @@
 # KIC 3.4 requires Gateway API v1.2
 # https://developer.konghq.com/kubernetes-ingress-controller/version-compatibility/
 #
-# This creates a ConfigMap marker to track the CRD version.
-# The actual CRDs are installed via a helmfile presync hook.
+# A ConfigMap marker recording the version only. The CRDs themselves are
+# applied by the gateway-api-crds Application in apps/system.
 resources:
   - apiVersion: v1
     kind: ConfigMap
