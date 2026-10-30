@@ -88,6 +88,9 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "s3:PutBucketPublicAccessBlock", "s3:GetBucketOwnershipControls",
       "s3:PutBucketOwnershipControls", "s3:CreateBucket", "s3:DeleteBucket",
       "s3:GetBucketTagging", "s3:PutBucketTagging",
+      # Emptying a versioned bucket on destroy; without these Terraform can
+      # create one it is then unable to delete.
+      "s3:ListBucketVersions", "s3:DeleteObjectVersion",
       # Bucket-config reads on resources=* — covers buckets in layers 03/04
       # (observability, application_data, ai_data) the same way bootstrap's
       # state-bucket policy does for layer 01. Note IAM-vs-API name pairs:
