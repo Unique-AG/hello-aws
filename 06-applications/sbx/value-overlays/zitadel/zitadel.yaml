@@ -1,8 +1,5 @@
 # Zitadel for AWS EKS
 # Using public images
-chownImage:
-  repository: alpine
-  tag: "3.19"
 image:
   repository: ghcr.io/zitadel/zitadel
   # Chart 9.34.1's own appVersion. v3 is skipped: no chart ever shipped a v3
@@ -13,11 +10,15 @@ image:
 login:
   enabled: false
 
-# New in chart 9.x. The kubectl tag has no default and must be set.
+# The chart defaults this to docker.io/alpine/k8s, whose layers come from
+# in-region S3 and are refused by the gateway endpoint policy.
+imageRegistry: <ECR_REGISTRY_THIRDPARTY_BARE>
 tools:
   kubectl:
     image:
-      tag: "1.35.1"
+      repository: quay.io/kata-containers/kubectl
+      # The chart always renders registry/repo:tag, so the digest rides on the tag.
+      tag: "latest@sha256:350a8a76f45fdb8217a6e48f7e001a270ef8beb103032b815dbdceb5be9e1a24"
   wait4x:
     image:
       tag: "3.6"
