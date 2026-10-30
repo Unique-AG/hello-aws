@@ -1,12 +1,7 @@
 name: '[img] Mirror third-party artifacts'
 
-# Copies the artifacts listed in 06-applications/mirror-artifacts.yaml into this
-# account's ECR. They have no copy on a registry the cluster can already reach,
-# and their upstream serves layers from in-region S3, which the S3 gateway
-# endpoint policy refuses. Everything else should use the pull-through cache.
-#
-# Manual: the list changes rarely, and a copy is only needed before the version
-# that references it is deployed.
+# Copies 06-applications/mirror-artifacts.yaml into this account's ECR, for
+# artifacts no reachable registry carries. Manual: the list changes rarely.
 on:
   workflow_dispatch:
     inputs:
@@ -96,9 +91,21 @@ jobs:
               || aws ecr create-repository --repository-name "$REPO" --region "$AWS_REGION" \
                    --image-tag-mutability IMMUTABLE >/dev/null
 
+            # Tags are immutable, so a re-run must not push over itself. A tag
+            # already at the expected digest is done; a different one is a real
+            # conflict and should stop the run.
+            HAVE=$(crane digest "${REGISTRY}/${TGT}" 2>/dev/null || true)
+            if [ "$HAVE" = "$DIG" ]; then
+              echo "    already present, skipping"
+              COPIED=$((COPIED + 1))
+              continue
+            elif [ -n "$HAVE" ]; then
+              echo "::error::${TGT} already exists as ${HAVE}, expected ${DIG}"
+              exit 1
+            fi
+
             crane copy "$FROM" "${REGISTRY}/${TGT}"
 
-            # The copy preserves the manifest digest; prove it rather than trust it.
             GOT=$(crane digest "${REGISTRY}/${TGT}")
             if [ "$GOT" != "$DIG" ]; then
               echo "::error::${TGT} landed as ${GOT}, expected ${DIG}"
