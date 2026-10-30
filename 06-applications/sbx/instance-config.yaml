@@ -55,6 +55,6 @@ aws:
   efs:
     doclingModelsId: fs-0bb15a45019d0527b
 zitadel:
-  projectId: "368533034342811339"
-  clientId: "368533034594535115"
-  orgId: "368533034040821451"
+  projectId: "397413297122445183"
+  clientId: "397413297877485439"
+  orgId: "397413296350693247"
