@@ -1,11 +1,9 @@
 # Qdrant Vector Database for AWS EKS
-# Mirrored: Qdrant publishes only to Docker Hub.
+# Using public Qdrant images
 replicaCount: 1
 
 image:
-  # No digest: the chart runs semverCompare on this tag. The mirror repository
-  # has immutable tags, so v1.13.1-unprivileged cannot move.
-  repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/qdrant/qdrant
+  repository: qdrant/qdrant
   tag: v1.13.1
   useUnprivilegedImage: true
 

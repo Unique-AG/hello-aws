@@ -7,15 +7,10 @@ artifacts:
     digest: sha256:cf74e0e1e54a5a96d7b48e1c02120369953d66126ff5763398372bce925b5d8e
     target: mirror/kong/kubernetes-ingress-controller:3.4.4
 
-  # useUnprivilegedImage makes the chart append -unprivileged for the server;
-  # its ensure-dir-ownership init container uses the plain tag.
+  # useUnprivilegedImage makes the chart append -unprivileged.
   - source: qdrant/qdrant:v1.13.1-unprivileged
     digest: sha256:56653f354e8781ff19b68a46b5704eb7fc65c0ee11849e27efd598863d3d08f1
     target: mirror/qdrant/qdrant:v1.13.1-unprivileged
-
-  - source: qdrant/qdrant:v1.13.1
-    digest: sha256:b2fa1d74b69bfc270817a50a1d526548991a787a42b68e85e1918d1b8c47441c
-    target: mirror/qdrant/qdrant:v1.13.1
 
   # An OCI Helm chart, not an image. ArgoCD's repo-server pulls it, so it is
   # subject to the same block. The only chart in this repo hosted on Docker Hub.

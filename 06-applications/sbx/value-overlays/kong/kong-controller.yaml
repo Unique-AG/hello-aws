@@ -1,6 +1,5 @@
-# The controller is mirrored; the gateway is a Docker Official Image.
-# controller and gateway are both aliases of the kong chart, so the ingress
-# controller's own image is under ingressController, not image.
+# Mirrored controller, Docker Official gateway. The controller's own image is
+# under ingressController: controller and gateway both alias the kong chart.
 controller:
   ingressController:
     image:

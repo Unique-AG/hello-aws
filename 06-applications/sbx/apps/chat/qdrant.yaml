@@ -10,7 +10,8 @@ spec:
       valuesObject:
         replicaCount: 1
         image:
-          repository: qdrant/qdrant
+          # Mirrored: Qdrant publishes only to Docker Hub.
+          repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/qdrant/qdrant
           tag: v1.13.1
           useUnprivilegedImage: true # auto-appends -unprivileged to the tag
         updateVolumeFsOwnership: false # as this is a new cluster, the file system was never running as root
