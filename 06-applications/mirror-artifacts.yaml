@@ -1,0 +1,19 @@
+# Artifacts with no copy on a registry the cluster can reach; everything else
+# belongs in the pull-through cache. Copied by .github/workflows/mirror.images.yaml.
+artifacts:
+  # Kong's ingress controller. The gateway itself is a Docker Official Image
+  # and comes from public.ecr.aws/docker/library/kong instead.
+  - source: kong/kubernetes-ingress-controller:3.4.4
+    digest: sha256:cf74e0e1e54a5a96d7b48e1c02120369953d66126ff5763398372bce925b5d8e
+    target: mirror/kong/kubernetes-ingress-controller:3.4.4
+
+  # The overlay sets useUnprivilegedImage, so the chart appends -unprivileged.
+  - source: qdrant/qdrant:v1.13.1-unprivileged
+    digest: sha256:56653f354e8781ff19b68a46b5704eb7fc65c0ee11849e27efd598863d3d08f1
+    target: mirror/qdrant/qdrant:v1.13.1-unprivileged
+
+  # An OCI Helm chart, not an image. ArgoCD's repo-server pulls it, so it is
+  # subject to the same block. The only chart in this repo hosted on Docker Hub.
+  - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21
+    digest: sha256:c65e5d1aa22ac7b9151b8e7707530a801551fc198fcc32565898b2e9b482185c
+    target: mirror/bitnamicharts/rabbitmq-cluster-operator:4.3.21
