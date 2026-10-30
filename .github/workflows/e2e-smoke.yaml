@@ -23,7 +23,8 @@ jobs:
   smoke:
     name: 💨 AWS Smoke (browser + API)
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # Conduct turns can wait minutes for a cold sandbox.
+    timeout-minutes: 50
     defaults:
       run:
         working-directory: e2e

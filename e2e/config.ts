@@ -70,6 +70,11 @@ export const config = {
     clientId: required('SERVICE_USER_CLIENT_ID'),
     clientSecret: required('SERVICE_USER_CLIENT_SECRET'),
   },
+
+  // ── Conduct ──────────────────────────────────────────────────────────
+  // Claude model for the Conduct spaces the tests create. Empty = the
+  // deployment's own Conduct default, which must be a model it serves.
+  conductModel: optional('CONDUCT_MODEL', ''),
 } as const;
 
 export type AppConfig = typeof config;
