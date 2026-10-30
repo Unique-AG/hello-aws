@@ -1,9 +1,10 @@
 global:
   priorityClassName: system-cluster-critical
 installCRDs: true
-# Using official images for sbx - private ECR not accessible from this account
+# Through the account's ECR cache: quay.io serves layers from in-region S3,
+# which the gateway endpoint policy does not allow.
 image:
-  repository: quay.io/jetstack/cert-manager-controller
+  repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/jetstack/cert-manager-controller
   tag: v1.17.2
 # nodeSelector removed for sbx environment - nodes don't have these labels
 # nodeSelector:
@@ -17,7 +18,7 @@ extraArgs:
   - --dns01-recursive-nameservers-only
 webhook:
   image:
-    repository: quay.io/jetstack/cert-manager-webhook
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/jetstack/cert-manager-webhook
     tag: v1.17.2
   resources:
     limits:
@@ -28,7 +29,7 @@ webhook:
       memory: 128Mi
 cainjector:
   image:
-    repository: quay.io/jetstack/cert-manager-cainjector
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/jetstack/cert-manager-cainjector
     tag: v1.17.2
   resources:
     limits:
@@ -48,3 +49,15 @@ resources:
 # Service account for cert-manager (Pod Identity association managed by Terraform)
 serviceAccount:
   create: true
+
+# Helm hook Job, enabled by default — a failed pull here fails the sync.
+startupapicheck:
+  image:
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/jetstack/cert-manager-startupapicheck
+    tag: v1.17.2
+# Passed to the controller as --acme-http01-solver-image; unused by a DNS-01
+# issuer, but left on quay.io it would break any HTTP-01 challenge.
+acmesolver:
+  image:
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/jetstack/cert-manager-acmesolver
+    tag: v1.17.2
