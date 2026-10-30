@@ -121,6 +121,8 @@ put_value() {
 
 gen_password() { openssl rand -base64 48 | tr -d '/+=' | head -c 32; }
 gen_hex()      { openssl rand -hex 32; }
+# Zitadel needs a symbol; gen_password is alphanumeric so DSNs need no escaping.
+gen_complex()  { printf '%sAa1!' "$(openssl rand -base64 48 | tr -d '/+=' | head -c 28)"; }
 
 #######################################
 # External sources
@@ -280,8 +282,9 @@ seed_one() {
   case "$kind" in
     generate)
       case "$(field "$e" '.generator')" in
-        hex) value=$(gen_hex) ;;
-        *)   value=$(gen_password) ;;
+        hex)     value=$(gen_hex) ;;
+        complex) value=$(gen_complex) ;;
+        *)       value=$(gen_password) ;;
       esac
       ;;
     external)
