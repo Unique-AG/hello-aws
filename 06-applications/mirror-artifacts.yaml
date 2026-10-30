@@ -1,0 +1,25 @@
+# Third-party artifacts copied into this account's ECR.
+#
+# Docker Hub serves its layers from an S3 bucket in our own region, so the S3
+# gateway endpoint sees those requests and refuses them. Anything listed here
+# has no copy on a registry the cluster can already reach — everything else
+# should use the pull-through cache instead of being mirrored.
+#
+# Mirrored by .github/workflows/mirror.images.yaml. Sources are digest-pinned:
+# the tag is what the chart asks for, the digest is what is actually copied.
+artifacts:
+  # Kong's ingress controller. The gateway itself is a Docker Official Image
+  # and comes from public.ecr.aws/docker/library/kong instead.
+  - source: kong/kubernetes-ingress-controller:3.4.4
+    digest: sha256:cf74e0e1e54a5a96d7b48e1c02120369953d66126ff5763398372bce925b5d8e
+    target: mirror/kong/kubernetes-ingress-controller:3.4.4
+
+  - source: qdrant/qdrant:v1.13.1
+    digest: sha256:b2fa1d74b69bfc270817a50a1d526548991a787a42b68e85e1918d1b8c47441c
+    target: mirror/qdrant/qdrant:v1.13.1
+
+  # An OCI Helm chart, not an image. ArgoCD's repo-server pulls it, so it is
+  # subject to the same block. The only chart in this repo hosted on Docker Hub.
+  - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21
+    digest: sha256:c65e5d1aa22ac7b9151b8e7707530a801551fc198fcc32565898b2e9b482185c
+    target: mirror/bitnamicharts/rabbitmq-cluster-operator:4.3.21
