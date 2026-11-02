@@ -42,3 +42,27 @@ volumes:
 volumeMounts:
   - mountPath: /tmp
     name: tmp-volume
+
+# backend-service listens on 8080/80 by default; this service is addressed on 8081.
+ports:
+  application: 8081
+service:
+  port: 8081
+# ai-service supplied both as chart defaults; backend-service leaves them unset.
+lifecycle:
+  preStop:
+    httpGet:
+      path: can_shutdown
+      port: 8081
+terminationGracePeriodSeconds: 3600
+# ai-service published no route. Callers reach this service in-cluster.
+routes:
+  paths:
+    default:
+      enabled: false
+    versioned:
+      enabled: false
+    scoped:
+      enabled: false
+    probe:
+      enabled: false
