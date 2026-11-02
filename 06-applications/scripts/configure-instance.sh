@@ -343,6 +343,9 @@ replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
 # The overlays name the ACR registry directly; the tfvars copy is rewritten below.
 echo "  ACR registry URL ..."
 replace_all "$FROM_ACR_URL" "$TO_ACR_URL"
+# A token introduced after an instance was configured is not covered by the
+# derived "from" above, which no-ops when the prefix is unchanged.
+replace_all "<ACR_REGISTRY_URL>" "$TO_ACR_URL"
 
 # 2. Redis URL (before region, since URL contains region)
 echo "  Redis URL ..."
