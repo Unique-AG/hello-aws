@@ -1,10 +1,12 @@
+# ai-service is deprecated; backend-service is its successor. releaseName stays
+# assistants-core because chat calls it at that Service name on 8081.
 spec:
   name: assistants-core
   autoSync: false
   sources:
     - repoURL: ghcr.io/unique-ag/helm-charts
-      chart: ai-service
-      targetRevision: 3.0.0
+      chart: backend-service
+      targetRevision: 10.5.1
       helm:
         releaseName: assistants-core
         valueFiles:
