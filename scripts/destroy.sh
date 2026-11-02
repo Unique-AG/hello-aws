@@ -249,6 +249,13 @@ else
 fi
 echo ""
 
+# A resumed teardown can reach here with the ingress NLB already deleted; Terraform
+# still re-reads its ENI lookup and fails. Zeroing the flag skips that lookup.
+TEARDOWN_VARS=()
+if [[ "$LAYER_DIR_NAME" == 03-* ]]; then
+  TEARDOWN_VARS+=("-var" "enable_ingress_nlb=false")
+fi
+
 #######################################
 # Step 3: Plan Destruction
 #######################################
@@ -261,6 +268,7 @@ if [[ "$SKIP_PLAN" == "false" ]]; then
     -destroy \
     -var-file="../../common.auto.tfvars" \
     -var-file="environments/${ENV}/00-config.auto.tfvars" \
+    "${TEARDOWN_VARS[@]+"${TEARDOWN_VARS[@]}"}" \
     -out="${PLAN_FILE}"; then
     echo -e "${GREEN}✅ Destroy plan created successfully${NC}"
   else
@@ -311,7 +319,8 @@ else
   if terraform destroy \
     -var-file="../../common.auto.tfvars" \
     -var-file="environments/${ENV}/00-config.auto.tfvars" \
-    "${DESTROY_ARGS[@]}"; then
+    "${TEARDOWN_VARS[@]+"${TEARDOWN_VARS[@]}"}" \
+    "${DESTROY_ARGS[@]+"${DESTROY_ARGS[@]}"}"; then
     echo -e "${GREEN}✅ Destroy completed successfully${NC}"
   else
     echo -e "${RED}❌ Destroy failed${NC}"
