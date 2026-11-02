@@ -37,19 +37,22 @@ nodeSelector: null
 extraEnvSecrets:
   - assistants-core-secrets
 
-# Turns Conduct on: assistants-core claims a sandbox per agent run.
-sandboxConfig:
-  enabled: true
-  namespace: sbx
-  # The boundary: unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate).
-  template: <SANDBOX_TEMPLATE_NAME>
-  router:
-    host:
-      fromKubernetesService:
-        name: agent-sandbox-controller-router-svc
-        namespace: unique
-        podPort: 8080
-        podSelectorLabels:
-          k8s:app.kubernetes.io/name: agent-sandbox-controller
-          k8s:app.kubernetes.io/component: router
-    port: 8080
+# Conduct is off until a published chart accepts sandboxConfig. Neither
+# ai-service 3.0.0 (deprecated) nor backend-service 10.5.1 declares it, so the
+# block below is held here rather than lost. See the Conduct LLD, section 11.4.
+#
+# sandboxConfig:
+#   enabled: true
+#   namespace: sbx
+#   # The boundary: unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate).
+#   template: <SANDBOX_TEMPLATE_NAME>
+#   router:
+#     host:
+#       fromKubernetesService:
+#         name: agent-sandbox-controller-router-svc
+#         namespace: unique
+#         podPort: 8080
+#         podSelectorLabels:
+#           k8s:app.kubernetes.io/name: agent-sandbox-controller
+#           k8s:app.kubernetes.io/component: router
+#     port: 8080
