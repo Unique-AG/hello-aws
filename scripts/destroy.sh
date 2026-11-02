@@ -95,6 +95,31 @@ fi
 LAYER_DIR="${PROJECT_ROOT}/${LAYER_DIR_NAME}"
 TERRAFORM_DIR="${LAYER_DIR}/terraform"
 
+# The CloudFront VPC origin lives in this layer, and a distribution in another
+# account references it by id. Destroying the layer invalidates that reference,
+# which only shows up later as a 504 from the edge.
+if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]; then
+  ORIGIN_IDS=$(aws cloudfront list-vpc-origins --region us-east-1 \
+    --query "VpcOriginList.Items[].Id" --output text 2>/dev/null || echo "")
+  IN_USE=""
+  for oid in $ORIGIN_IDS; do
+    if aws cloudfront get-vpc-origin --id "$oid" --region us-east-1 \
+         --query 'VpcOrigin.VpcOriginEndpointConfig.Arn' --output text 2>/dev/null \
+         | grep -q ":${AWS_REGION:-us-east-1}:"; then
+      IN_USE="${IN_USE} ${oid}"
+    fi
+  done
+  if [[ -n "${IN_USE// /}" ]]; then
+    echo -e "${RED}❌ Refusing to destroy ${LAYER_DIR_NAME}.${NC}"
+    echo -e "${YELLOW}   VPC origin(s) in this region are shared with another account:${IN_USE}${NC}"
+    echo -e "${YELLOW}   A distribution there references the id, and recreating this layer"
+    echo -e "${YELLOW}   mints a new one — the reference has to be updated in that account."
+    echo -e "${YELLOW}   Tear down 04/05/06 instead, which leaves the origin intact.${NC}"
+    echo -e "${YELLOW}   Override with ALLOW_EDGE_TEARDOWN=true once that is coordinated.${NC}"
+    exit 1
+  fi
+fi
+
 CONFIG_FILE="${TERRAFORM_DIR}/environments/${ENV}/00-config.auto.tfvars"
 BACKEND_CONFIG="${TERRAFORM_DIR}/environments/${ENV}/backend-config.hcl"
 COMMON_CONFIG="${PROJECT_ROOT}/common.auto.tfvars"
