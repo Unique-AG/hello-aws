@@ -33,13 +33,13 @@ resources:
             name: uniquecr-oci
             enableOCI: "true"
             username: "{{ .username }}"
-            password: "{{ .password }}"
+            password: "{{ .accessToken }}"
       data:
         - secretKey: username
           remoteRef:
             key: ecr-pullthroughcache/<ACR_REGISTRY_URL>
             property: username
-        - secretKey: password
+        - secretKey: accessToken
           remoteRef:
             key: ecr-pullthroughcache/<ACR_REGISTRY_URL>
-            property: password
+            property: accessToken

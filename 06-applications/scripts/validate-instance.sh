@@ -74,6 +74,7 @@ PLACEHOLDERS=(
   "<AMP_WORKSPACE_ID>"
   "<AMP_REMOTE_WRITE_URL>"
   "<OBSERVABILITY_S3_BUCKET_NAME>"
+  "<ACR_REGISTRY_URL>"
 )
 
 # ------------------------------------------------------------------
