@@ -92,6 +92,33 @@ For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingr
 
 > **Future**: The ambition is to consolidate the two ALBs into a single ALB once CloudFront VPC Origins support WebSocket traffic.
 
+#### The VPC origin id is a cross-account contract
+
+The distribution lives in the connectivity account and references the VPC origin
+by id (`vo_…`). That id is the only coupling between the two accounts, and
+nothing in CloudFront re-points it automatically: AWS RAM can share a VPC origin
+but not a distribution, and the consuming account gets read-only access to what
+is shared.
+
+What that means in practice:
+
+- **Tearing down 04/05/06 and redeploying needs no access to the connectivity
+  account.** The origin and its ALB live here, untouched by those layers.
+- **Replacing the ALB within this layer is also safe.** `arn` on
+  `aws_cloudfront_vpc_origin` is not `ForceNew`, so Terraform updates the origin
+  in place and the id survives.
+- **Destroying this layer breaks the edge.** A rebuild mints a new id, the
+  distribution keeps pointing at the old one, and the symptom is a 504 at the
+  edge while every target in this account looks healthy. `scripts/destroy.sh`
+  refuses to destroy this layer while a VPC origin in the region is shared;
+  override with `ALLOW_EDGE_TEARDOWN=true` once the connectivity side is ready
+  to take a new id.
+- **A region move always needs the connectivity account.** A VPC origin points
+  at a load balancer in its own region, so a new region means a new origin and a
+  distribution update. Treat a region move as a coordinated change, not a
+  redeploy.
+
+
 ### Transit Gateway (Optional)
 
 When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity account), the VPC is attached to the Transit Gateway for hub-and-spoke network connectivity:

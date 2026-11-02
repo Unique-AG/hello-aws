@@ -125,6 +125,53 @@ if [[ ! -f "$BACKEND_CONFIG" ]]; then
 fi
 
 #######################################
+# Edge interlock
+#######################################
+# Another account's distribution references this layer's VPC origin by id, so a
+# rebuild orphans it. Fails closed; see 03-infrastructure/README.md.
+if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]; then
+  TF_REGION=$(grep -E '^[[:space:]]*aws_region[[:space:]]*=' "$COMMON_CONFIG" \
+    | head -1 | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/')
+  if [[ -z "$TF_REGION" ]]; then
+    echo -e "${RED}❌ Could not read aws_region from ${COMMON_CONFIG}.${NC}"
+    echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} without knowing which region to check.${NC}"
+    exit 1
+  fi
+
+  if ! ORIGIN_IDS=$(aws cloudfront list-vpc-origins --region us-east-1 \
+        --query "VpcOriginList.Items[].Id" --output text 2>&1); then
+    echo -e "${RED}❌ Could not list CloudFront VPC origins: ${ORIGIN_IDS}${NC}"
+    echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} while the edge cannot be checked.${NC}"
+    exit 1
+  fi
+
+  # --output text renders an absent Items key as the literal None.
+  if [[ -z "$ORIGIN_IDS" || "$ORIGIN_IDS" == "None" ]]; then
+    ORIGIN_IDS=""
+  fi
+
+  IN_USE=""
+  for oid in $ORIGIN_IDS; do
+    if ! OARN=$(aws cloudfront get-vpc-origin --id "$oid" --region us-east-1 \
+          --query 'VpcOrigin.VpcOriginEndpointConfig.Arn' --output text 2>&1); then
+      echo -e "${RED}❌ Could not read VPC origin ${oid}: ${OARN}${NC}"
+      echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} while the edge cannot be checked.${NC}"
+      exit 1
+    fi
+    [[ "$OARN" == *":${TF_REGION}:"* ]] && IN_USE="${IN_USE} ${oid}"
+  done
+
+  if [[ -n "${IN_USE// /}" ]]; then
+    echo -e "${RED}❌ Refusing to destroy ${LAYER_DIR_NAME} in ${TF_REGION}.${NC}"
+    echo -e "${YELLOW}   VPC origin(s) here are shared with another account:${IN_USE}${NC}"
+    echo -e "${YELLOW}   A distribution there references the id, and a rebuild mints a new one.${NC}"
+    echo -e "${YELLOW}   Tear down 04/05/06 instead, which leaves the origin intact.${NC}"
+    echo -e "${YELLOW}   Override with ALLOW_EDGE_TEARDOWN=true once that is coordinated.${NC}"
+    exit 1
+  fi
+fi
+
+#######################################
 # Check Prerequisites
 #######################################
 echo -e "${YELLOW}🔐 Checking prerequisites...${NC}"
