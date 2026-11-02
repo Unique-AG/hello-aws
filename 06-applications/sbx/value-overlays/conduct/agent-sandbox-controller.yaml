@@ -1,5 +1,12 @@
+# The chart's upstream images are not reachable from private nodes: the blob
+# fetch lands on an in-region S3 bucket the gateway endpoint policy refuses.
+image:
+  repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/registry.k8s.io/agent-sandbox/agent-sandbox-controller
+
 # The chart defaults router egress to the release namespace; sandboxes run in sbx.
 router:
+  image:
+    repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/registry.k8s.io/agent-sandbox/sandbox-router-go
   networkPolicy:
     egress:
       sandboxNamespaceSelector:
