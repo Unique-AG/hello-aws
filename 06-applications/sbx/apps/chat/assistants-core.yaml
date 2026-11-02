@@ -1,6 +1,5 @@
-# ai-service 3.0.0 is deprecated and names backend-service as its successor;
-# the other services here already use it. releaseName stays assistants-core
-# because chat calls http://assistants-core.unique.svc:8081/core.
+# ai-service is deprecated; backend-service is its successor. releaseName stays
+# assistants-core because chat calls it at that Service name on 8081.
 spec:
   name: assistants-core
   autoSync: false
