@@ -5,8 +5,8 @@ spec:
   name: agent-sandbox-controller
   autoSync: false
   sources:
-    - repoURL: oci://ghcr.io/unique-ag/helm-charts/agent-sandbox-controller
-      chart: "."
+    - repoURL: ghcr.io/unique-ag/helm-charts
+      chart: agent-sandbox-controller
       targetRevision: "1.0.1"
       helm:
         releaseName: agent-sandbox-controller
