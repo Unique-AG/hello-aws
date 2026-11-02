@@ -95,31 +95,6 @@ fi
 LAYER_DIR="${PROJECT_ROOT}/${LAYER_DIR_NAME}"
 TERRAFORM_DIR="${LAYER_DIR}/terraform"
 
-# The CloudFront VPC origin lives in this layer, and a distribution in another
-# account references it by id. Destroying the layer invalidates that reference,
-# which only shows up later as a 504 from the edge.
-if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]; then
-  ORIGIN_IDS=$(aws cloudfront list-vpc-origins --region us-east-1 \
-    --query "VpcOriginList.Items[].Id" --output text 2>/dev/null || echo "")
-  IN_USE=""
-  for oid in $ORIGIN_IDS; do
-    if aws cloudfront get-vpc-origin --id "$oid" --region us-east-1 \
-         --query 'VpcOrigin.VpcOriginEndpointConfig.Arn' --output text 2>/dev/null \
-         | grep -q ":${AWS_REGION:-us-east-1}:"; then
-      IN_USE="${IN_USE} ${oid}"
-    fi
-  done
-  if [[ -n "${IN_USE// /}" ]]; then
-    echo -e "${RED}❌ Refusing to destroy ${LAYER_DIR_NAME}.${NC}"
-    echo -e "${YELLOW}   VPC origin(s) in this region are shared with another account:${IN_USE}${NC}"
-    echo -e "${YELLOW}   A distribution there references the id, and recreating this layer"
-    echo -e "${YELLOW}   mints a new one — the reference has to be updated in that account."
-    echo -e "${YELLOW}   Tear down 04/05/06 instead, which leaves the origin intact.${NC}"
-    echo -e "${YELLOW}   Override with ALLOW_EDGE_TEARDOWN=true once that is coordinated.${NC}"
-    exit 1
-  fi
-fi
-
 CONFIG_FILE="${TERRAFORM_DIR}/environments/${ENV}/00-config.auto.tfvars"
 BACKEND_CONFIG="${TERRAFORM_DIR}/environments/${ENV}/backend-config.hcl"
 COMMON_CONFIG="${PROJECT_ROOT}/common.auto.tfvars"
@@ -147,6 +122,51 @@ if [[ ! -f "$BACKEND_CONFIG" ]]; then
   echo -e "${RED}❌ Error: Backend config file not found: ${BACKEND_CONFIG}${NC}"
   echo -e "${YELLOW}   Please update backend-config.hcl with bootstrap layer outputs${NC}"
   exit 1
+fi
+
+#######################################
+# Edge interlock
+#######################################
+# A distribution in the connectivity account references this account's
+# CloudFront VPC origin by id. Destroying this layer mints a new id on rebuild
+# while that distribution keeps the old one, which surfaces as a 504 at the
+# edge with every target here healthy. Fails closed: if the origin cannot be
+# checked, it is not safe to proceed.
+if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]; then
+  TF_REGION=$(grep -E '^[[:space:]]*aws_region[[:space:]]*=' "$COMMON_CONFIG" \
+    | head -1 | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/')
+  if [[ -z "$TF_REGION" ]]; then
+    echo -e "${RED}❌ Could not read aws_region from ${COMMON_CONFIG}.${NC}"
+    echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} without knowing which region to check.${NC}"
+    exit 1
+  fi
+
+  if ! ORIGIN_IDS=$(aws cloudfront list-vpc-origins --region us-east-1 \
+        --query "VpcOriginList.Items[].Id" --output text 2>&1); then
+    echo -e "${RED}❌ Could not list CloudFront VPC origins: ${ORIGIN_IDS}${NC}"
+    echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} while the edge cannot be checked.${NC}"
+    exit 1
+  fi
+
+  IN_USE=""
+  for oid in $ORIGIN_IDS; do
+    if ! OARN=$(aws cloudfront get-vpc-origin --id "$oid" --region us-east-1 \
+          --query 'VpcOrigin.VpcOriginEndpointConfig.Arn' --output text 2>&1); then
+      echo -e "${RED}❌ Could not read VPC origin ${oid}: ${OARN}${NC}"
+      echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} while the edge cannot be checked.${NC}"
+      exit 1
+    fi
+    [[ "$OARN" == *":${TF_REGION}:"* ]] && IN_USE="${IN_USE} ${oid}"
+  done
+
+  if [[ -n "${IN_USE// /}" ]]; then
+    echo -e "${RED}❌ Refusing to destroy ${LAYER_DIR_NAME} in ${TF_REGION}.${NC}"
+    echo -e "${YELLOW}   VPC origin(s) here are shared with another account:${IN_USE}${NC}"
+    echo -e "${YELLOW}   A distribution there references the id, and a rebuild mints a new one.${NC}"
+    echo -e "${YELLOW}   Tear down 04/05/06 instead, which leaves the origin intact.${NC}"
+    echo -e "${YELLOW}   Override with ALLOW_EDGE_TEARDOWN=true once that is coordinated.${NC}"
+    exit 1
+  fi
 fi
 
 #######################################
