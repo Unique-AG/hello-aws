@@ -127,11 +127,8 @@ fi
 #######################################
 # Edge interlock
 #######################################
-# A distribution in the connectivity account references this account's
-# CloudFront VPC origin by id. Destroying this layer mints a new id on rebuild
-# while that distribution keeps the old one, which surfaces as a 504 at the
-# edge with every target here healthy. Fails closed: if the origin cannot be
-# checked, it is not safe to proceed.
+# Another account's distribution references this layer's VPC origin by id, so a
+# rebuild orphans it. Fails closed; see 03-infrastructure/README.md.
 if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]; then
   TF_REGION=$(grep -E '^[[:space:]]*aws_region[[:space:]]*=' "$COMMON_CONFIG" \
     | head -1 | sed -E 's/.*=[[:space:]]*"([^"]+)".*/\1/')
@@ -146,6 +143,11 @@ if [[ "$LAYER_DIR_NAME" == 03-* ]] && [[ "${ALLOW_EDGE_TEARDOWN:-}" != "true" ]]
     echo -e "${RED}❌ Could not list CloudFront VPC origins: ${ORIGIN_IDS}${NC}"
     echo -e "${YELLOW}   Refusing to destroy ${LAYER_DIR_NAME} while the edge cannot be checked.${NC}"
     exit 1
+  fi
+
+  # --output text renders an absent Items key as the literal None.
+  if [[ -z "$ORIGIN_IDS" || "$ORIGIN_IDS" == "None" ]]; then
+    ORIGIN_IDS=""
   fi
 
   IN_USE=""
