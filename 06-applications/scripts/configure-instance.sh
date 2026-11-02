@@ -192,6 +192,7 @@ if is_placeholder "$FROM_AWS_REGION"; then
   FROM_ECR_PRIMARY_FULL="<ECR_REGISTRY_PRIMARY>"
   FROM_ECR_THIRDPARTY_FULL="<ECR_REGISTRY_THIRDPARTY>"
   FROM_ECR_THIRDPARTY_BARE="<ECR_REGISTRY_THIRDPARTY_BARE>"
+  FROM_ACR_URL="<ACR_REGISTRY_URL>"
 else
   # Real values: construct ECR URLs from components
   FROM_ECR_PRIMARY="${FROM_ECR_PRIMARY_ACCOUNT}.dkr.ecr.${FROM_AWS_REGION}.amazonaws.com"
@@ -199,6 +200,7 @@ else
   FROM_ECR_PRIMARY_FULL="${FROM_ECR_PRIMARY}/${FROM_ECR_PRIMARY_PREFIX}"
   FROM_ECR_THIRDPARTY_FULL="${FROM_ECR_THIRDPARTY}/${FROM_ECR_THIRDPARTY_PREFIX}"
   FROM_ECR_THIRDPARTY_BARE="${FROM_ECR_THIRDPARTY}"
+  FROM_ACR_URL="${FROM_ECR_PRIMARY_PREFIX}.azurecr.io"
 fi
 
 # ------------------------------------------------------------------
@@ -337,6 +339,10 @@ replace_all "$FROM_ECR_THIRDPARTY_FULL" "$TO_ECR_THIRDPARTY_FULL"
 # Also handle bare registry references (without prefix, e.g. in _common.yaml)
 echo "  ECR third-party bare registry ..."
 replace_all "$FROM_ECR_THIRDPARTY_BARE" "$TO_ECR_THIRDPARTY"
+
+# The overlays name the ACR registry directly; the tfvars copy is rewritten below.
+echo "  ACR registry URL ..."
+replace_all "$FROM_ACR_URL" "$TO_ACR_URL"
 
 # 2. Redis URL (before region, since URL contains region)
 echo "  Redis URL ..."
