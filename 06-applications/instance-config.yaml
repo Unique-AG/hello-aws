@@ -33,6 +33,8 @@ aws:
     url: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
   bedrock:
     cohereEmbedV4ProfileId: "p5rbstj6fcgb"
+    minimaxRegion: "us-east-1"
+    geoPrefix: "us"
   ecr:
     primary:
       accountId: "217381566492"
