@@ -10,7 +10,11 @@ env:
   STORAGE_PROVIDER: s3
 
 image:
-  repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr/ai-service-assistants-core
+  # The chart renders registry/repository and stamps a digest for the ACR path,
+  # which does not apply here; pull by tag from the pull-through cache.
+  registry: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr
+  repository: ai-service-assistants-core
+  useDigest: false
 
 replicaCount: 1
 
@@ -22,7 +26,7 @@ resources:
     cpu: 250m
     memory: 1Gi
 
-secretProvider: null
+secretProvider: {}
 
 serviceAccount:
   enabled: true
@@ -32,10 +36,24 @@ serviceAccount:
 podAnnotations:
   reloader.stakater.com/auto: "true"
 
-nodeSelector: null
+nodeSelector: {}
 
 extraEnvSecrets:
   - assistants-core-secrets
 
-# Conduct stays off: no published chart declares sandboxConfig. The values block
-# is in the PR that removed it and in the Conduct LLD, section 11.4.
+# Turns Conduct on: assistants-core claims a sandbox per agent run.
+sandboxConfig:
+  enabled: true
+  namespace: sbx
+  # The boundary: unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate).
+  template: unique-polyagent-001
+  router:
+    host:
+      fromKubernetesService:
+        name: agent-sandbox-controller-router-svc
+        namespace: unique
+        podPort: 8080
+        podSelectorLabels:
+          k8s:app.kubernetes.io/name: agent-sandbox-controller
+          k8s:app.kubernetes.io/component: router
+    port: 8080

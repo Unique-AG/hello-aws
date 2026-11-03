@@ -446,18 +446,8 @@ releases:
                   storage: 30Gi
 
   # ── ai-services ────────────────────────────
-  - name: assistants-core
-    namespace: unique
-    chart: unique-ag/backend-service
-    version: 10.5.1
-    needs:
-      - application-secrets
-    labels:
-      tier: chat
-      group: ai-services
-    values:
-      - defaults/ai-services/assistants-core.yaml
-      - {{ .Values.env }}/value-overlays/ai-services/assistants-core.yaml
+  # assistants-core is not deployable here: its chart is ACR-hosted, and this file
+  # carries no account-specific values. Use the ArgoCD path, as for every sbx-* chart.
 
   - name: ingestor
     namespace: unique
