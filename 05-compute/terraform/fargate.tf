@@ -66,6 +66,29 @@ resource "aws_iam_role_policy" "fargate_logging" {
   policy = data.aws_iam_policy_document.fargate_logging[0].json
 }
 
+# The managed policy cannot import through the pull-through cache, so the first
+# pull of an uncached image fails where a node-scheduled pod would succeed.
+data "aws_iam_policy_document" "fargate_ecr_pull_through_cache" {
+  count = local.fargate_count
+
+  statement {
+    sid    = "FargateEcrPullThroughCache"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchImportUpstreamImage",
+      "ecr:CreateRepository",
+    ]
+    resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"]
+  }
+}
+
+resource "aws_iam_role_policy" "fargate_ecr_pull_through_cache" {
+  count  = local.fargate_count
+  name   = "ecr-pull-through-cache"
+  role   = aws_iam_role.fargate_pod_execution[0].id
+  policy = data.aws_iam_policy_document.fargate_ecr_pull_through_cache[0].json
+}
+
 # Selectors are immutable — changing one forces destroy and recreate. The sandbox
 # profile must match only the runtime pods, not sbx-gateway, which shares the
 # namespace but has to stay on EC2.
