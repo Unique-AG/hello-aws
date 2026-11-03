@@ -1,12 +1,12 @@
-# ai-service is deprecated; backend-service is its successor. releaseName stays
-# assistants-core because chat calls it at that Service name on 8081.
+# The per-app chart: the generic charts have no _sandbox-config template, so they
+# drop sandboxConfig and Conduct cannot be enabled.
 spec:
   name: assistants-core
   autoSync: false
   sources:
-    - repoURL: ghcr.io/unique-ag/helm-charts
-      chart: backend-service
-      targetRevision: 10.5.1
+    - repoURL: uniquecr.azurecr.io
+      chart: helm/assistants-core
+      targetRevision: "2026.42.10"
       helm:
         releaseName: assistants-core
         valueFiles:
