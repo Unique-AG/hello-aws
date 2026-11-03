@@ -62,10 +62,6 @@ repositories:
   - name: unique-ag
     url: ghcr.io/unique-ag/helm-charts
     oci: true
-  # The per-app platform charts, via the ECR pull-through cache.
-  - name: uniquecr
-    url: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr/helm
-    oci: true
 
 # ─────────────────────────────────────────────
 # SYSTEM TIER — deploy first
@@ -450,18 +446,8 @@ releases:
                   storage: 30Gi
 
   # ── ai-services ────────────────────────────
-  - name: assistants-core
-    namespace: unique
-    chart: uniquecr/assistants-core
-    version: 2026.42.10
-    needs:
-      - application-secrets
-    labels:
-      tier: chat
-      group: ai-services
-    values:
-      - defaults/ai-services/assistants-core.yaml
-      - {{ .Values.env }}/value-overlays/ai-services/assistants-core.yaml
+  # assistants-core is not deployable here: its chart is ACR-hosted, and this file
+  # carries no account-specific values. Use the ArgoCD path, as for every sbx-* chart.
 
   - name: ingestor
     namespace: unique
