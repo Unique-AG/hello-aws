@@ -206,6 +206,11 @@ output "peer_pods_subnet_id" {
   value       = local.peer_pods_subnet_id
 }
 
+output "podvm_launch_template_name" {
+  description = "Launch template cloud-api-adaptor launches peer-pod sandboxes from; empty when podvm_ami_id is unset. Set PODVM_LAUNCHTEMPLATE_NAME to this and USE_PODVM_LAUNCHTEMPLATE to true."
+  value       = try(aws_launch_template.podvm[0].name, "")
+}
+
 output "podvm_import_bucket" {
   description = "Staging bucket for pod VM disk image imports (null unless enable_podvm_image_import)"
   value       = var.enable_podvm_image_import ? aws_s3_bucket.podvm_import[0].id : null

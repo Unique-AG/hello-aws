@@ -97,3 +97,7 @@ fargate_profiles = {
     labels    = { "unique.app/sandbox-template" = "unique-polyagent-001-fargate" }
   }
 }
+
+# Conduct sandbox isolation — the self-managed boundary. Enables the pod VM launch
+# template, whose instance profile is the only way the VM can authenticate to ECR.
+podvm_ami_id = "ami-051f1906ef8ed2590"

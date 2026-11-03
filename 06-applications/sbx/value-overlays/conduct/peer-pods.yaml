@@ -25,6 +25,10 @@ providerConfigs:
     # capable instance types.
     DISABLECVM: "true"
     PEERPODS_LIMIT_PER_NODE: "10"
+    # The VM is its own EC2 instance, so ECR credentials can only reach it through
+    # a launch template's instance profile. AMI, type and SG come from there.
+    USE_PODVM_LAUNCHTEMPLATE: "true"
+    PODVM_LAUNCHTEMPLATE_NAME: "uq-dogfood-sbx-use1-podvm"
 
 daemonset:
   # The adaptor's entrypoint requires a role ARN and a web identity token file;

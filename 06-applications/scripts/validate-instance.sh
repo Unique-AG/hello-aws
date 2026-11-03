@@ -75,6 +75,7 @@ PLACEHOLDERS=(
   "<AMP_REMOTE_WRITE_URL>"
   "<OBSERVABILITY_S3_BUCKET_NAME>"
   "<ACR_REGISTRY_URL>"
+  "<PODVM_LAUNCHTEMPLATE_NAME>"
 )
 
 # ------------------------------------------------------------------
