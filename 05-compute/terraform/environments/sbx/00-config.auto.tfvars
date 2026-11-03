@@ -86,3 +86,14 @@ ecr_pull_through_cache_upstream_registries = [
   "registry.k8s.io",
 ]
 
+# Conduct sandbox isolation — the managed boundary (ADR-002/ADR-007: the reference
+# offers both, so every release validates both). Selects only the Fargate template's
+# pods, so peer-pod sandboxes and sbx-gateway stay on EC2.
+fargate_profiles = {
+  sandbox = {
+    namespace = "sbx"
+    labels = {
+      "unique.app/sandbox-template" = "unique-polyagent-001-fargate"
+    }
+  }
+}
