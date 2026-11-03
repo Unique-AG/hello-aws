@@ -11,6 +11,13 @@ image:
   useDigest: false
 
 sandboxTemplate:
+  # The chart tolerates workload-runtime=kata; this cluster taints the sandbox
+  # pool workload=sandbox, so the default toleration never admits the pod there.
+  tolerations:
+    - key: workload
+      operator: Equal
+      value: sandbox
+      effect: NoSchedule
   enabled: true
   name: unique-polyagent-001
   # Headless Service per sandbox; needs controller >= 0.4.6-rc.1.
@@ -26,6 +33,10 @@ sandboxTemplate:
     mountPath: /etc/ssl/egress-mitm
     fileName: ca-cert.pem
     optional: true
+  # The agent reaches models through sbx-gateway and chat's Anthropic proxy (then LiteLLM).
+  extraEnv:
+    - name: UNIQUE_API_BASE
+      value: http://backend-service-chat.unique.svc.cluster.local/public
   # Never enable: ships unredacted customer data to the log store.
   allowInsecureLogging: false
   insecureVerboseLogging: {}
