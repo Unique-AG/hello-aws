@@ -242,3 +242,25 @@ variable "fargate_profiles" {
     error_message = "Each Fargate profile needs labels: without them it selects every pod in its namespace, sbx-gateway included."
   }
 }
+
+#######################################
+# Conduct Pod VM (peer pods)
+#######################################
+
+variable "podvm_ami_id" {
+  description = "AMI for Conduct peer-pod sandbox VMs, built out of band (see the pod VM image section of 05-compute/README.md). Empty (default) skips the launch template, instance profile and role, so peer pods keep whatever placement cloud-api-adaptor is configured with."
+  type        = string
+  default     = ""
+}
+
+variable "podvm_instance_type" {
+  description = "Instance type for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set."
+  type        = string
+  default     = "m6i.large"
+}
+
+variable "podvm_root_volume_size" {
+  description = "Root volume size in GiB for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set."
+  type        = number
+  default     = 30
+}
