@@ -1,12 +1,8 @@
 #######################################
 # Conduct Pod VM — launch template
 #######################################
-# A peer-pod sandbox is its own EC2 instance, outside the cluster's IAM, so the
-# node role does not reach it. Without an instance profile it cannot authenticate
-# to ECR and the container fails with CreateContainerRequest timed out.
-#
-# cloud-api-adaptor has no instance-profile field; a launch template is the only
-# supported way to give the VM credentials (USE_PODVM_LAUNCHTEMPLATE).
+# A peer-pod sandbox is its own EC2 instance outside the cluster's IAM, and
+# cloud-api-adaptor has no instance-profile field, so this is the only way in.
 
 locals {
   podvm_enabled = var.podvm_ami_id != ""
@@ -84,6 +80,10 @@ resource "aws_launch_template" "podvm" {
   image_id      = var.podvm_ami_id
   instance_type = var.podvm_instance_type
 
+  # The adaptor references the template by name, which resolves to the default
+  # version; without this an AMI change would be created but never launched.
+  update_default_version = true
+
   iam_instance_profile {
     arn = aws_iam_instance_profile.podvm[0].arn
   }
@@ -119,4 +119,37 @@ resource "aws_launch_template" "podvm" {
   }
 
   tags = merge(module.naming.tags, { Name = "${module.naming.id}-podvm" })
+}
+
+# RunInstances with an instance profile needs iam:PassRole, and the template
+# itself is a resource the adaptor must be allowed to launch from.
+data "aws_iam_policy_document" "peer_pods_launch_template" {
+  count = local.podvm_count
+
+  statement {
+    sid       = "PassPodVMRole"
+    effect    = "Allow"
+    actions   = ["iam:PassRole"]
+    resources = [aws_iam_role.podvm[0].arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ec2.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid       = "RunFromPodVMLaunchTemplate"
+    effect    = "Allow"
+    actions   = ["ec2:RunInstances"]
+    resources = [aws_launch_template.podvm[0].arn]
+  }
+}
+
+resource "aws_iam_role_policy" "peer_pods_launch_template" {
+  count  = local.podvm_count
+  name   = "peer-pods-launch-template"
+  role   = aws_iam_role.peer_pods.id
+  policy = data.aws_iam_policy_document.peer_pods_launch_template[0].json
 }
