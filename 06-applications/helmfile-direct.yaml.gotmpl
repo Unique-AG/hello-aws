@@ -62,6 +62,10 @@ repositories:
   - name: unique-ag
     url: ghcr.io/unique-ag/helm-charts
     oci: true
+  # The per-app platform charts, via the ECR pull-through cache.
+  - name: uniquecr
+    url: <ECR_REGISTRY_PRIMARY>/helm
+    oci: true
 
 # ─────────────────────────────────────────────
 # SYSTEM TIER — deploy first
@@ -448,8 +452,8 @@ releases:
   # ── ai-services ────────────────────────────
   - name: assistants-core
     namespace: unique
-    chart: unique-ag/backend-service
-    version: 10.5.1
+    chart: uniquecr/assistants-core
+    version: 2026.42.10
     needs:
       - application-secrets
     labels:
