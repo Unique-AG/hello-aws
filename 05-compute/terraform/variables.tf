@@ -260,9 +260,9 @@ variable "podvm_ami_id" {
 }
 
 variable "podvm_instance_type" {
-  description = "Instance type for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set."
+  description = "Instance type for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set. The pod VM root is read-only squashfs, so the guest unpacks the sandbox image into RAM and holds it there: memory must exceed the unpacked image plus the sandbox's own limit."
   type        = string
-  default     = "m6i.large"
+  default     = "r6i.large"
 }
 
 variable "podvm_root_volume_size" {
