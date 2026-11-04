@@ -16,7 +16,7 @@ providerConfigs:
     # pod-network tunnel, the adaptor channel and its image pull.
     AWS_SG_IDS: "sg-05a7811bba23514c9"
     # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
-    PODVM_AMI_ID: "<PODVM_AMI_ID>"
+    PODVM_AMI_ID: "ami-051f1906ef8ed2590"
     # Memory-optimised: the guest holds the unpacked sandbox image in RAM, since
     # the pod VM root is read-only squashfs. The launch template overrides this.
     PODVM_INSTANCE_TYPE: "r6i.large"
