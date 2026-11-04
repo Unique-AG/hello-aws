@@ -1,0 +1,69 @@
+# Registry credentials for peer-pod sandboxes. The guest VM pulls its own image
+# and cannot use the pod VM instance profile, so cloud-api-adaptor builds the
+# guest's auth.json from imagePullSecrets instead. ESO mints the ECR token from
+# its own pod identity and re-mints it ahead of the 12h expiry, so nothing here
+# is a stored credential.
+
+resources:
+  - apiVersion: generators.external-secrets.io/v1alpha1
+    kind: ECRAuthorizationToken
+    metadata:
+      name: sbx-ecr-token
+      namespace: sbx
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    spec:
+      # No auth block: the generator falls back to the ESO controller's pod identity.
+      region: <AWS_REGION>
+
+  - apiVersion: external-secrets.io/v1beta1
+    kind: ExternalSecret
+    metadata:
+      name: sbx-ecr-pull
+      namespace: sbx
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    spec:
+      # ECR tokens last 12h; re-minting at 6h keeps one valid at all times.
+      refreshInterval: 6h
+      target:
+        name: sbx-ecr-pull
+        creationPolicy: Owner
+        template:
+          engineVersion: v2
+          type: kubernetes.io/dockerconfigjson
+          data:
+            # Keyed on the bare host: an ECR token is registry-wide, so one entry
+            # covers every pull-through prefix under it.
+            .dockerconfigjson: |
+              {
+                "auths": {
+                  "<ECR_REGISTRY_THIRDPARTY_BARE>": {
+                    "username": "{{ .username }}",
+                    "password": "{{ .password }}",
+                    "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
+                  }
+                }
+              }
+      dataFrom:
+        - sourceRef:
+            generatorRef:
+              apiVersion: generators.external-secrets.io/v1alpha1
+              kind: ECRAuthorizationToken
+              name: sbx-ecr-token
+
+  # cloud-api-adaptor reads imagePullSecrets from the pod's ServiceAccount, so
+  # binding it here needs no change to the SandboxTemplate chart.
+  - apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: default
+      namespace: sbx
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+        # Kubernetes owns this ServiceAccount; never delete it on prune.
+        argocd.argoproj.io/sync-options: Prune=false
+    imagePullSecrets:
+      - name: sbx-ecr-pull

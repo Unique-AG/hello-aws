@@ -30,38 +30,8 @@ resource "aws_iam_role" "podvm" {
   tags               = merge(module.naming.tags, { Name = "role-${module.naming.id}-podvm" })
 }
 
-# Pull only, plus the pull-through import the node role also carries: the sandbox
-# image is mirrored, so a cold cache needs the import on first use.
-data "aws_iam_policy_document" "podvm_ecr" {
-  count = local.podvm_count
-
-  statement {
-    sid       = "EcrAuth"
-    effect    = "Allow"
-    actions   = ["ecr:GetAuthorizationToken"]
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "EcrPull"
-    effect = "Allow"
-    actions = [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:BatchGetImage",
-      "ecr:GetDownloadUrlForLayer",
-      "ecr:BatchImportUpstreamImage",
-      "ecr:CreateRepository",
-    ]
-    resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"]
-  }
-}
-
-resource "aws_iam_role_policy" "podvm_ecr" {
-  count  = local.podvm_count
-  name   = "ecr-pull"
-  role   = aws_iam_role.podvm[0].id
-  policy = data.aws_iam_policy_document.podvm_ecr[0].json
-}
+# Deliberately no policies: the guest pulls with the auth.json cloud-api-adaptor
+# builds from imagePullSecrets, never with AWS credentials.
 
 resource "aws_iam_instance_profile" "podvm" {
   count = local.podvm_count
