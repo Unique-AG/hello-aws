@@ -1,0 +1,15 @@
+# Registry credentials for the sandbox image. Lives here, not with
+# external-secrets, because these resources belong to the sbx namespace.
+spec:
+  name: sbx-ecr-pull
+  autoSync: false
+  syncOptions:
+    - SkipDryRunOnMissingResource=true
+  sources:
+    - repoURL: https://bedag.github.io/helm-charts
+      chart: raw
+      targetRevision: 2.0.0
+      helm:
+        releaseName: sbx-ecr-pull
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/conduct/sbx-ecr-pull.yaml
