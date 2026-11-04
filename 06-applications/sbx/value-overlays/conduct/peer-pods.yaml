@@ -23,9 +23,6 @@ providerConfigs:
     # AMI, instance type, subnet and SG all come from the launch template.
     USE_PODVM_LAUNCHTEMPLATE: "true"
     PODVM_LAUNCHTEMPLATE_NAME: "<PODVM_LAUNCHTEMPLATE_NAME>"
-    # Without this the guest unpacks the image into memory, which the sandbox
-    # image exhausts before the pull completes.
-    ENABLE_SCRATCH_SPACE: "true"
 
 daemonset:
   # The adaptor's entrypoint requires a role ARN and a web identity token file;
