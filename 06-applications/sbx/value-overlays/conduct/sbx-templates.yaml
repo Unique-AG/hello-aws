@@ -25,10 +25,6 @@ sandboxTemplate:
   runtimeClassName: kata-vm-isolation
   # Nodes authenticate to ECR by IAM; the chart's default secret is absent here.
   imagePullSecrets: []
-  # The guest pulls and unpacks the image itself, which does not finish inside
-  # kata's default create window. Capped by kubelet's runtimeRequestTimeout.
-  podAnnotations:
-    io.katacontainers.config.runtime.create_container_timeout: "600"
   # The CA sbx-gateway generates, so the sandbox trusts the proxy.
   egressProxyCA:
     enabled: true
