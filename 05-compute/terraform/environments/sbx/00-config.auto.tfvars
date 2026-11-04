@@ -99,5 +99,5 @@ fargate_profiles = {
 }
 
 # Conduct sandbox isolation — the self-managed boundary. Enables the pod VM launch
-# template, whose instance profile is the only way the VM can authenticate to ECR.
+# template; the guest authenticates to the registry with auth.json, not with AWS.
 podvm_ami_id = "ami-051f1906ef8ed2590"

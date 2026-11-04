@@ -15,7 +15,7 @@ resources:
         argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     spec:
       # No auth block: the generator falls back to the ESO controller's pod identity.
-      region: <AWS_REGION>
+      region: us-east-1
 
   - apiVersion: external-secrets.io/v1beta1
     kind: ExternalSecret
@@ -40,7 +40,7 @@ resources:
             .dockerconfigjson: |
               {
                 "auths": {
-                  "<ECR_REGISTRY_THIRDPARTY_BARE>": {
+                  "217381566492.dkr.ecr.us-east-1.amazonaws.com": {
                     "username": "{{ .username }}",
                     "password": "{{ .password }}",
                     "auth": "{{ printf "%s:%s" .username .password | b64enc }}"
