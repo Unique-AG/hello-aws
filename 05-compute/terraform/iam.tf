@@ -152,7 +152,8 @@ data "aws_iam_policy_document" "cluster_secrets" {
     resources = ["*"]
   }
 
-  # The minted token carries this role's identity, so the pull authorizes against it.
+  # The minted token carries this role's identity, so the pull authorizes against
+  # it -- including the import a cold pull-through cache needs on first use.
   statement {
     sid    = "ECRPullSandboxImages"
     effect = "Allow"
@@ -160,6 +161,8 @@ data "aws_iam_policy_document" "cluster_secrets" {
       "ecr:BatchCheckLayerAvailability",
       "ecr:BatchGetImage",
       "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchImportUpstreamImage",
+      "ecr:CreateRepository",
     ]
     resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"]
   }

@@ -1,8 +1,5 @@
-# Registry credentials for peer-pod sandboxes. The guest VM pulls its own image
-# and cannot use the pod VM instance profile, so cloud-api-adaptor builds the
-# guest's auth.json from imagePullSecrets instead. ESO mints the ECR token from
-# its own pod identity and re-mints it ahead of the 12h expiry, so nothing here
-# is a stored credential.
+# The peer-pod guest pulls its own image, so cloud-api-adaptor builds its
+# auth.json from imagePullSecrets; ESO mints and re-mints the token.
 
 resources:
   - apiVersion: generators.external-secrets.io/v1alpha1
