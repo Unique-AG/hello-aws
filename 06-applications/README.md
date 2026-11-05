@@ -192,10 +192,13 @@ prefix (`us`, `eu` or `apac`) is `aws.bedrock.geoPrefix` in `instance-config.yam
 model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
 ```
 
-The fleet is frontier-only: Claude Opus 5.5 and GPT-6 Astra. Each is served twice — as
+The fleet is frontier-only: Claude Opus 5.5 and the three GPT-6 tiers — Astra (most capable),
+Sol (agentic and coding work) and Luna (high-volume tasks). Each is served twice — as
 `anthropic-claude-*` / `openai-gpt-*`, the names Unique's model lists and Conduct spaces use, and
-under its native vendor ID (`claude-opus-5-5`, `gpt-6-astra`), because Claude Code in a Conduct
+under its native vendor ID (`claude-opus-5-5`, `gpt-6-astra`, ...), because Claude Code in a Conduct
 sandbox calls its sub-agents and background tasks by those IDs. Both names share one YAML anchor.
+
+Every model in the fleet rejects `temperature` and `top_p`, so each entry drops them.
 
 **Embedding models** require an application inference profile because:
 1. Cohere Embed v4 requires an inference profile for on-demand invocation
@@ -203,7 +206,7 @@ sandbox calls its sub-agents and background tasks by those IDs. Both names share
 
 The workaround uses `model` for provider mapping and `model_id` for the Bedrock API call:
 ```yaml
-- model_name: text-embedding-ada-002
+- model_name: text-embedding-cohere-embed-v4
   litellm_params:
     model: bedrock/cohere.embed-v4:0                    # provider mapping -> "cohere"
     model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<PROFILE_ID>

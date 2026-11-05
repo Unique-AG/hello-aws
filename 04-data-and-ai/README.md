@@ -65,6 +65,8 @@ narrowest scope available — `global.` is wider, not narrower. Check what a reg
 |---|---|---|
 | `claude-opus-5-5` | `<geo>.anthropic.claude-opus-5-5` | cross-region |
 | `gpt-6-astra` | `<geo>.openai.gpt-6-astra` | cross-region |
+| `gpt-6-sol` | `<geo>.openai.gpt-6-sol` | cross-region |
+| `gpt-6-luna` | `<geo>.openai.gpt-6-luna` | cross-region |
 | `cohere-embed-v4` | `<geo>.cohere.embed-v4:0` | cross-region |
 
 Models need their Bedrock Marketplace agreement accepted once per account; `06-applications/scripts/configure-instance.sh` accepts it for the models LiteLLM serves.

@@ -506,6 +506,8 @@ echo "Enabling Bedrock marketplace model agreements ..."
 BEDROCK_MODELS_REQUIRING_AGREEMENT=(
   "anthropic.claude-opus-5-5"
   "openai.gpt-6-astra"
+  "openai.gpt-6-sol"
+  "openai.gpt-6-luna"
   "cohere.embed-v4:0"
 )
 for model_id in "${BEDROCK_MODELS_REQUIRING_AGREEMENT[@]}"; do
