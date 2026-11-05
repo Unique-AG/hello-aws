@@ -49,8 +49,8 @@ hooks:
 proxy_config:
   model_list:
     # Bedrock serves no Anthropic or OpenAI model on-demand in-region, so the
-    # geo-prefixed cross-region profile (<BEDROCK_GEO_PREFIX>.*) is the narrowest
-    # scope available; "global." would be wider, not narrower.
+    # geo-prefixed cross-region profile is the narrowest scope available;
+    # a "global." profile would be wider, not narrower.
     - model_name: anthropic-claude-opus-5-5
       litellm_params: &claude-opus-5-5
         model: bedrock/us.anthropic.claude-opus-5-5
