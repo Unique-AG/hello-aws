@@ -24,6 +24,9 @@ providerConfigs:
     # AMI, instance type, subnet and SG all come from the launch template.
     USE_PODVM_LAUNCHTEMPLATE: "true"
     PODVM_LAUNCHTEMPLATE_NAME: "<PODVM_LAUNCHTEMPLATE_NAME>"
+    # Measured: without this the guest's image store is 3.1 GB; with it, 27.6 GB.
+    # Upstream deprecated it in v0.23.0, so this needs a replacement before 0.24.
+    ENABLE_SCRATCH_SPACE: "true"
 
 daemonset:
   # The adaptor's entrypoint requires a role ARN and a web identity token file;
