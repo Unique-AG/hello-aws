@@ -100,8 +100,4 @@ fargate_profiles = {
 
 # Conduct sandbox isolation — the self-managed boundary. Enables the pod VM launch
 # template; the guest authenticates to the registry with auth.json, not with AWS.
-# Transient: staging bucket + VM Import role for a pod VM image import.
-# Turn back off once the AMI is registered.
-enable_podvm_image_import = true
-
-podvm_ami_id = "ami-051f1906ef8ed2590"
+podvm_ami_id = "ami-0be984e3b13ddb79d"
