@@ -11,7 +11,7 @@ env:
   # below. Users hit ModelRestrictedException 400 ("not available on the
   # cluster").
   LITELLM_ENABLED: "true"
-  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-5-5,litellm:openai-gpt-6-astra"
+  UNIQUEAI_ALLOWED_MODELS: "*:litellm:anthropic-claude-opus-5-5,litellm:openai-gpt-6-astra,litellm:openai-gpt-6-sol,litellm:openai-gpt-6-luna"
   MAX_HEAP_MB: "3700"
   PUBSUB_REDIS_DB: "2"
   MCP_POLICY_MODE: "UNRESTRICTED"

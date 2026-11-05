@@ -94,6 +94,8 @@ variable "bedrock_inference_profiles" {
     # Frontier chat models, through the region's cross-region profiles
     "claude-opus-5-5" = { model_id = "anthropic.claude-opus-5-5" }
     "gpt-6-astra"     = { model_id = "openai.gpt-6-astra" }
+    "gpt-6-sol"       = { model_id = "openai.gpt-6-sol" }
+    "gpt-6-luna"      = { model_id = "openai.gpt-6-luna" }
     # Embeddings: Cohere Embed v4, which LiteLLM invokes by this profile's ARN
     "cohere-embed-v4" = { model_id = "cohere.embed-v4:0" }
   }

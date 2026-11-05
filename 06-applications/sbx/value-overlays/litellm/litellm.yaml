@@ -58,11 +58,28 @@ proxy_config:
         max_tokens: 20000
         additional_drop_params: ["temperature", "top_p", "top_k"]
 
+    # GPT-6 tiers: Astra is the most capable, Sol covers agentic and coding work,
+    # Luna is for high-volume tasks. All three reject temperature and top_p.
     - model_name: openai-gpt-6-astra
       litellm_params: &gpt-6-astra
         model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-astra
         aws_region_name: <AWS_REGION>
         max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: openai-gpt-6-sol
+      litellm_params: &gpt-6-sol
+        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-sol
+        aws_region_name: <AWS_REGION>
+        max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: openai-gpt-6-luna
+      litellm_params: &gpt-6-luna
+        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-luna
+        aws_region_name: <AWS_REGION>
+        max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
 
     # Native vendor IDs: Claude Code in Conduct sandboxes calls its sub-agents and
     # background tasks by these, through chat's Anthropic proxy.
@@ -70,11 +87,15 @@ proxy_config:
       litellm_params: *claude-opus-5-5
     - model_name: gpt-6-astra
       litellm_params: *gpt-6-astra
+    - model_name: gpt-6-sol
+      litellm_params: *gpt-6-sol
+    - model_name: gpt-6-luna
+      litellm_params: *gpt-6-luna
 
-    # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
-    # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
+    # Cohere Embed v4 (1536 dims), reached through the ingestion service's Azure
+    # OpenAI SDK as a deployment name.
     # model: sets provider mapping, model_id: sets Bedrock inference profile ARN
-    - model_name: text-embedding-ada-002
+    - model_name: text-embedding-cohere-embed-v4
       litellm_params:
         model: bedrock/cohere.embed-v4:0
         model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>
