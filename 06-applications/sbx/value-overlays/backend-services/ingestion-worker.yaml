@@ -2,11 +2,11 @@
 # Uses AWS Bedrock for AI and S3 for storage
 
 image:
-  repository: <ECR_REGISTRY_PRIMARY>/backend-service-ingestion-worker
+  repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/uniquecr/backend-service-ingestion-worker
 
 env:
   LLM_PROVIDER: bedrock
-  AWS_REGION: <AWS_REGION>
+  AWS_REGION: us-east-1
   AZURE_OPENAI_API_DEPLOYMENT_NAME: text-embedding-cohere-embed-v4
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   AZURE_OPENAI_API_VERSION: "2023-05-15"

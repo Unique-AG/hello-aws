@@ -36,7 +36,7 @@ secretFrom:
 env:
   LITELLM_LOG: "INFO"
   LITELLM_MODE: PRODUCTION
-  REDIS_URL: "<REDIS_URL>"
+  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-use1.o9swgn.use1.cache.amazonaws.com:6380/0"
 
 # Migration job for Prisma schema
 hooks:
@@ -53,8 +53,8 @@ proxy_config:
     # scope available; "global." would be wider, not narrower.
     - model_name: anthropic-claude-opus-5-5
       litellm_params: &claude-opus-5-5
-        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
-        aws_region_name: <AWS_REGION>
+        model: bedrock/us.anthropic.claude-opus-5-5
+        aws_region_name: us-east-1
         max_tokens: 20000
         additional_drop_params: ["temperature", "top_p", "top_k"]
 
@@ -62,22 +62,22 @@ proxy_config:
     # Luna is for high-volume tasks. All three reject temperature and top_p.
     - model_name: openai-gpt-6-astra
       litellm_params: &gpt-6-astra
-        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-astra
-        aws_region_name: <AWS_REGION>
+        model: bedrock/us.openai.gpt-6-astra
+        aws_region_name: us-east-1
         max_tokens: 20000
         additional_drop_params: ["temperature", "top_p", "top_k"]
 
     - model_name: openai-gpt-6-sol
       litellm_params: &gpt-6-sol
-        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-sol
-        aws_region_name: <AWS_REGION>
+        model: bedrock/us.openai.gpt-6-sol
+        aws_region_name: us-east-1
         max_tokens: 20000
         additional_drop_params: ["temperature", "top_p", "top_k"]
 
     - model_name: openai-gpt-6-luna
       litellm_params: &gpt-6-luna
-        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-luna
-        aws_region_name: <AWS_REGION>
+        model: bedrock/us.openai.gpt-6-luna
+        aws_region_name: us-east-1
         max_tokens: 20000
         additional_drop_params: ["temperature", "top_p", "top_k"]
 
@@ -98,8 +98,8 @@ proxy_config:
     - model_name: text-embedding-cohere-embed-v4
       litellm_params:
         model: bedrock/cohere.embed-v4:0
-        model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>
-        aws_region_name: <AWS_REGION>
+        model_id: arn:aws:bedrock:us-east-1:217381566492:application-inference-profile/n8ogrl4txi7n
+        aws_region_name: us-east-1
 
   general_settings:
     master_key: os.environ/PROXY_MASTER_KEY
