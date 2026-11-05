@@ -349,6 +349,9 @@ replace_all "$FROM_ACR_URL" "$TO_ACR_URL"
 # A token introduced after an instance was configured is not covered by the
 # derived "from" above, which no-ops when the prefix is unchanged.
 replace_all "<ACR_REGISTRY_URL>" "$TO_ACR_URL"
+# Unconditional for the same reason: on a reconfigure the derived FROM is the
+# real hostname, so a newly added token would never be matched.
+replace_all "<ECR_REGISTRY_THIRDPARTY_BARE>" "$TO_ECR_THIRDPARTY"
 
 # 2. Redis URL (before region, since URL contains region)
 echo "  Redis URL ..."

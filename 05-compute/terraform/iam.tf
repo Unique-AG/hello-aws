@@ -164,7 +164,11 @@ data "aws_iam_policy_document" "cluster_secrets" {
       "ecr:BatchImportUpstreamImage",
       "ecr:CreateRepository",
     ]
-    resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"]
+    # Only the configured pull-through prefixes, not every repository in the account.
+    resources = [
+      for r in var.ecr_pull_through_cache_upstream_registries :
+      "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${r}/*"
+    ]
   }
 }
 
