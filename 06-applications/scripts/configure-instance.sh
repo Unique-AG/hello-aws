@@ -329,6 +329,15 @@ replace_all_tfvars() {
 # ------------------------------------------------------------------
 echo "Configuring $ENV from $CONFIG ..."
 
+# 0. Literal placeholders. A file carried over from main arrives templated, but every
+# derived "from" below is already the real value, so only a literal pass matches it.
+echo "  Placeholder tokens ..."
+replace_all "<ECR_REGISTRY_PRIMARY>" "$TO_ECR_PRIMARY_FULL"
+replace_all "<REDIS_URL>" "$TO_REDIS_URL"
+replace_all "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>" "$TO_BEDROCK_COHERE_PROFILE_ID"
+replace_all "<AWS_ACCOUNT_ID>" "$TO_AWS_ACCOUNT_ID"
+replace_all "<AWS_REGION>" "$TO_AWS_REGION"
+
 # 1. ECR registries (full registry URL including prefix — must be before region replacement)
 echo "  ECR primary registry ..."
 replace_all "$FROM_ECR_PRIMARY_FULL" "$TO_ECR_PRIMARY_FULL"
