@@ -372,7 +372,11 @@ replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
 # 3b-2. Bedrock cross-region profile prefix, in context: the bare value (us, eu) is too
 # short to substitute on its own.
 echo "  Bedrock cross-region profile prefix ..."
+# Unconditional first: on a reconfigure the derived FROM is the real prefix, so the
+# placeholder would never be matched by the FROM->TO passes that follow.
+replace_all "bedrock/<BEDROCK_GEO_PREFIX>." "bedrock/${TO_BEDROCK_GEO_PREFIX}."
 replace_all "bedrock/${FROM_BEDROCK_GEO_PREFIX}.anthropic." "bedrock/${TO_BEDROCK_GEO_PREFIX}.anthropic."
+replace_all "bedrock/${FROM_BEDROCK_GEO_PREFIX}.openai." "bedrock/${TO_BEDROCK_GEO_PREFIX}.openai."
 
 # 3c. Prometheus / Observability (before region and account, since URLs contain both)
 echo "  AMP remote write URL ..."
