@@ -36,7 +36,7 @@ secretFrom:
 env:
   LITELLM_LOG: "INFO"
   LITELLM_MODE: PRODUCTION
-  REDIS_URL: "rediss://master.redis-uq-dogfood-sbx-use1.o9swgn.use1.cache.amazonaws.com:6380/0"
+  REDIS_URL: "<REDIS_URL>"
 
 # Migration job for Prisma schema
 hooks:
@@ -48,111 +48,28 @@ hooks:
 # Proxy configuration
 proxy_config:
   model_list:
-    # Anthropic Claude via Bedrock single-region US inference profiles.
-    # Every id below was confirmed ACTIVE with aws bedrock list-inference-profiles.
+    # Bedrock serves no Anthropic or OpenAI model on-demand in-region, so the
+    # geo-prefixed cross-region profile (<BEDROCK_GEO_PREFIX>.*) is the narrowest
+    # scope available; "global." would be wider, not narrower.
     - model_name: anthropic-claude-opus-5-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-opus-5-5
-        aws_region_name: us-east-1
+      litellm_params: &claude-opus-5-5
+        model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
+        aws_region_name: <AWS_REGION>
+        max_tokens: 20000
+        additional_drop_params: ["temperature", "top_p", "top_k"]
+
+    - model_name: openai-gpt-6-astra
+      litellm_params: &gpt-6-astra
+        model: bedrock/<BEDROCK_GEO_PREFIX>.openai.gpt-6-astra
+        aws_region_name: <AWS_REGION>
         max_tokens: 20000
 
-    - model_name: anthropic-claude-sonnet-5-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-5-5
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-haiku-5-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-haiku-5-5
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-fable-5-1
-      litellm_params:
-        model: bedrock/us.anthropic.claude-fable-5-1
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-opus-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-opus-5
-        aws_region_name: us-east-1
-        max_tokens: 20000
-
-    - model_name: anthropic-claude-sonnet-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-5
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-opus-4-6
-      litellm_params:
-        model: bedrock/us.anthropic.claude-opus-4-6-v1
-        aws_region_name: us-east-1
-        max_tokens: 20000
-
-    - model_name: anthropic-claude-sonnet-4-6
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-4-6
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-haiku-4-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-haiku-4-5-20251001-v1:0
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: anthropic-claude-sonnet-4-5
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: amazon-titan-embed-text-v2
-      litellm_params:
-        model: bedrock/amazon.titan-embed-text-v2:0
-        aws_region_name: us-east-1
-
-    # MiniMax M2.5 via AWS Bedrock — served natively in us-east-1, so it is
-    # invoked on the model id directly with no inference profile.
-    - model_name: minimax-m2-5
-      litellm_params:
-        model: bedrock/minimax.minimax-m2.5
-        aws_region_name: us-east-1
-        max_tokens: 8192
-
-    # Qwen3.6-35B-A3B (MoE) self-hosted on a SageMaker real-time endpoint in
-    # ap-northeast-2, same sagemaker_chat (vLLM, OpenAI-compatible) pattern as
-    # gemma above — cross-region from us-east-1, sandbox/reference only.
-    # Runs on ml.g6e.24xlarge with tensor_parallel=4 and a pinned 131072-token
-    # window (SM_VLLM_MAX_MODEL_LEN), so max_tokens can be generous. Tool calling
-    # IS enabled: the endpoint starts vLLM with --enable-auto-tool-choice
-    # --tool-call-parser qwen3_coder --reasoning-parser qwen3 (verified 2026-06-03,
-    # structured tool_calls returned), so tools/tool_choice are NOT dropped here.
-    # *_cost_per_token: amortized placeholder (no LiteLLM price map for a
-    # self-hosted endpoint). IAM: the litellm Pod Identity role's sagemaker invoke
-    # statement is scoped to endpoint/* in this region (05-compute iam.tf).
-    - model_name: qwen3-6-35b-a3b
-      litellm_params:
-        model: sagemaker_chat/qwen3-6-35b
-        aws_region_name: ap-northeast-2
-        max_tokens: 8192
-        input_cost_per_token: 0.000001
-        output_cost_per_token: 0.000001
-
-    - model_name: gpt-4-turbo
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: us-east-1
-        max_tokens: 10000
-
-    - model_name: gpt-4-32k
-      litellm_params:
-        model: bedrock/us.anthropic.claude-sonnet-4-5-20250929-v1:0
-        aws_region_name: us-east-1
-        max_tokens: 10000
+    # Native vendor IDs: Claude Code in Conduct sandboxes calls its sub-agents and
+    # background tasks by these, through chat's Anthropic proxy.
+    - model_name: claude-opus-5-5
+      litellm_params: *claude-opus-5-5
+    - model_name: gpt-6-astra
+      litellm_params: *gpt-6-astra
 
     # Embedding model alias (for ingestion service Azure OpenAI SDK compatibility)
     # Maps text-embedding-ada-002 to Cohere Embed v4 (1536 dims)
@@ -160,8 +77,8 @@ proxy_config:
     - model_name: text-embedding-ada-002
       litellm_params:
         model: bedrock/cohere.embed-v4:0
-        model_id: arn:aws:bedrock:us-east-1:217381566492:application-inference-profile/n8ogrl4txi7n
-        aws_region_name: us-east-1
+        model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>
+        aws_region_name: <AWS_REGION>
 
   general_settings:
     master_key: os.environ/PROXY_MASTER_KEY

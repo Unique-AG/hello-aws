@@ -53,23 +53,21 @@ There are two categories of source model, determined by the `source_type` field:
 - **`inference-profile`** (default): wraps the system-defined cross-region profile `<geo>.<model_id>`. The geography follows the region (`us` for `us-*`, `eu` for `eu-*`, `apac` for `ap-*`, otherwise `global`), or `bedrock_geo_prefix`; an entry's `geo` overrides both. Requests stay within that geography. The prefix in use is the `bedrock_geo_prefix` output, which `instance-config.yaml` takes as `aws.bedrock.geoPrefix`.
 - **`foundation-model`**: wraps a model served natively in the deployment region; requests stay in the region.
 
-Newer models are offered only through cross-region profiles. Check what a region offers with `aws bedrock list-inference-profiles --type-equals SYSTEM_DEFINED` and `aws bedrock list-foundation-models`.
+No Anthropic or OpenAI model is offered on-demand in-region: every one reports
+`inferenceTypesSupported: ["INFERENCE_PROFILE"]`, and invoking the bare foundation-model ID returns
+`ValidationException: ... on-demand throughput isn't supported`. The geo-prefixed profile is therefore the
+narrowest scope available — `global.` is wider, not narrower. Check what a region offers with
+`aws bedrock list-inference-profiles --type-equals SYSTEM_DEFINED` and `aws bedrock list-foundation-models`.
 
 #### Default Application Inference Profiles
 
 | Profile Key | Source Model (`<geo>` = region's prefix) | Source Type |
 |---|---|---|
 | `claude-opus-5-5` | `<geo>.anthropic.claude-opus-5-5` | cross-region |
-| `claude-opus-5` | `<geo>.anthropic.claude-opus-5` | cross-region |
-| `claude-opus-4-8` | `<geo>.anthropic.claude-opus-4-8` | cross-region |
-| `claude-sonnet-5-5` | `<geo>.anthropic.claude-sonnet-5-5` | cross-region |
-| `claude-sonnet-5` | `<geo>.anthropic.claude-sonnet-5` | cross-region |
-| `claude-sonnet-4-6` | `<geo>.anthropic.claude-sonnet-4-6` | cross-region |
-| `claude-haiku-5-5` | `<geo>.anthropic.claude-haiku-5-5` | cross-region |
+| `gpt-6-astra` | `<geo>.openai.gpt-6-astra` | cross-region |
 | `cohere-embed-v4` | `<geo>.cohere.embed-v4:0` | cross-region |
-| `titan-embed-text-v2` | `amazon.titan-embed-text-v2:0` | in-region |
 
-Anthropic models need their Bedrock Marketplace agreement accepted once per account; `06-applications/scripts/configure-instance.sh` accepts it for the models LiteLLM serves.
+Models need their Bedrock Marketplace agreement accepted once per account; `06-applications/scripts/configure-instance.sh` accepts it for the models LiteLLM serves.
 
 Profiles are created as `aws_bedrock_inference_profile` resources with the naming convention `{naming-id}-{profile-key}`. Each profile is tagged with `Model = {source-model-id}` for cost allocation. Override the `bedrock_inference_profiles` variable to add, remove, or change profiles per environment.
 
