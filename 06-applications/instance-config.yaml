@@ -13,24 +13,32 @@ domain:
   dnsZone: rbcn.ai
 
 aws:
-  region: eu-central-2
+  region: us-east-1
   accountId: "217381566492"
   hostedZoneID: Z06962683TV7AEN6MMQ8E
   kms:
-    keyArn: "arn:aws:kms:eu-central-2:217381566492:key/0f60d8fc-d97d-4b7e-ab8f-50c80b16caf4"
+    keyArn: "arn:aws:kms:us-east-1:217381566492:key/13428ba6-4203-405a-b69a-edb2124b6c21"
   eks:
-    clusterName: eks-uq-dogfood-sbx-euc2
+    clusterName: eks-uq-dogfood-sbx-use1
   vpc:
-    id: vpc-0d1fb1562b66a9a02
+    id: vpc-07f206251370e1b6f
   route53:
     privateZoneId: Z05798252TZLW3XWZUQE0
   connectivity:
     accountId: "198666613175"
   nlb:
-    targetGroupHttpArn: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-http/44fbaddde80cbf60
-    targetGroupHttpsArn: arn:aws:elasticloadbalancing:eu-central-2:217381566492:targetgroup/uq-dogfood-x-euc2-ing-https/1105243f0c8419a2
+    targetGroupHttpArn: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-http/6c196a801484bb2f
+    targetGroupHttpsArn: arn:aws:elasticloadbalancing:us-east-1:217381566492:targetgroup/uq-dogfood-x-use1-ing-https/764a80968a0ef4a7
   redis:
-    url: "rediss://master.redis-uq-dogfood-sbx-euc2.jwixqt.euc2.cache.amazonaws.com:6380/0"
+    url: "rediss://master.redis-uq-dogfood-sbx-use1.o9swgn.use1.cache.amazonaws.com:6380/0"
+  sandbox:
+    subnetId: subnet-0e11bb790e4d989fc
+    securityGroupId: sg-05a7811bba23514c9
+    fargateSecurityGroupId: sg-0ae138073e0e8e533
+    podvmAmiId: ami-0be984e3b13ddb79d
+    podvmLaunchTemplateName: uq-dogfood-sbx-use1-podvm
+    peerPodsRoleArn: arn:aws:iam::217381566492:role/uq-dogfood-sbx-use1-peer-pods
+    templateName: unique-polyagent-001
   bedrock:
     cohereEmbedV4ProfileId: "p5rbstj6fcgb"
     minimaxRegion: "us-east-1"
