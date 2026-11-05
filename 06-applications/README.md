@@ -189,13 +189,13 @@ in `value-overlays/litellm/litellm.yaml` under `proxy_config.model_list`.
 **Chat/completion models** use the region's cross-region inference profiles directly. The
 prefix (`us`, `eu` or `apac`) is `aws.bedrock.geoPrefix` in `instance-config.yaml`:
 ```yaml
-model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5
+model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
 ```
 
-Every Claude model is served twice: as `anthropic-claude-*`, the name Unique's model lists and
-Conduct spaces use, and under its native Anthropic ID (`claude-opus-5`,
-`claude-haiku-4-5-20251001`, ...), because Claude Code in a Conduct sandbox calls its sub-agents
-and background tasks by those IDs. Both names share one YAML anchor.
+The fleet is frontier-only: Claude Opus 5.5 and GPT-6 Astra. Each is served twice — as
+`anthropic-claude-*` / `openai-gpt-*`, the names Unique's model lists and Conduct spaces use, and
+under its native vendor ID (`claude-opus-5-5`, `gpt-6-astra`), because Claude Code in a Conduct
+sandbox calls its sub-agents and background tasks by those IDs. Both names share one YAML anchor.
 
 **Embedding models** require an application inference profile because:
 1. Cohere Embed v4 requires an inference profile for on-demand invocation

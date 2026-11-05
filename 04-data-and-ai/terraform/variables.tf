@@ -91,17 +91,11 @@ variable "bedrock_inference_profiles" {
     geo         = optional(string)
   }))
   default = {
-    # Anthropic Claude via LiteLLM, through the region's cross-region profiles
-    "claude-opus-5-5"   = { model_id = "anthropic.claude-opus-5-5" }
-    "claude-opus-5"     = { model_id = "anthropic.claude-opus-5" }
-    "claude-opus-4-8"   = { model_id = "anthropic.claude-opus-4-8" }
-    "claude-sonnet-5-5" = { model_id = "anthropic.claude-sonnet-5-5" }
-    "claude-sonnet-5"   = { model_id = "anthropic.claude-sonnet-5" }
-    "claude-sonnet-4-6" = { model_id = "anthropic.claude-sonnet-4-6" }
-    "claude-haiku-5-5"  = { model_id = "anthropic.claude-haiku-5-5" }
-    # Embeddings: Cohere Embed v4 (via LiteLLM) and Titan Text Embeddings v2 (in-region)
-    "cohere-embed-v4"     = { model_id = "cohere.embed-v4:0" }
-    "titan-embed-text-v2" = { model_id = "amazon.titan-embed-text-v2:0", source_type = "foundation-model" }
+    # Frontier chat models, through the region's cross-region profiles
+    "claude-opus-5-5" = { model_id = "anthropic.claude-opus-5-5" }
+    "gpt-6-astra"     = { model_id = "openai.gpt-6-astra" }
+    # Embeddings: Cohere Embed v4, which LiteLLM invokes by this profile's ARN
+    "cohere-embed-v4" = { model_id = "cohere.embed-v4:0" }
   }
 }
 

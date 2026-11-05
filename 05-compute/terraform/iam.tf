@@ -234,6 +234,8 @@ data "aws_iam_policy_document" "assistants_core" {
       "bedrock:InvokeModelWithResponseStream",
     ]
     resources = [
+      # Region-wildcarded: a cross-region profile authorizes against the foundation
+      # model in each region it may route to, not just the deployment region.
       "arn:aws:bedrock:*::foundation-model/*",
       "arn:aws:bedrock:${var.aws_region}:${data.aws_caller_identity.current.account_id}:inference-profile/*",
     ]
@@ -303,25 +305,6 @@ data "aws_iam_policy_document" "litellm" {
     ]
   }
 
-  # Invoke the self-hosted SageMaker endpoints in ap-northeast-2 (cross-region,
-  # same account). Used by the sagemaker_chat/* models in the LiteLLM
-  # proxy_config model_list (gemma-4-31b, qwen3-6-35b, ...). Both the unary and
-  # the streaming action are required — the chat backend streams, and SageMaker
-  # treats InvokeEndpointWithResponseStream as a distinct action (mirrors the
-  # Bedrock statement above, which pairs InvokeModel + ...WithResponseStream).
-  # Scoped to all endpoints in the region (not a single ARN) so adding a new
-  # self-hosted model needs only the LiteLLM + allowlist edits, no IAM change.
-  # Acceptable in this sandbox account where every endpoint is ours.
-  statement {
-    effect = "Allow"
-    actions = [
-      "sagemaker:InvokeEndpoint",
-      "sagemaker:InvokeEndpointWithResponseStream",
-    ]
-    resources = [
-      "arn:aws:sagemaker:ap-northeast-2:${data.aws_caller_identity.current.account_id}:endpoint/*",
-    ]
-  }
 }
 
 resource "aws_iam_role_policy" "litellm" {
