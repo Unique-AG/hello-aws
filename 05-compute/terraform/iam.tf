@@ -170,6 +170,19 @@ data "aws_iam_policy_document" "cluster_secrets" {
       "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${r}/*"
     ]
   }
+
+  # ArgoCD's repo-server pulls the mirrored chart with the same token, and
+  # `mirror` is populated by hand rather than by a pull-through rule.
+  statement {
+    sid    = "ECRReadMirroredArtifacts"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
+    ]
+    resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/mirror/*"]
+  }
 }
 
 resource "aws_iam_role_policy" "cluster_secrets" {
