@@ -333,6 +333,7 @@ echo "Configuring $ENV from $CONFIG ..."
 # derived "from" below is already the real value, so only a literal pass matches it.
 echo "  Placeholder tokens ..."
 replace_all "<ECR_REGISTRY_PRIMARY>" "$TO_ECR_PRIMARY_FULL"
+replace_all "<ECR_REGISTRY_THIRDPARTY_BARE>" "$TO_ECR_THIRDPARTY"
 replace_all "<REDIS_URL>" "$TO_REDIS_URL"
 replace_all "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>" "$TO_BEDROCK_COHERE_PROFILE_ID"
 replace_all "<AWS_ACCOUNT_ID>" "$TO_AWS_ACCOUNT_ID"
