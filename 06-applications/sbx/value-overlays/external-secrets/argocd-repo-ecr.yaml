@@ -1,7 +1,5 @@
-# ArgoCD OCI Helm repository credential for the ECR mirror, so ArgoCD can pull
-# the RabbitMQ cluster operator chart. ArgoCD's repo-server fetches charts
-# itself and has no AWS identity, so the node's ECR permissions do not reach it;
-# ECR tokens last 12h, hence the generator rather than a stored value.
+# ArgoCD's repo-server fetches charts itself and has no AWS identity, so a
+# private ECR pull needs this credential; ECR tokens last 12h, hence a generator.
 
 resources:
   - apiVersion: generators.external-secrets.io/v1alpha1
