@@ -69,6 +69,28 @@ narrowest scope available — `global.` is wider, not narrower. Check what a reg
 | `gpt-6-luna` | `<geo>.openai.gpt-6-luna` | cross-region |
 | `cohere-embed-v4` | `<geo>.cohere.embed-v4:0` | cross-region |
 
+#### Profile geography is not uniform across vendors
+
+The derived prefix assumes every vendor publishes a profile for the region's geography. They do
+not. Measured 2026-11-06:
+
+| Region | GPT-6 | Claude Opus 5.5 | Cohere Embed v4 |
+|---|---|---|---|
+| `us-east-1` | `us.`, `global.` | `us.`, `global.` | `us.`, `global.` |
+| `eu-central-1`, `eu-west-1` | `global.` only | `eu.`, `global.` | `eu.`, `global.` |
+| `ap-northeast-1` | `global.` only | `jp.`, `global.` | `global.` only |
+
+Two consequences for a non-US deployment:
+
+- The GPT-6 entries are pinned to `geo = "us"` because no `eu.`/`apac.` profile exists. Outside
+  the US they must be overridden or removed; choosing `global` routes inference worldwide and is a
+  data-residency decision, not a default. The LiteLLM overlay's model ids must be changed to match.
+- The region-to-geography lookup maps every `ap-*` region to `apac`, but `ap-northeast-1` publishes
+  Anthropic profiles under `jp.`. Set `bedrock_geo_prefix` explicitly there.
+
+Confirm what a region offers before changing `aws_region`:
+`aws bedrock list-inference-profiles --type-equals SYSTEM_DEFINED`.
+
 Models need their Bedrock Marketplace agreement accepted once per account; `06-applications/scripts/configure-instance.sh` accepts it for the models LiteLLM serves.
 
 Profiles are created as `aws_bedrock_inference_profile` resources with the naming convention `{naming-id}-{profile-key}`. Each profile is tagged with `Model = {source-model-id}` for cost allocation. Override the `bedrock_inference_profiles` variable to add, remove, or change profiles per environment.

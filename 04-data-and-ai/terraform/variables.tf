@@ -93,9 +93,11 @@ variable "bedrock_inference_profiles" {
   default = {
     # Frontier chat models, through the region's cross-region profiles
     "claude-opus-5-5" = { model_id = "anthropic.claude-opus-5-5" }
-    "gpt-6-astra"     = { model_id = "openai.gpt-6-astra" }
-    "gpt-6-sol"       = { model_id = "openai.gpt-6-sol" }
-    "gpt-6-luna"      = { model_id = "openai.gpt-6-luna" }
+    # GPT-6 publishes only us.* and global.* system profiles, so a non-US region
+    # must override these; "global" is a data-residency decision, not a default.
+    "gpt-6-astra" = { model_id = "openai.gpt-6-astra", geo = "us" }
+    "gpt-6-sol"   = { model_id = "openai.gpt-6-sol", geo = "us" }
+    "gpt-6-luna"  = { model_id = "openai.gpt-6-luna", geo = "us" }
     # Embeddings: Cohere Embed v4, which LiteLLM invokes by this profile's ARN
     "cohere-embed-v4" = { model_id = "cohere.embed-v4:0" }
   }

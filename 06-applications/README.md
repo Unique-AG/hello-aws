@@ -217,6 +217,15 @@ The application inference profile wraps the region's `<geo>.cohere.embed-v4:0` s
 (see `bedrock_geo_prefix`) and is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
 and must be set per deployment.
 
+**After changing `model_list`, refresh the endpoint definitions.** The
+`azure-openai-endpoint-definitions` secret is derived from this overlay, but `seed-secrets.sh`
+skips a secret that already has a value, so chat keeps advertising the old names — including ones
+LiteLLM no longer serves. Refresh just that secret, so unrelated credentials are not rotated:
+
+```bash
+./scripts/seed-secrets.sh <env> --only azure-openai-endpoint-definitions --force
+```
+
 **Key settings:**
 - `drop_params: true` — silently drops unsupported parameters (e.g. `encoding_format: 'float'`)
 - Image tag is pinned explicitly (not tied to chart version)
