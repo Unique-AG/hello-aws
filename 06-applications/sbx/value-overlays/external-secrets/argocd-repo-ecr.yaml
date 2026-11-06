@@ -12,7 +12,7 @@ resources:
         argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     spec:
       # No auth block: the generator falls back to the ESO controller's pod identity.
-      region: <AWS_REGION>
+      region: us-east-1
 
   - apiVersion: external-secrets.io/v1beta1
     kind: ExternalSecret
@@ -35,7 +35,7 @@ resources:
           data:
             type: helm
             # Matches the chart source in apps/system/rabbitmq-operator.yaml.
-            url: <ECR_REGISTRY_THIRDPARTY_BARE>/mirror/bitnamicharts
+            url: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/bitnamicharts
             name: ecr-mirror-bitnamicharts
             enableOCI: "true"
             username: "{{ .username }}"
