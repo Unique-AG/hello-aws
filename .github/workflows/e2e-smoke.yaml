@@ -32,7 +32,7 @@ jobs:
       CI: "true"
       TEST_ENV: AWS
       # The AWS_REGION repository variable; unset keeps the Terraform default.
-      AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
       E2E_SECRET_ID: manual-e2e-aws-credentials
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0

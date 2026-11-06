@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   CRANE_VERSION: v0.22.1
   CRANE_SHA256: 0ab7a1d6932a213aed964ce97666c3077fe691c8606413674a8b3e0b9ec4cda0
   YQ_VERSION: v4.54.1
