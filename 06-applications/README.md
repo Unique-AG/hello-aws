@@ -223,8 +223,21 @@ skips a secret that already has a value, so chat keeps advertising the old names
 LiteLLM no longer serves. Refresh just that secret, so unrelated credentials are not rotated:
 
 ```bash
+# The env argument selects the overlay, not the backend: the script reads
+# `terraform output` from 04-data-and-ai/terraform as it is currently
+# initialised. Confirm it points at the environment you mean, or --force
+# writes another environment's secret.
+terraform -chdir=04-data-and-ai/terraform init -reconfigure \
+  -backend-config=environments/<env>/backend-config.hcl
+terraform -chdir=04-data-and-ai/terraform output -raw aws_region   # sanity check
+
 ./scripts/seed-secrets.sh <env> --only azure-openai-endpoint-definitions --force
 ```
+
+The new value does not reach chat immediately: `chat-secrets` has
+`refreshInterval: 1h`, so until it re-syncs chat still advertises the old names. Force it with
+`kubectl annotate externalsecret chat-secrets -n unique force-sync=$(date +%s) --overwrite`;
+the reloader restarts the deployment once the Secret changes.
 
 **Key settings:**
 - `drop_params: true` — silently drops unsupported parameters (e.g. `encoding_format: 'float'`)
