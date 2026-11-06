@@ -185,7 +185,9 @@ Before deploying any layer, you must configure the common values file:
    ```
 
 2. Edit `common.auto.tfvars` and update the following values:
-   - `aws_region`: Your AWS region (e.g., `"eu-central-2"`)
+   - `aws_region`: Your AWS region (e.g., `"us-east-1"`). Set the `AWS_REGION`
+     repository variable to the same value — the workflows read that, not the
+     tfvars, and default to `us-east-1` when it is unset.
    - `org`: Your organization name (e.g., `"dogfood"`)
    - `org_moniker`: Your organization short name (e.g., `"df"`)
    - `product`: Your product/project name (e.g., `"unique"`)
