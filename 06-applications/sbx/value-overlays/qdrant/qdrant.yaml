@@ -3,7 +3,8 @@
 replicaCount: 1
 
 image:
-  repository: qdrant/qdrant
+  # Not on a registry the cluster can reach; mirrored by mirror-artifacts.yaml.
+  repository: <ECR_REGISTRY_THIRDPARTY_BARE>/mirror/qdrant/qdrant
   tag: v1.13.1
   useUnprivilegedImage: true
 
