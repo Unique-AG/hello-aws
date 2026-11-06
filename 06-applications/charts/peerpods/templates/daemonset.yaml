@@ -54,6 +54,18 @@ spec:
           failureThreshold: 30
           periodSeconds: 20
           initialDelaySeconds: 20
+{{- if .Values.livenessProbe.enabled }}
+        # The startup probe answers once and the adaptor stops checking after that,
+        # so a bound-but-unlinked socket leaves the pod Ready and every dial failing.
+        livenessProbe:
+          exec:
+            command:
+              - sh
+              - -c
+              - test -S {{ .Values.livenessProbe.socketPath | quote }}
+          periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+          failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+{{- end }}
         # TODO: We should think about a better patch strategy for keeping per provider
         # patches in different files, otherwise this template might get bloated.
         volumeMounts:

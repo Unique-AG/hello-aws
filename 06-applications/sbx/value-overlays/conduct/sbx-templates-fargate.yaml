@@ -18,6 +18,11 @@ sandboxTemplate:
   podLabels:
     unique.app/sandbox-template: unique-polyagent-001-fargate
 
+  # Declared here rather than inherited: the shared overlay's value would
+  # otherwise size this pool as a side effect.
+  warmPool:
+    replicas: 1
+
   # NetworkPolicy is enforced by the VPC CNI, which does not govern Fargate pods,
   # so the chart's policies would be silently inert. The per-pod security group is
   # the L4 control and the sbx-gateway remains the L7 one.

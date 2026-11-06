@@ -75,6 +75,7 @@ PLACEHOLDERS=(
   "<AMP_REMOTE_WRITE_URL>"
   "<OBSERVABILITY_S3_BUCKET_NAME>"
   "<ACR_REGISTRY_URL>"
+  "<PODVM_LAUNCHTEMPLATE_NAME>"
 )
 
 # ------------------------------------------------------------------
@@ -155,6 +156,23 @@ echo ""
 for token in "${PLACEHOLDERS[@]}"; do
   check_placeholder "$token"
 done
+
+# Backstop for tokens the hand-maintained list above does not name.
+# The greps need `|| true`: no match exits 1, which would abort under set -e.
+UNLISTED=$( { grep -rhoE '<[A-Z][A-Z0-9_]{2,}>' --include='*.yaml' "$ENV_DIR" 2>/dev/null || true; } \
+  | sort -u \
+  | while IFS= read -r found; do
+      printf '%s\n' "${PLACEHOLDERS[@]}" | grep -qxF "$found" || printf '%s\n' "$found"
+    done)
+if [[ -n "$UNLISTED" ]]; then
+  echo "FAIL: unsubstituted token(s) not in PLACEHOLDERS:"
+  while IFS= read -r token; do
+    echo "  $token"
+    { grep -rl --include='*.yaml' -F "$token" "$ENV_DIR" || true; } | sed 's/^/    /'
+  done <<< "$UNLISTED"
+  echo "  Add a replacement in configure-instance.sh, and the token to PLACEHOLDERS."
+  ERRORS=$((ERRORS + 1))
+fi
 
 for token in "${TFVARS_PLACEHOLDERS[@]}"; do
   check_tfvars_placeholder "$token"

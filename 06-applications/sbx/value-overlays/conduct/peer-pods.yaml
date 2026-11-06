@@ -12,7 +12,7 @@ providerConfigs:
     AWS_SG_IDS: "<PEER_PODS_SECURITY_GROUP_ID>"
     # Not built by Terraform: see the pod VM image section of 05-compute/README.md.
     PODVM_AMI_ID: "<PODVM_AMI_ID>"
-    # m6a is not offered in eu-central-2; m6i matches the sandbox node pool.
+    # The launch template overrides this; both are kept in step deliberately.
     PODVM_INSTANCE_TYPE: "m6i.large"
     # The tag the IAM policy conditions on for both launch and termination.
     TAGS: "PeerPod=true"
@@ -20,6 +20,12 @@ providerConfigs:
     # capable instance types.
     DISABLECVM: "true"
     PEERPODS_LIMIT_PER_NODE: "10"
+    # AMI, instance type, subnet and SG all come from the launch template.
+    USE_PODVM_LAUNCHTEMPLATE: "true"
+    PODVM_LAUNCHTEMPLATE_NAME: "<PODVM_LAUNCHTEMPLATE_NAME>"
+    # Measured: without this the guest's image store is 3.1 GB; with it, 27.6 GB.
+    # Upstream deprecated it in v0.23.0, so this needs a replacement before 0.24.
+    ENABLE_SCRATCH_SPACE: "true"
 
 daemonset:
   # The adaptor's entrypoint requires a role ARN and a web identity token file;

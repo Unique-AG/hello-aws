@@ -201,3 +201,11 @@ kata-deploy:
       enabled: false
     remote:
       enabled: true
+
+# Restarts the adaptor when its hypervisor socket is gone; upstream has no such
+# check, so an unlinked socket leaves the pod Ready with every dial failing.
+livenessProbe:
+  enabled: true
+  socketPath: /run/peerpod/hypervisor.sock
+  periodSeconds: 30
+  failureThreshold: 3

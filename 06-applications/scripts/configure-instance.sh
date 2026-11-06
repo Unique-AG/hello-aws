@@ -88,6 +88,7 @@ aws:
     fargateSecurityGroupId: "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"
     # unique-polyagent-001 (peer pods) or unique-polyagent-001-fargate (Fargate)
     templateName: "<SANDBOX_TEMPLATE_NAME>"
+    podvmLaunchTemplateName: "<PODVM_LAUNCHTEMPLATE_NAME>"
     peerPodsRoleArn: "<PEER_PODS_ROLE_ARN>"
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
@@ -165,6 +166,7 @@ FROM_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$F
 FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$FROM")
 FROM_FARGATE_SG_ID=$(yq '.aws.sandbox.fargateSecurityGroupId // "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"' "$FROM")
 FROM_SANDBOX_TEMPLATE=$(yq '.aws.sandbox.templateName // "<SANDBOX_TEMPLATE_NAME>"' "$FROM")
+FROM_PODVM_LAUNCHTEMPLATE_NAME=$(yq '.aws.sandbox.podvmLaunchTemplateName // "<PODVM_LAUNCHTEMPLATE_NAME>"' "$FROM")
 FROM_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$FROM")
 FROM_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$FROM")
 FROM_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$FROM")
@@ -227,6 +229,7 @@ TO_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$CON
 TO_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$CONFIG")
 TO_FARGATE_SG_ID=$(yq '.aws.sandbox.fargateSecurityGroupId // "<FARGATE_SANDBOX_SECURITY_GROUP_ID>"' "$CONFIG")
 TO_SANDBOX_TEMPLATE=$(yq '.aws.sandbox.templateName // "<SANDBOX_TEMPLATE_NAME>"' "$CONFIG")
+TO_PODVM_LAUNCHTEMPLATE_NAME=$(yq '.aws.sandbox.podvmLaunchTemplateName // "<PODVM_LAUNCHTEMPLATE_NAME>"' "$CONFIG")
 TO_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$CONFIG")
 TO_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$CONFIG")
 TO_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$CONFIG")
@@ -346,6 +349,9 @@ replace_all "$FROM_ACR_URL" "$TO_ACR_URL"
 # A token introduced after an instance was configured is not covered by the
 # derived "from" above, which no-ops when the prefix is unchanged.
 replace_all "<ACR_REGISTRY_URL>" "$TO_ACR_URL"
+# Unconditional for the same reason: on a reconfigure the derived FROM is the
+# real hostname, so a newly added token would never be matched.
+replace_all "<ECR_REGISTRY_THIRDPARTY_BARE>" "$TO_ECR_THIRDPARTY"
 
 # 2. Redis URL (before region, since URL contains region)
 echo "  Redis URL ..."
@@ -446,6 +452,7 @@ replace_all "$FROM_SANDBOX_SUBNET_ID" "$TO_SANDBOX_SUBNET_ID"
 replace_all "$FROM_PEER_PODS_SG_ID" "$TO_PEER_PODS_SG_ID"
 replace_all "$FROM_FARGATE_SG_ID" "$TO_FARGATE_SG_ID"
 replace_all "$FROM_SANDBOX_TEMPLATE" "$TO_SANDBOX_TEMPLATE"
+replace_all "$FROM_PODVM_LAUNCHTEMPLATE_NAME" "$TO_PODVM_LAUNCHTEMPLATE_NAME"
 replace_all "$FROM_PODVM_AMI_ID" "$TO_PODVM_AMI_ID"
 replace_all "$FROM_PEER_PODS_ROLE_ARN" "$TO_PEER_PODS_ROLE_ARN"
 

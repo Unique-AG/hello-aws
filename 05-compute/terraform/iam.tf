@@ -141,6 +141,35 @@ data "aws_iam_policy_document" "cluster_secrets" {
     actions   = ["kms:Decrypt"]
     resources = [local.infrastructure.kms_key_secrets_manager_arn]
   }
+
+  # A peer-pod guest pulls its own image and cannot reach an instance profile,
+  # so ESO mints the registry token the guest's auth.json carries.
+  statement {
+    #checkov:skip=CKV_AWS_356: GetAuthorizationToken is registry-wide and takes no resource ARN
+    sid       = "ECRAuthorizationToken"
+    effect    = "Allow"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  # The minted token carries this role's identity, so the pull authorizes against
+  # it -- including the import a cold pull-through cache needs on first use.
+  statement {
+    sid    = "ECRPullSandboxImages"
+    effect = "Allow"
+    actions = [
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchImportUpstreamImage",
+      "ecr:CreateRepository",
+    ]
+    # Only the configured pull-through prefixes, not every repository in the account.
+    resources = [
+      for r in var.ecr_pull_through_cache_upstream_registries :
+      "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${r}/*"
+    ]
+  }
 }
 
 resource "aws_iam_role_policy" "cluster_secrets" {

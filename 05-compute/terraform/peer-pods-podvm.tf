@@ -30,38 +30,8 @@ resource "aws_iam_role" "podvm" {
   tags               = merge(module.naming.tags, { Name = "role-${module.naming.id}-podvm" })
 }
 
-# Pull only, plus the pull-through import the node role also carries: the sandbox
-# image is mirrored, so a cold cache needs the import on first use.
-data "aws_iam_policy_document" "podvm_ecr" {
-  count = local.podvm_count
-
-  statement {
-    sid       = "EcrAuth"
-    effect    = "Allow"
-    actions   = ["ecr:GetAuthorizationToken"]
-    resources = ["*"]
-  }
-
-  statement {
-    sid    = "EcrPull"
-    effect = "Allow"
-    actions = [
-      "ecr:BatchCheckLayerAvailability",
-      "ecr:BatchGetImage",
-      "ecr:GetDownloadUrlForLayer",
-      "ecr:BatchImportUpstreamImage",
-      "ecr:CreateRepository",
-    ]
-    resources = ["arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/*"]
-  }
-}
-
-resource "aws_iam_role_policy" "podvm_ecr" {
-  count  = local.podvm_count
-  name   = "ecr-pull"
-  role   = aws_iam_role.podvm[0].id
-  policy = data.aws_iam_policy_document.podvm_ecr[0].json
-}
+# Deliberately no policies: the guest pulls with the auth.json cloud-api-adaptor
+# builds from imagePullSecrets, never with AWS credentials.
 
 resource "aws_iam_instance_profile" "podvm" {
   count = local.podvm_count
@@ -88,7 +58,14 @@ resource "aws_launch_template" "podvm" {
     arn = aws_iam_instance_profile.podvm[0].arn
   }
 
-  vpc_security_group_ids = [aws_security_group.peer_pods.id]
+  # RunInstances takes placement from the template, so without a subnet here the
+  # pod VM launches into the default VPC instead of the cluster's private subnet.
+  network_interfaces {
+    subnet_id                   = local.peer_pods_subnet_id
+    security_groups             = [aws_security_group.peer_pods.id]
+    associate_public_ip_address = false
+    delete_on_termination       = true
+  }
 
   block_device_mappings {
     device_name = "/dev/xvda"

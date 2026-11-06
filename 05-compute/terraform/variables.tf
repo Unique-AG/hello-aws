@@ -254,7 +254,7 @@ variable "podvm_ami_id" {
 }
 
 variable "podvm_instance_type" {
-  description = "Instance type for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set."
+  description = "Instance type for Conduct peer-pod sandbox VMs. Only used when podvm_ami_id is set. The guest pulls and unpacks the sandbox image onto its scratch disk, so size this for the sandbox's own limit plus the guest's overheads, not for the image."
   type        = string
   default     = "m6i.large"
 }
