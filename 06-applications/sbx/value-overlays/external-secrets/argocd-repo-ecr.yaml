@@ -1,0 +1,50 @@
+# ArgoCD OCI Helm repository credential for the ECR mirror, so ArgoCD can pull
+# the RabbitMQ cluster operator chart. ArgoCD's repo-server fetches charts
+# itself and has no AWS identity, so the node's ECR permissions do not reach it;
+# ECR tokens last 12h, hence the generator rather than a stored value.
+
+resources:
+  - apiVersion: generators.external-secrets.io/v1alpha1
+    kind: ECRAuthorizationToken
+    metadata:
+      name: argocd-ecr-token
+      namespace: unique
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    spec:
+      # No auth block: the generator falls back to the ESO controller's pod identity.
+      region: <AWS_REGION>
+
+  - apiVersion: external-secrets.io/v1beta1
+    kind: ExternalSecret
+    metadata:
+      name: argocd-repo-ecr
+      namespace: unique
+      annotations:
+        argocd.argoproj.io/sync-wave: "3"
+        argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    spec:
+      # Re-mint at 6h so a valid token always outlives the 12h expiry.
+      refreshInterval: 6h
+      target:
+        name: argocd-repo-ecr
+        creationPolicy: Owner
+        template:
+          metadata:
+            labels:
+              argocd.argoproj.io/secret-type: repository
+          data:
+            type: helm
+            # Matches the chart source in apps/system/rabbitmq-operator.yaml.
+            url: <ECR_REGISTRY_THIRDPARTY_BARE>/mirror/bitnamicharts
+            name: ecr-mirror-bitnamicharts
+            enableOCI: "true"
+            username: "{{ .username }}"
+            password: "{{ .password }}"
+      dataFrom:
+        - sourceRef:
+            generatorRef:
+              apiVersion: generators.external-secrets.io/v1alpha1
+              kind: ECRAuthorizationToken
+              name: argocd-ecr-token

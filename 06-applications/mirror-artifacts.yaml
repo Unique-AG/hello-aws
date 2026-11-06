@@ -12,6 +12,16 @@ artifacts:
     digest: sha256:56653f354e8781ff19b68a46b5704eb7fc65c0ee11849e27efd598863d3d08f1
     target: mirror/qdrant/qdrant:v1.13.1-unprivileged
 
+  # The chart's operator images. Bitnami moved these to bitnamilegacy on Docker Hub,
+  # which the cluster cannot reach, and there is no docker.io pull-through rule.
+  - source: bitnamilegacy/rabbitmq-cluster-operator:2.10.0-debian-12-r0
+    digest: sha256:5ae31b6be5424392da37b0d86246490842b775f855a4a12eecb84aac08753b62
+    target: mirror/bitnamilegacy/rabbitmq-cluster-operator:2.10.0-debian-12-r0
+
+  - source: bitnamilegacy/rmq-messaging-topology-operator:1.14.2-debian-12-r5
+    digest: sha256:82c40d4e3702102818a61d133ba3db800c18d319deec771d7a88199d91045d5f
+    target: mirror/bitnamilegacy/rmq-messaging-topology-operator:1.14.2-debian-12-r5
+
   # An OCI Helm chart, not an image. ArgoCD's repo-server pulls it, so it is
   # subject to the same block. The only chart in this repo hosted on Docker Hub.
   - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21

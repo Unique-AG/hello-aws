@@ -3,7 +3,8 @@ spec:
   autoSync: false
   sources:
     - chart: rabbitmq-cluster-operator
-      repoURL: registry-1.docker.io/bitnamicharts
+      # ArgoCD's repo-server cannot reach Docker Hub's blob store; use the mirror.
+      repoURL: <ECR_REGISTRY_THIRDPARTY_BARE>/mirror/bitnamicharts
       targetRevision: 4.3.21
       helm:
         releaseName: rabbitmq-operator
