@@ -68,7 +68,12 @@ it must contain `BASE_DOMAIN`, `TEST_USER`, `ZITADEL_UNIQUE_APP_PROJECT_ID`,
 `SERVICE_USER_CLIENT_ID`, `PASSWORD` and `SERVICE_USER_CLIENT_SECRET`. Any other
 key is exported too — add `SLACK_WEBHOOK_URL` to enable the failure alert.
 
-Create or rotate it from a populated `e2e/.env` with:
+`scripts/setup-e2e-user.sh <env> <pat>` creates both principals in the customer
+organization, grants them the project, and writes this secret directly — no
+credential touches the disk. Run it after `scripts/setup-zitadel.sh`, which
+creates the project and roles but not these two users.
+
+Create or rotate it by hand from a populated `e2e/.env` with:
 
 ```bash
 aws secretsmanager create-secret --region "$AWS_REGION" \
