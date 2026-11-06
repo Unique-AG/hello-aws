@@ -38,7 +38,7 @@ Each generated file contains the shared S3 bucket, KMS key, and a layer-specific
 ```hcl
 bucket        = "s3-{org}-{product}-{env_short}-{region}-tfstate"
 key           = "bootstrap/terraform.tfstate"    # varies per layer
-region        = "eu-central-2"
+region        = "us-east-1"
 encrypt       = true
 kms_key_id    = "alias/kms-{org}-{product}-{env}-{region}-tfstate"
 use_lockfile  = true

@@ -21,7 +21,7 @@ permissions:
   attestations: write
 
 env:
-  AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
 concurrency:
   group: podvm-image

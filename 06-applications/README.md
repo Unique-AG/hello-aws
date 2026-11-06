@@ -77,7 +77,7 @@ All parameters in `<env>/instance-config.yaml`:
 | `domain.identity` | `<DOMAIN_IDENTITY>` | Identity provider domain (e.g. `id.sbx.example.com`) |
 | `domain.argocd` | `<DOMAIN_ARGOCD>` | ArgoCD UI domain (e.g. `argo.sbx.example.com`) |
 | `domain.dnsZone` | `<DNS_ZONE>` | DNS zone for cert-manager (e.g. `example.com`) |
-| `aws.region` | `<AWS_REGION>` | AWS region (e.g. `eu-central-2`) |
+| `aws.region` | `<AWS_REGION>` | AWS region (e.g. `us-east-1`) |
 | `aws.hostedZoneID` | `<AWS_HOSTED_ZONE_ID>` | Route 53 hosted zone ID |
 | `aws.kms.keyArn` | `<KMS_KEY_ARN>` | KMS key ARN for EBS encryption |
 | `aws.ecr.primary.accountId` | Part of `<ECR_REGISTRY_PRIMARY>` | ECR account for app images |

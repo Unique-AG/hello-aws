@@ -68,7 +68,7 @@ aws secretsmanager create-secret --region "$AWS_REGION" \
 ```
 
 A fork points `AWS_ROLE_ARN` at its own OIDC role, sets the `AWS_REGION` repository
-variable when it deploys outside `eu-central-2`, and creates the same secret in
+variable when it deploys outside `us-east-1`, and creates the same secret in
 its own account. The role already carries `secretsmanager:*` via the bootstrap
 deploy policy, so no extra IAM is needed.
 

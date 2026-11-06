@@ -12,7 +12,7 @@ permissions:
 
 env:
   # The AWS_REGION repository variable; unset keeps the Terraform default.
-  AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-2' }}
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
 concurrency:
   group: sbx-deploy
