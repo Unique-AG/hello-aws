@@ -189,13 +189,16 @@ in `value-overlays/litellm/litellm.yaml` under `proxy_config.model_list`.
 **Chat/completion models** use the region's cross-region inference profiles directly. The
 prefix (`us`, `eu` or `apac`) is `aws.bedrock.geoPrefix` in `instance-config.yaml`:
 ```yaml
-model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5
+model: bedrock/<BEDROCK_GEO_PREFIX>.anthropic.claude-opus-5-5
 ```
 
-Every Claude model is served twice: as `anthropic-claude-*`, the name Unique's model lists and
-Conduct spaces use, and under its native Anthropic ID (`claude-opus-5`,
-`claude-haiku-4-5-20251001`, ...), because Claude Code in a Conduct sandbox calls its sub-agents
-and background tasks by those IDs. Both names share one YAML anchor.
+The fleet is frontier-only: Claude Opus 5.5 and the three GPT-6 tiers — Astra (most capable),
+Sol (agentic and coding work) and Luna (high-volume tasks). Each is served twice — as
+`anthropic-claude-*` / `openai-gpt-*`, the names Unique's model lists and Conduct spaces use, and
+under its native vendor ID (`claude-opus-5-5`, `gpt-6-astra`, ...), because Claude Code in a Conduct
+sandbox calls its sub-agents and background tasks by those IDs. Both names share one YAML anchor.
+
+Every model in the fleet rejects `temperature` and `top_p`, so each entry drops them.
 
 **Embedding models** require an application inference profile because:
 1. Cohere Embed v4 requires an inference profile for on-demand invocation
@@ -203,7 +206,7 @@ and background tasks by those IDs. Both names share one YAML anchor.
 
 The workaround uses `model` for provider mapping and `model_id` for the Bedrock API call:
 ```yaml
-- model_name: text-embedding-ada-002
+- model_name: text-embedding-cohere-embed-v4
   litellm_params:
     model: bedrock/cohere.embed-v4:0                    # provider mapping -> "cohere"
     model_id: arn:aws:bedrock:<AWS_REGION>:<AWS_ACCOUNT_ID>:application-inference-profile/<PROFILE_ID>
@@ -213,6 +216,28 @@ The workaround uses `model` for provider mapping and `model_id` for the Bedrock 
 The application inference profile wraps the region's `<geo>.cohere.embed-v4:0` system profile
 (see `bedrock_geo_prefix`) and is created in `04-data-and-ai/terraform/bedrock.tf`. The `model_id` ARN is environment-specific
 and must be set per deployment.
+
+**After changing `model_list`, refresh the endpoint definitions.** The
+`azure-openai-endpoint-definitions` secret is derived from this overlay, but `seed-secrets.sh`
+skips a secret that already has a value, so chat keeps advertising the old names — including ones
+LiteLLM no longer serves. Refresh just that secret, so unrelated credentials are not rotated:
+
+```bash
+# The env argument selects the overlay, not the backend: the script reads
+# `terraform output` from 04-data-and-ai/terraform as it is currently
+# initialised. Confirm it points at the environment you mean, or --force
+# writes another environment's secret.
+terraform -chdir=04-data-and-ai/terraform init -reconfigure \
+  -backend-config=environments/<env>/backend-config.hcl
+terraform -chdir=04-data-and-ai/terraform output -raw aws_region   # sanity check
+
+./scripts/seed-secrets.sh <env> --only azure-openai-endpoint-definitions --force
+```
+
+The new value does not reach chat immediately: `chat-secrets` has
+`refreshInterval: 1h`, so until it re-syncs chat still advertises the old names. Force it with
+`kubectl annotate externalsecret chat-secrets -n unique force-sync=$(date +%s) --overwrite`;
+the reloader restarts the deployment once the Secret changes.
 
 **Key settings:**
 - `drop_params: true` — silently drops unsupported parameters (e.g. `encoding_format: 'float'`)

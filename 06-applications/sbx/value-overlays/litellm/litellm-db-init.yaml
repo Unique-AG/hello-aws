@@ -19,7 +19,9 @@ resources:
           restartPolicy: OnFailure
           containers:
             - name: create-db
-              image: postgres:14
+              # Docker Hub serves blobs from an in-region S3 bucket the gateway
+              # endpoint policy does not allow, so pull through the cache.
+              image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/postgres:14
               command:
                 - sh
                 - -c

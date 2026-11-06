@@ -103,7 +103,6 @@ aws:
     url: "<REDIS_URL>"
   bedrock:
     cohereEmbedV4ProfileId: "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>"
-    minimaxRegion: "<BEDROCK_MINIMAX_REGION>"
     geoPrefix: "<BEDROCK_GEO_PREFIX>"
   prometheus:
     workspaceId: "<AMP_WORKSPACE_ID>"
@@ -176,7 +175,6 @@ FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
 FROM_REDIS_URL=$(yq '.aws.redis.url' "$FROM")
 FROM_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$FROM")
-FROM_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion // "<BEDROCK_MINIMAX_REGION>"' "$FROM")
 FROM_BEDROCK_GEO_PREFIX=$(yq '.aws.bedrock.geoPrefix // "<BEDROCK_GEO_PREFIX>"' "$FROM")
 FROM_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$FROM")
 FROM_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$FROM")
@@ -239,7 +237,6 @@ TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
 TO_REDIS_URL=$(yq '.aws.redis.url' "$CONFIG")
 TO_BEDROCK_COHERE_PROFILE_ID=$(yq '.aws.bedrock.cohereEmbedV4ProfileId' "$CONFIG")
-TO_BEDROCK_MINIMAX_REGION=$(yq '.aws.bedrock.minimaxRegion' "$CONFIG")
 TO_BEDROCK_GEO_PREFIX=$(yq '.aws.bedrock.geoPrefix // "<BEDROCK_GEO_PREFIX>"' "$CONFIG")
 TO_AMP_WORKSPACE_ID=$(yq '.aws.prometheus.workspaceId // "<AMP_WORKSPACE_ID>"' "$CONFIG")
 TO_AMP_REMOTE_WRITE_URL=$(yq '.aws.prometheus.remoteWriteUrl // "<AMP_REMOTE_WRITE_URL>"' "$CONFIG")
@@ -332,6 +329,16 @@ replace_all_tfvars() {
 # ------------------------------------------------------------------
 echo "Configuring $ENV from $CONFIG ..."
 
+# 0. Literal placeholders. A file carried over from main arrives templated, but every
+# derived "from" below is already the real value, so only a literal pass matches it.
+echo "  Placeholder tokens ..."
+replace_all "<ECR_REGISTRY_PRIMARY>" "$TO_ECR_PRIMARY_FULL"
+replace_all "<ECR_REGISTRY_THIRDPARTY_BARE>" "$TO_ECR_THIRDPARTY"
+replace_all "<REDIS_URL>" "$TO_REDIS_URL"
+replace_all "<BEDROCK_COHERE_EMBED_V4_PROFILE_ID>" "$TO_BEDROCK_COHERE_PROFILE_ID"
+replace_all "<AWS_ACCOUNT_ID>" "$TO_AWS_ACCOUNT_ID"
+replace_all "<AWS_REGION>" "$TO_AWS_REGION"
+
 # 1. ECR registries (full registry URL including prefix — must be before region replacement)
 echo "  ECR primary registry ..."
 replace_all "$FROM_ECR_PRIMARY_FULL" "$TO_ECR_PRIMARY_FULL"
@@ -372,15 +379,14 @@ replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
 echo "  Bedrock Cohere Embed v4 profile ID ..."
 replace_all "$FROM_BEDROCK_COHERE_PROFILE_ID" "$TO_BEDROCK_COHERE_PROFILE_ID"
 
-# 3b-2. Bedrock MiniMax region (must run before the generic AWS region replacement
-# at step 6; placeholder is region-shaped but distinct from <AWS_REGION>).
-echo "  Bedrock MiniMax region ..."
-replace_all "$FROM_BEDROCK_MINIMAX_REGION" "$TO_BEDROCK_MINIMAX_REGION"
-
-# 3b-3. Bedrock cross-region profile prefix, in context: the bare value (us, eu) is too
+# 3b-2. Bedrock cross-region profile prefix, in context: the bare value (us, eu) is too
 # short to substitute on its own.
 echo "  Bedrock cross-region profile prefix ..."
+# Unconditional first: on a reconfigure the derived FROM is the real prefix, so the
+# placeholder would never be matched by the FROM->TO passes that follow.
+replace_all "bedrock/<BEDROCK_GEO_PREFIX>." "bedrock/${TO_BEDROCK_GEO_PREFIX}."
 replace_all "bedrock/${FROM_BEDROCK_GEO_PREFIX}.anthropic." "bedrock/${TO_BEDROCK_GEO_PREFIX}.anthropic."
+replace_all "bedrock/${FROM_BEDROCK_GEO_PREFIX}.openai." "bedrock/${TO_BEDROCK_GEO_PREFIX}.openai."
 
 # 3c. Prometheus / Observability (before region and account, since URLs contain both)
 echo "  AMP remote write URL ..."
@@ -520,14 +526,9 @@ echo ""
 echo "Enabling Bedrock marketplace model agreements ..."
 BEDROCK_MODELS_REQUIRING_AGREEMENT=(
   "anthropic.claude-opus-5-5"
-  "anthropic.claude-opus-5"
-  "anthropic.claude-opus-4-8"
-  "anthropic.claude-sonnet-5-5"
-  "anthropic.claude-sonnet-5"
-  "anthropic.claude-sonnet-4-6"
-  "anthropic.claude-sonnet-4-5-20250929-v1:0"
-  "anthropic.claude-haiku-5-5"
-  "anthropic.claude-haiku-4-5-20251001-v1:0"
+  "openai.gpt-6-astra"
+  "openai.gpt-6-sol"
+  "openai.gpt-6-luna"
   "cohere.embed-v4:0"
 )
 for model_id in "${BEDROCK_MODELS_REQUIRING_AGREEMENT[@]}"; do
