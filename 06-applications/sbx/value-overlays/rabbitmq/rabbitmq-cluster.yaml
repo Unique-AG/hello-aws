@@ -8,7 +8,7 @@ metadata:
 spec:
   # Docker Hub serves blobs from an in-region S3 bucket the gateway endpoint
   # policy does not list, so pull through the cache.
-  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
+  image: 217381566492.dkr.ecr.us-east-1.amazonaws.com/public.ecr.aws/docker/library/rabbitmq:3.13-management
   replicas: 1
   resources:
     requests:
