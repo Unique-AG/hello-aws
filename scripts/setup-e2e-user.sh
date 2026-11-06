@@ -2,29 +2,23 @@
 #######################################
 # Setup the e2e test principals in Zitadel
 #######################################
-# The e2e suites need two principals that scripts/setup-zitadel.sh does not
-# create: a human user for browser login and a service account for the API
-# tests. Both must live in the customer organization, not the Cluster IAM org,
-# or they cannot be granted the project.
-#
-# Writes the result straight into the `manual-e2e-aws-credentials` secret that
-# .github/workflows/e2e-*.yaml read, so no credential is written to disk.
+# Creates the two principals the e2e suites log in as, which setup-zitadel.sh
+# does not: a human user for the browser flows and a service account for the API
+# flows. Both are created in the customer org, the only org the project is
+# granted to. The result is written to the `manual-e2e-aws-credentials` secret
+# that .github/workflows/e2e-*.yaml read, so no credential reaches disk.
 #
 # Usage:
-#   scripts/setup-e2e-user.sh <env> <pat> [--print]
+#   ZITADEL_PAT=... scripts/setup-e2e-user.sh <env> [--print]
+#     env      Environment name (e.g. sbx)
+#     --print  Also print the JSON, which otherwise only reaches the secret
+#     PAT in the environment, not an argument: arguments are world-readable.
 #
-# Arguments:
-#   env     Environment name (e.g. sbx)
-#   pat     Personal Access Token for a machine user with IAM_OWNER
-#   --print Also print the JSON instead of only writing the secret
-#
-# Prerequisites:
-#   - aws CLI with valid credentials (AWS_PROFILE set)
-#   - curl, jq, yq
-#   - scripts/setup-zitadel.sh already run (project, roles and org exist)
+# Needs the aws CLI (AWS_PROFILE set), curl, jq, yq, and setup-zitadel.sh
+# already run so the project, roles and grant exist.
 #
 # Example:
-#   AWS_PROFILE=sandbox scripts/setup-e2e-user.sh sbx wf7dDj...uUOEVBDaM5c
+#   AWS_PROFILE=sandbox ZITADEL_PAT=wf7dDj... scripts/setup-e2e-user.sh sbx
 #######################################
 
 set -euo pipefail
@@ -39,9 +33,10 @@ error() { echo -e "${RED}[x]${NC} $1"; exit 1; }
 info()  { echo -e "${BLUE}[i]${NC} $1"; }
 
 ENV="${1:-}"
-PAT="${2:-}"
-PRINT="${3:-}"
-[ -n "$ENV" ] && [ -n "$PAT" ] || error "Usage: $0 <env> <pat> [--print]"
+PRINT="${2:-}"
+PAT="${ZITADEL_PAT:-}"
+[ -n "$ENV" ] || error "Usage: ZITADEL_PAT=... $0 <env> [--print]"
+[ -n "$PAT" ] || error "ZITADEL_PAT is not set (IAM_OWNER machine-user PAT)"
 
 for cmd in aws curl jq yq; do
   command -v "$cmd" &>/dev/null || error "$cmd is required but not found"
@@ -64,6 +59,12 @@ done
 ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
 SECRET_ID="manual-e2e-aws-credentials"
 E2E_USER="e2e@${DOMAIN_BASE}"
+
+# Everything below rotates credentials that are only useful once stored, so
+# prove the write target is reachable before touching Zitadel.
+aws secretsmanager describe-secret --secret-id "$SECRET_ID" --region "$AWS_REGION" >/dev/null 2>&1 \
+  || aws secretsmanager list-secrets --region "$AWS_REGION" --max-results 1 >/dev/null 2>&1 \
+  || error "Cannot reach Secrets Manager in ${AWS_REGION}; check AWS_PROFILE"
 
 info "Environment:  ${ENV}"
 info "Zitadel host: ${ZITADEL_HOST}"
@@ -92,9 +93,13 @@ find_user() {
 # 1. Human user for browser login
 #######################################
 info "Creating human user ${E2E_USER} ..."
-# Zitadel rejects a password that fails the org policy, so keep the generated
-# one long and mixed rather than base64 alone.
-PASSWORD="E2e!$(LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 28)"
+# A finite source: `tr` reading /dev/urandom into `head` gets SIGPIPE and, under
+# pipefail, aborts the script.
+RANDOM_POOL=$(LC_ALL=C head -c 512 /dev/urandom | tr -dc 'A-Za-z0-9')
+[ ${#RANDOM_POOL} -ge 28 ] || error "Could not generate a password"
+# The fixed prefix only satisfies Zitadel's complexity policy; the entropy is
+# all in the generated tail.
+PASSWORD=$(printf '%s%s' 'E2e!' "${RANDOM_POOL:0:28}")
 
 HUMAN_RESP=$(api POST "/management/v1/users/human/_import" "$(jq -n \
   --arg u "$E2E_USER" --arg p "$PASSWORD" \
@@ -111,7 +116,7 @@ if [ -z "$HUMAN_ID" ]; then
   [ -n "$HUMAN_ID" ] || error "Could not create or find ${E2E_USER}"
   warn "Found existing user ${HUMAN_ID}; resetting its password"
   RESET=$(api POST "/management/v1/users/${HUMAN_ID}/password" \
-    "$(jq -n --arg p "$PASSWORD" '{newPassword:{password:$p,changeRequired:false}}')")
+    "$(jq -n --arg p "$PASSWORD" '{password:$p,noChangeRequired:true}')")
   echo "$RESET" | jq -e '.code' >/dev/null 2>&1 \
     && error "Password reset failed: $(echo "$RESET" | jq -c .)"
 else
@@ -147,18 +152,36 @@ log "Client credentials generated (clientId ${CLIENT_ID})"
 #######################################
 # 3. Grant the project to both principals
 #######################################
-ROLE_KEYS=$(api GET "/management/v1/projects/${PROJECT_ID}/roles/_search" \
-  | jq -c '[(.result // [])[].key]')
-if [ "$ROLE_KEYS" = "[]" ] || [ -z "$ROLE_KEYS" ]; then
-  warn "No project roles found; granting without roles"
-  ROLE_KEYS='[]'
-fi
+# The project belongs to the Cluster IAM org. Seen from the customer org it is a
+# granted project, which carries the grant id and the roles that grant allows.
+GRANTED=$(api POST "/management/v1/granted_projects/_search" '{"query":{}}')
+GRANT_ID=$(echo "$GRANTED" | jq -r --arg p "$PROJECT_ID" \
+  'first((.result // [])[] | select(.projectId == $p) | .grantId) // empty')
+ROLE_KEYS=$(echo "$GRANTED" | jq -c --arg p "$PROJECT_ID" \
+  '[first((.result // [])[] | select(.projectId == $p)) // {} | (.grantedRoleKeys // [])[]]')
+[ -n "$GRANT_ID" ] || error "Project ${PROJECT_ID} is not granted to org ${ORG_ID}; run setup-zitadel.sh first"
+[ "$ROLE_KEYS" != "[]" ] || warn "The grant carries no roles; the test user will have none"
+log "Project grant ${GRANT_ID} with $(echo "$ROLE_KEYS" | jq 'length') role(s)"
 
 for uid in "$HUMAN_ID" "$MACHINE_ID"; do
-  GRANT=$(api POST "/management/v1/users/${uid}/grants" \
-    "$(jq -n --arg p "$PROJECT_ID" --argjson r "$ROLE_KEYS" '{projectId:$p,roleKeys:$r}')")
+  GRANT=$(api POST "/management/v1/users/${uid}/grants" "$(jq -n \
+    --arg p "$PROJECT_ID" --arg g "$GRANT_ID" --argjson r "$ROLE_KEYS" \
+    '{projectId:$p,projectGrantId:$g,roleKeys:$r}')")
   if echo "$GRANT" | jq -e '.code' >/dev/null 2>&1; then
-    warn "Grant for ${uid}: $(echo "$GRANT" | jq -r '.message // .code')"
+    msg=$(echo "$GRANT" | jq -r '.message // .code')
+    case "$msg" in
+      *already*|*xists*)
+        EXISTING_GRANT=$(api POST "/management/v1/users/grants/_search" \
+          "$(jq -n --arg u "$uid" '{queries:[{userIdQuery:{userId:$u}}]}')" \
+          | jq -r --arg p "$PROJECT_ID" 'first((.result // [])[] | select(.projectId == $p) | .id) // empty')
+        [ -n "$EXISTING_GRANT" ] || error "Grant for ${uid} exists but could not be found"
+        UPD=$(api PUT "/management/v1/users/${uid}/grants/${EXISTING_GRANT}" \
+          "$(jq -n --argjson r "$ROLE_KEYS" '{roleKeys:$r}')")
+        echo "$UPD" | jq -e '.code' >/dev/null 2>&1 \
+          && error "Could not update grant for ${uid}: $(echo "$UPD" | jq -r '.message // .code')"
+        log "Updated existing grant for ${uid}" ;;
+      *) error "Grant for ${uid} failed: ${msg}" ;;
+    esac
   else
     log "Granted project to ${uid}"
   fi
@@ -168,11 +191,16 @@ done
 # 4. Write the credentials the workflows read
 #######################################
 info "Writing ${SECRET_ID} in ${AWS_REGION} ..."
-PAYLOAD=$(jq -n \
+# Merge over what is already stored: every key becomes an environment variable,
+# so extras such as SLACK_WEBHOOK_URL must survive a rotation.
+EXISTING=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" \
+  --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo '{}')
+echo "$EXISTING" | jq -e 'type == "object"' >/dev/null 2>&1 || EXISTING='{}'
+PAYLOAD=$(jq -n --argjson old "$EXISTING" \
   --arg base "$DOMAIN_BASE" --arg proj "$PROJECT_ID" \
   --arg user "$E2E_USER" --arg pass "$PASSWORD" \
   --arg cid "$CLIENT_ID" --arg csec "$CLIENT_SECRET" \
-  '{BASE_DOMAIN:$base,
+  '$old + {BASE_DOMAIN:$base,
     ZITADEL_UNIQUE_APP_PROJECT_ID:$proj,
     TEST_USER:$user,
     PASSWORD:$pass,
