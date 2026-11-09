@@ -381,7 +381,12 @@ if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
     else
       jq -n --arg key "$LITELLM_MASTER_KEY" --arg region "$AWS_REGION" --argjson models "$MODELS" \
         '[{endpoint:"http://litellm.unique.svc:4000", key:$key, location:$region,
-           models: ($models | map({modelName:., deploymentName:., modelVersion:"1.0"}))}]' \
+           models: ($models | map(
+             # node-chat keys its endpoint config on "<modelName>-<modelVersion>", so a
+             # date-versioned Azure-style name has to be split back apart to match.
+             (capture("^(?<n>.+)-(?<v>[0-9]{4}-[0-9]{2}-[0-9]{2})$") // null) as $m
+             | if $m then {modelName:$m.n, deploymentName:., modelVersion:$m.v}
+               else {modelName:., deploymentName:., modelVersion:"1.0"} end))}]' \
         | put_value "$ENDPOINT_ARN"
       log "azure-openai-endpoint-definitions: seeded ($(echo "$MODELS" | jq 'length') models)"
       SEEDED=$((SEEDED+1))
