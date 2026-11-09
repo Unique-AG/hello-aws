@@ -7,6 +7,9 @@ env:
   UNIQUE_INSTALLATION_ID: hello.aws.unique.dev
   AWS_REGION: us-east-1
   LLM_PROVIDER: bedrock
+  # Unset, unique_toolkit falls back to AZURE_GPT_4o_2024_1120, which LiteLLM
+  # does not serve here, and chat crash-loops resolving its default model.
+  DEFAULT_LANGUAGE_MODEL: "litellm:anthropic-claude-opus-5-5"
   STORAGE_PROVIDER: s3
 
 image:
