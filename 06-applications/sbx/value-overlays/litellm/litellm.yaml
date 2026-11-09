@@ -91,6 +91,11 @@ proxy_config:
     - model_name: gpt-6-luna
       litellm_params: *gpt-6-luna
 
+    # node-chat's benchmarking module builds a client for AZURE_GPT_4o_2024_1120
+    # in onApplicationBootstrap unconditionally, so chat cannot start without it.
+    - model_name: gpt-4o-2024-11-20
+      litellm_params: *claude-opus-5-5
+
     # Cohere Embed v4 (1536 dims), reached through the ingestion service's Azure
     # OpenAI SDK as a deployment name.
     # model: sets provider mapping, model_id: sets Bedrock inference profile ARN
