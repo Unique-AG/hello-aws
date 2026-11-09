@@ -6,7 +6,9 @@ metadata:
   name: rabbitmqcluster-chat
   namespace: unique
 spec:
-  image: rabbitmq:3.13-management
+  # Docker Hub serves blobs from an in-region S3 bucket the gateway endpoint
+  # policy does not list, so pull through the cache.
+  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
   replicas: 1
   resources:
     requests:
