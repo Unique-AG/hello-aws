@@ -93,9 +93,10 @@ find_user() {
 # 1. Human user for browser login
 #######################################
 info "Creating human user ${E2E_USER} ..."
-# A finite source: `tr` reading /dev/urandom into `head` gets SIGPIPE and, under
-# pipefail, aborts the script.
-RANDOM_POOL=$(LC_ALL=C head -c 512 /dev/urandom | tr -dc 'A-Za-z0-9')
+# A finite source, because `tr` reading /dev/urandom into `head` takes SIGPIPE and
+# aborts under pipefail. LC_ALL=C belongs on `tr`: BSD tr reads the bytes as UTF-8
+# and exits "Illegal byte sequence".
+RANDOM_POOL=$(head -c 512 /dev/urandom | LC_ALL=C tr -dc 'A-Za-z0-9')
 [ ${#RANDOM_POOL} -ge 28 ] || error "Could not generate a password"
 # The fixed prefix only satisfies Zitadel's complexity policy; the entropy is
 # all in the generated tail.
@@ -163,28 +164,33 @@ ROLE_KEYS=$(echo "$GRANTED" | jq -c --arg p "$PROJECT_ID" \
 [ "$ROLE_KEYS" != "[]" ] || warn "The grant carries no roles; the test user will have none"
 log "Project grant ${GRANT_ID} with $(echo "$ROLE_KEYS" | jq 'length') role(s)"
 
+# Look the grant up rather than creating and reading the failure: the duplicate
+# message is localised, so matching its text misses on a non-English instance.
 for uid in "$HUMAN_ID" "$MACHINE_ID"; do
-  GRANT=$(api POST "/management/v1/users/${uid}/grants" "$(jq -n \
-    --arg p "$PROJECT_ID" --arg g "$GRANT_ID" --argjson r "$ROLE_KEYS" \
-    '{projectId:$p,projectGrantId:$g,roleKeys:$r}')")
-  if echo "$GRANT" | jq -e '.code' >/dev/null 2>&1; then
-    msg=$(echo "$GRANT" | jq -r '.message // .code')
-    case "$msg" in
-      *already*|*xists*)
-        EXISTING_GRANT=$(api POST "/management/v1/users/grants/_search" \
-          "$(jq -n --arg u "$uid" '{queries:[{userIdQuery:{userId:$u}}]}')" \
-          | jq -r --arg p "$PROJECT_ID" 'first((.result // [])[] | select(.projectId == $p) | .id) // empty')
-        [ -n "$EXISTING_GRANT" ] || error "Grant for ${uid} exists but could not be found"
-        UPD=$(api PUT "/management/v1/users/${uid}/grants/${EXISTING_GRANT}" \
-          "$(jq -n --argjson r "$ROLE_KEYS" '{roleKeys:$r}')")
-        echo "$UPD" | jq -e '.code' >/dev/null 2>&1 \
-          && error "Could not update grant for ${uid}: $(echo "$UPD" | jq -r '.message // .code')"
-        log "Updated existing grant for ${uid}" ;;
-      *) error "Grant for ${uid} failed: ${msg}" ;;
-    esac
-  else
+  FOUND=$(api POST "/management/v1/users/grants/_search" \
+    "$(jq -n --arg u "$uid" '{queries:[{userIdQuery:{userId:$u}}]}')" \
+    | jq -c --arg p "$PROJECT_ID" 'first((.result // [])[] | select(.projectId == $p)) // empty')
+
+  if [ -z "$FOUND" ]; then
+    GRANT=$(api POST "/management/v1/users/${uid}/grants" "$(jq -n \
+      --arg p "$PROJECT_ID" --arg g "$GRANT_ID" --argjson r "$ROLE_KEYS" \
+      '{projectId:$p,projectGrantId:$g,roleKeys:$r}')")
+    echo "$GRANT" | jq -e '.code' >/dev/null 2>&1 \
+      && error "Grant for ${uid} failed: $(echo "$GRANT" | jq -r '.message // .code')"
     log "Granted project to ${uid}"
+    continue
   fi
+
+  GRANT_UID=$(echo "$FOUND" | jq -r '.id')
+  if [ "$(echo "$FOUND" | jq -cS '(.roleKeys // [])')" = "$(echo "$ROLE_KEYS" | jq -cS '.')" ]; then
+    log "Grant for ${uid} already carries the expected roles"
+    continue
+  fi
+  UPD=$(api PUT "/management/v1/users/${uid}/grants/${GRANT_UID}" \
+    "$(jq -n --argjson r "$ROLE_KEYS" '{roleKeys:$r}')")
+  echo "$UPD" | jq -e '.code' >/dev/null 2>&1 \
+    && error "Could not update grant for ${uid}: $(echo "$UPD" | jq -r '.message // .code')"
+  log "Updated roles on the existing grant for ${uid}"
 done
 
 #######################################
