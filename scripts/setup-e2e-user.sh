@@ -182,7 +182,9 @@ for uid in "$HUMAN_ID" "$MACHINE_ID"; do
   fi
 
   GRANT_UID=$(echo "$FOUND" | jq -r '.id')
-  if [ "$(echo "$FOUND" | jq -cS '(.roleKeys // [])')" = "$(echo "$ROLE_KEYS" | jq -cS '.')" ]; then
+  # sort the arrays, not their keys: -S orders object keys and would call an
+  # identical role set a difference whenever the order came back shuffled.
+  if [ "$(echo "$FOUND" | jq -c '(.roleKeys // []) | sort')" = "$(echo "$ROLE_KEYS" | jq -c 'sort')" ]; then
     log "Grant for ${uid} already carries the expected roles"
     continue
   fi
