@@ -39,6 +39,9 @@ terraform.rc
 
 # Ignore any local environment variable files
 .env
+# e2e/README.md tells you to build this from .env; it holds live tenant credentials.
+creds.json
+**/creds.json
 .env.local
 
 # Ignore any backup files
