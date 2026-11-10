@@ -5,15 +5,16 @@
 # Run once after Zitadel deploys. Uses a machine user PAT (with IAM_OWNER)
 # to perform the complete Zitadel setup:
 #
-#   1. Create customer organization
-#   2. Create "unique" project in Cluster IAM org
-#   3. Create "unique-app" OIDC application (PKCE)
-#   4. Configure token settings (JWT, roles in token)
-#   5. Create all project roles
-#   6. Grant project to customer organization
-#   7. Create scope-management service user + PAT → AWS Secrets Manager
-#   8. Add Zitadel Actions (addGrant)
-#   9. Delete provision user (self-destruct)
+#   1. Select the built-in login UI (clear the Login V2 instance feature)
+#   2. Create customer organization
+#   3. Create "unique" project in Cluster IAM org
+#   4. Create "unique-app" OIDC application (PKCE)
+#   5. Configure token settings (JWT, roles in token)
+#   6. Create all project roles
+#   7. Grant project to customer organization
+#   8. Create scope-management service user + PAT → AWS Secrets Manager
+#   9. Add Zitadel Actions (addGrant)
+#  10. Delete provision user (self-destruct)
 #
 # Usage:
 #   scripts/setup-zitadel.sh <env> <pat> [org-name]
@@ -148,7 +149,21 @@ done
 log "Zitadel is healthy"
 
 #######################################
-# 2. Create customer organization
+# 2. Select the login UI
+#######################################
+# Zitadel v4 marks Login V2 required on new instances, sending authorize to
+# /ui/v2/login — a separate deployment this installation does not run.
+info "Disabling the Login V2 instance feature..."
+FEATURES=$(api PUT "/v2/features/instance" '{"loginV2":{"required":false}}')
+if echo "$FEATURES" | jq -e '.code' >/dev/null 2>&1; then
+  warn "Could not set instance features: $(echo "$FEATURES" | jq -r '.message // .code')"
+  warn "Needs an IAM_OWNER PAT; interactive login stays broken until this is set."
+else
+  log "Login V2 not required; the built-in login serves authorize requests"
+fi
+
+#######################################
+# 3. Create customer organization
 #######################################
 info "Creating organization '${ORG_NAME}'..."
 ORG_RESP=$(api POST "/v2/organizations" \
@@ -183,7 +198,7 @@ fi
 log "Root organization (Cluster IAM): ${ROOT_ORG_ID}"
 
 #######################################
-# 3. Create project in Cluster IAM org
+# 4. Create project in Cluster IAM org
 #######################################
 info "Creating project '${PROJECT_NAME}' in Cluster IAM..."
 PROJECT_RESP=$(api POST "/management/v1/projects" \
@@ -209,7 +224,7 @@ api PUT "/management/v1/projects/${PROJECT_ID}" \
 log "Project settings updated (roleAssertion=true, roleCheck=true, hasProjectCheck=true)"
 
 #######################################
-# 4. Create OIDC application (PKCE)
+# 5. Create OIDC application (PKCE)
 #######################################
 info "Creating OIDC application '${APP_NAME}'..."
 APP_RESP=$(api POST "/management/v1/projects/${PROJECT_ID}/apps/oidc" \
@@ -293,7 +308,7 @@ else
 fi
 
 #######################################
-# 5. Create project roles
+# 6. Create project roles
 #######################################
 info "Creating project roles (upsert)..."
 ROLE_DEFS=(
@@ -331,7 +346,7 @@ done
 log "Project roles upserted (${#ROLE_DEFS[@]} roles)"
 
 #######################################
-# 6. Grant project to customer organization
+# 7. Grant project to customer organization
 #######################################
 info "Granting project to organization '${ORG_NAME}'..."
 GRANT_RESP=$(api POST "/management/v1/projects/${PROJECT_ID}/grants" \
@@ -356,7 +371,7 @@ else
 fi
 
 #######################################
-# 7. Create scope-management service user
+# 8. Create scope-management service user
 #######################################
 info "Creating scope-management machine user..."
 CREATE_USER_RESP=$(api POST "/management/v1/users/machine" \
@@ -402,7 +417,7 @@ aws secretsmanager put-secret-value \
 log "PAT written to AWS SM"
 
 #######################################
-# 8. Add Zitadel Actions
+# 9. Add Zitadel Actions
 #######################################
 info "Creating Zitadel action: addGrant..."
 
@@ -443,7 +458,7 @@ else
 fi
 
 #######################################
-# 9. Delete provision user
+# 10. Delete provision user
 #######################################
 info "Looking up provision user..."
 PROV_SEARCH=$(api POST "/v2beta/users" \
@@ -476,7 +491,7 @@ info "Scope Mgmt User: ${SM_USER_ID}"
 info "PAT Secret:      ${AWS_SM_SECRET}"
 echo ""
 #######################################
-# 10. Create admin user (optional)
+# 11. Create admin user (optional)
 #######################################
 if [ -n "$ADMIN_EMAIL" ]; then
   # Extract name parts from email (first.last@domain → First Last)
@@ -534,7 +549,7 @@ if [ -n "$ADMIN_EMAIL" ]; then
 fi
 
 #######################################
-# 11. Patch instance-config.yaml
+# 12. Patch instance-config.yaml
 #######################################
 INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 if [ -f "$INSTANCE_CONFIG" ] && command -v yq &>/dev/null; then
