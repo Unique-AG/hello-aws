@@ -430,8 +430,8 @@ else
     warn "Could not grant IAM_OWNER to ${BREAKGLASS_USER}: $(echo "$BG_MEMBER" | jq -r '.message // .code')"
     warn "Skipping the PAT: a stored credential without IAM_OWNER cannot recover the instance."
   else
-    # Minting invalidates the stored token at once, so resolve where the new one
-    # goes first; only a real "not found" means create, never a denial.
+    # Resolve where the new token goes before minting; only a real "not found"
+    # means create, never a denial.
     BG_WRITE=()
     if BG_DESC_ERR=$(aws secretsmanager describe-secret --secret-id "$AWS_SM_BREAKGLASS_ID" \
          --region "$AWS_REGION" 2>&1 >/dev/null); then
@@ -447,19 +447,29 @@ else
     if [ "${#BG_WRITE[@]}" -eq 0 ]; then
       : # already reported above; leave the stored credential alone
     else
+      # PATs are additive: minting does not revoke earlier ones, so note what
+      # exists now and delete it only once the replacement is safely stored.
+      BG_OLD_PATS=$(api POST "/management/v1/users/${BG_USER_ID}/pats/_search" '{}' \
+        | jq -r '[(.result // [])[].id] | join(" ")')
+
       BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
         '{"expirationDate":"2029-01-01T00:00:00Z"}')
       BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
+      BG_PAT_ID=$(echo "$BG_PAT_RESP" | jq -r '.tokenId // empty')
 
       if [ -z "$BG_PAT" ]; then
         warn "Could not mint a break-glass PAT: $(echo "$BG_PAT_RESP" | jq -c .)"
       elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
         log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
+        for BG_OLD in $BG_OLD_PATS; do
+          api DELETE "/management/v1/users/${BG_USER_ID}/pats/${BG_OLD}" >/dev/null 2>&1 \
+            || warn "Could not revoke superseded PAT ${BG_OLD}; it stays valid until expiry"
+        done
       else
-        # The new PAT already invalidated whatever was stored, so say so rather
-        # than leaving a secret that silently no longer works.
+        # The earlier token still works, so the instance stays recoverable; the
+        # new one is live and unreferenced until someone removes it.
         warn "Minted a break-glass PAT but could not store it in ${AWS_SM_BREAKGLASS_ID}."
-        warn "The stored value is now invalid; re-run this step once the write succeeds."
+        warn "The stored PAT still works. Delete the orphaned token ${BG_PAT_ID} or store it by hand."
       fi
     fi
   fi
