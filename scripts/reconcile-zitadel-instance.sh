@@ -51,13 +51,22 @@ DOMAIN_IDENTITY=$(yq -r '.domain.identity // ""' "$INSTANCE_CONFIG")
 [ -n "$DOMAIN_IDENTITY" ] || error "domain.identity missing from ${INSTANCE_CONFIG}"
 ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
 
+# Bounded so a hung host fails the check rather than the job timeout, and
+# non-zero on a transport error so a caller can tell that from an error body.
 api() {
   local method="$1" endpoint="$2" data="${3:-}"
-  local args=(-s -X "$method" "${ZITADEL_HOST}${endpoint}"
+  local args=(-s --connect-timeout 10 --max-time 30 -X "$method" "${ZITADEL_HOST}${endpoint}"
     -H "Authorization: Bearer ${PAT}"
     -H "Content-Type: application/json")
   [ -n "$data" ] && args+=(-d "$data")
   curl "${args[@]}"
+}
+
+# A gateway can answer with HTML or nothing, which jq would read as absent
+# rather than wrong — and absent would look like a passing check.
+require_json() {
+  echo "$1" | jq -e 'type == "object"' >/dev/null 2>&1 \
+    || error "$2 was not a JSON object: $(echo "$1" | head -c 200)"
 }
 
 info "Environment:  ${ENV}"
@@ -75,17 +84,23 @@ DRIFT=0
 #######################################
 # This installation deploys the v2 login UI, so the instance should keep
 # requiring it; a false here means authorize falls back to the legacy login.
-FEATURES=$(api GET "/v2/features/instance")
+FEATURES=$(api GET "/v2/features/instance") \
+  || error "Could not reach ${ZITADEL_HOST} (connection or timeout)"
+require_json "$FEATURES" "The instance features response"
 if echo "$FEATURES" | jq -e '.code' >/dev/null 2>&1; then
   error "Could not read instance features: $(echo "$FEATURES" | jq -r '.message // .code')"
 fi
+echo "$FEATURES" | jq -e 'has("loginV2")' >/dev/null 2>&1 \
+  || error "The instance features response has no loginV2 key; refusing to report on it"
 
 LOGIN_V2=$(echo "$FEATURES" | jq -r '.loginV2.required // false')
 if [ "$LOGIN_V2" != "true" ]; then
   DRIFT=1
   warn "loginV2.required is ${LOGIN_V2}; authorize is falling back to the legacy login"
   if [ "$MODE" = "--apply" ]; then
-    RESP=$(api PUT "/v2/features/instance" '{"loginV2":{"required":true}}')
+    RESP=$(api PUT "/v2/features/instance" '{"loginV2":{"required":true}}') \
+      || error "Could not reach ${ZITADEL_HOST} while applying (connection or timeout)"
+    require_json "$RESP" "The feature update response"
     if echo "$RESP" | jq -e '.code' >/dev/null 2>&1; then
       error "Could not set loginV2: $(echo "$RESP" | jq -r '.message // .code')"
     fi
