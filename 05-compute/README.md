@@ -54,7 +54,7 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) + KMS encrypt/decrypt for EBS encryption |
 | Cluster Secrets | `unique` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
-| Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` |
+| Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` + AgentCore `InvokeWebSearch` (and `InvokeGateway` when the gateway is enabled) |
 | LiteLLM | `unique` | `litellm` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` |
 | Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `*-ai-data` |
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
@@ -63,6 +63,34 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), and inference profiles in the deployment region: the system cross-region profiles (`inference-profile/*`, whose ARNs carry the account) and, for LiteLLM, the application profiles (`application-inference-profile/*`).
+
+### Bedrock AgentCore
+
+AgentCore Web Search is reached two ways, and the difference is which principal
+holds the search permission:
+
+| Path | Caller needs | Who calls web search |
+|---|---|---|
+| `InvokeWebSearch` API | `bedrock-agentcore:InvokeWebSearch` | the workload itself |
+| AgentCore gateway (MCP) | `bedrock-agentcore:InvokeGateway` on the gateway | the gateway's service role |
+
+The managed tool is owned by AWS, so its ARN carries the literal account `aws`
+(`arn:aws:bedrock-agentcore:<region>:aws:tool/web-search.v1`), not this account's
+id. Nothing is created for the API path; it is a grant only.
+
+The gateway path exists for governance: because the agent never holds the search
+permission, target-level domain allow/deny lists are enforced where the calling
+agent cannot see or override them. It is off by default (`enable_agentcore_gateway`)
+because it creates billable resources, and uses `AWS_IAM` authorization so
+in-cluster callers authenticate with their Pod Identity credentials.
+
+Both paths stay inside the VPC: the API uses the `bedrock-agentcore` interface
+endpoint and the gateway uses `bedrock-agentcore.gateway`, which is a separate
+PrivateLink service (see `enable_agentcore_endpoint` in 03-infrastructure).
+
+The gateway's connector target is created with `aws_cloudcontrolapi_resource`
+rather than `aws_bedrockagentcore_gateway_target`, which supports every target
+type except the `connector` this needs.
 
 ### Conduct Pod VM Image
 
