@@ -63,8 +63,8 @@ Five managed addons, all deployed after the node group is ready:
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 | Prometheus | `unique` | `kube-prometheus-stack-prometheus` | Managed Prometheus `RemoteWrite`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
 | Grafana | `unique` | `kube-prometheus-stack-grafana` | Managed Prometheus `QueryMetrics`, `GetLabels`, `GetSeries`, `GetMetricMetadata` + CloudWatch `GetMetricData`, `ListMetrics`, `GetMetricStatistics`, `DescribeAlarmsForMetric` + Logs `StartQuery`, `DescribeLogGroups`, `GetLogGroupFields` |
-| Loki | `unique` | `loki` | S3 `ListBucket` + object CRUD on its chunk store |
-| Tempo | `unique` | `tempo` | S3 `ListBucket` + object CRUD on its trace store |
+| Loki | `unique` | `loki` | S3 `ListBucket` + object CRUD on its chunk store + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Tempo | `unique` | `tempo` | S3 `ListBucket` + object CRUD on its trace store + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
 | Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), and inference profiles in the deployment region: the system cross-region profiles (`inference-profile/*`, whose ARNs carry the account) and, for LiteLLM, the application profiles (`application-inference-profile/*`).
@@ -279,7 +279,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Access Control
 
 - **EKS Auth**: API-only mode, access entries (no `aws-auth` ConfigMap)
-- **Pod Identity**: 9 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
+- **Pod Identity**: 15 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
 - **ACR Credentials**: Write-only (`secret_string_wo`) + ephemeral variables — never in Terraform state or plan files
 
 ### Audit and Compliance

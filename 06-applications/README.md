@@ -97,8 +97,11 @@ All parameters in `<env>/instance-config.yaml`:
 ├── scripts/
 │   ├── configure-instance.sh        # Replace placeholders (env-scoped)
 │   ├── validate-instance.sh         # Verify no placeholders remain (env-scoped)
-│   ├── seed-secrets.sh              # Give every secret a value (env-scoped)
-│   ├── validate.sh                  # Validate the rendered manifests
+│   ├── seed-secrets.sh              # Give every secret a value (reads the
+│   │                                #   initialised data-layer backend; check it
+│   │                                #   matches <env> before using --force)
+│   ├── validate.sh                  # YAML lint, shellcheck, value-file refs,
+│   │                                #   placeholders — not a rendered manifest
 │   └── test-charts.sh               # Lint, render and verify the vendored charts
 ├── defaults/                        # Base app configurations (env-independent)
 │   ├── ai-services/
@@ -286,8 +289,8 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 | `efs-csi-controller-sa` | kube-system | EFS | ReadWriteMany volume provisioning (EKS addon) |
 | `kube-prometheus-stack-prometheus` | unique | Managed Prometheus | Metric remote-write |
 | `kube-prometheus-stack-grafana` | unique | Managed Prometheus + CloudWatch | Metric and log queries |
-| `loki` | unique | S3 | Log chunk storage |
-| `tempo` | unique | S3 | Trace storage |
+| `loki` | unique | S3 + KMS | Log chunk storage |
+| `tempo` | unique | S3 + KMS | Trace storage |
 
 ### Chat
 

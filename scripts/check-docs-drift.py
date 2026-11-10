@@ -52,12 +52,18 @@ associations = sum(
     len(re.findall(r'resource\s+"aws_eks_pod_identity_association"', p.read_text(encoding="utf-8")))
     for p in (ROOT / "05-compute/terraform").glob("*.tf")
 )
-compare(
-    "Pod Identity roles",
-    claim("05-compute/README.md", r"(\d+) IAM roles use the `pods\.eks\.amazonaws\.com`", "Pod Identity roles"),
-    associations,
-    "aws_eks_pod_identity_association count in 05-compute/terraform",
-)
+# The same number is stated twice in this README, in different sections, and the
+# two had drifted apart. Check every place that claims it.
+for pattern, label in (
+    (r"(\d+) IAM roles use the `pods\.eks\.amazonaws\.com`", "Pod Identity roles (table intro)"),
+    (r"\*\*Pod Identity\*\*: (\d+) roles", "Pod Identity roles (access control)"),
+):
+    compare(
+        label,
+        claim("05-compute/README.md", pattern, label),
+        associations,
+        "aws_eks_pod_identity_association count in 05-compute/terraform",
+    )
 
 # --- VPC interface endpoints ------------------------------------------------
 endpoints_tf = read("03-infrastructure/terraform/vpc-endpoints.tf")
