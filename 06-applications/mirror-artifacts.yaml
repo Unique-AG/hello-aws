@@ -7,6 +7,11 @@ artifacts:
     digest: sha256:cf74e0e1e54a5a96d7b48e1c02120369953d66126ff5763398372bce925b5d8e
     target: mirror/kong/kubernetes-ingress-controller:3.4.4
 
+  # The Zitadel chart's init-container wait, which defaults to Docker Hub.
+  - source: wait4x/wait4x:3.6
+    digest: sha256:bec7ac18547781d854562c3729d3195c3880116d6758c49fdf4573ad58805f14
+    target: mirror/wait4x/wait4x:3.6
+
   # useUnprivilegedImage makes the chart append -unprivileged.
   - source: qdrant/qdrant:v1.13.1-unprivileged
     digest: sha256:56653f354e8781ff19b68a46b5704eb7fc65c0ee11849e27efd598863d3d08f1
