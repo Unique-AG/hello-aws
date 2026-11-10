@@ -109,7 +109,7 @@ LiteLLM acts as an OpenAI-compatible proxy in front of Bedrock:
 - **Managed Grafana** (optional): SAML auth, VPC-only access via `vpc_configuration` on private subnets
   - Data sources: Prometheus (scoped to workspace ARN) and CloudWatch (scoped to account/region)
   - ENI management policy for VPC placement (`ec2:*NetworkInterface*`, region-scoped)
-  - Disabled in `eu-central-2` (not available)
+  - Optional; disabled in sbx
 
 ### Secrets Strategy
 
@@ -168,7 +168,7 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 
 ### Bedrock
 
-- **Application Inference Profiles**: 9 profiles (8 cross-region for the region's geography: 7 Anthropic Claude + Cohere Embed v4; 1 in-region Titan embedding)
+- **Application Inference Profiles**: 5 profiles over the region's cross-region system profiles — Anthropic Claude Opus 5.5; OpenAI GPT-6 Astra, Sol and Luna; and Cohere Embed v4 for embeddings. GPT-6 publishes only `us.*` and `global.*` system profiles, so a non-US region must override its `geo`.
 - **Logging Configuration**: Account-level, CloudWatch Logs destination, text delivery enabled
 - **IAM Role**: `bedrock.amazonaws.com` service principal with confused deputy conditions
 - **CloudWatch Log Group**: Encrypted with CloudWatch Logs KMS key
@@ -255,7 +255,7 @@ elasticache_multi_az_enabled           = true               # sbx: false
 
 # Feature Flags
 enable_managed_prometheus = true
-enable_managed_grafana    = true   # sbx: false (not available in eu-central-2)
+enable_managed_grafana    = true   # sbx: false
 enable_bedrock_logging    = true
 
 # VPC Endpoints

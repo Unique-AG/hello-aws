@@ -160,13 +160,13 @@ Common configuration values are defined in `common.auto.tfvars` at the repositor
 These values are critical because the naming module uses them to generate globally unique resource names. AWS resources such as S3 buckets, IAM roles, and KMS aliases must be unique within an account or globally across AWS. The naming module combines `org_moniker`, `product`, `environment`, and region into deterministic prefixes:
 
 ```
-s3-df-unique-sbx-euc2-state          # S3 bucket (globally unique)
-iam-df-unique-sbx-euc2-deploy        # IAM role (account-unique)
-kms-df-unique-sbx-euc2-state         # KMS alias (account-unique)
-eks-df-unique-sbx-euc2               # EKS cluster name
+s3-df-unique-sbx-use1-state          # S3 bucket (globally unique)
+iam-df-unique-sbx-use1-deploy        # IAM role (account-unique)
+kms-df-unique-sbx-use1-state         # KMS alias (account-unique)
+eks-df-unique-sbx-use1               # EKS cluster name
 ```
 
-For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `org_moniker = "df"` with `product = "unique-pr42"`, producing resource names like `s3-df-unique-pr42-sbx-euc2-state` that are isolated from the main deployment and can be torn down without risk.
+For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `org_moniker = "df"` with `product = "unique-pr42"`, producing resource names like `s3-df-unique-pr42-sbx-use1-state` that are isolated from the main deployment and can be torn down without risk.
 
 **Important**: This file must be created manually before deploying the bootstrap layer. Copy `common.auto.tfvars.template` to `common.auto.tfvars` and update the values for your organization and product.
 
