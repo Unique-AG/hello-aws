@@ -13,8 +13,9 @@
 #   6. Create all project roles
 #   7. Grant project to customer organization
 #   8. Create scope-management service user + PAT → AWS Secrets Manager
-#   9. Add Zitadel Actions (addGrant)
-#  10. Delete provision user (self-destruct)
+#   9. Create break-glass IAM_OWNER user + PAT → AWS Secrets Manager
+#  10. Add Zitadel Actions (addGrant)
+#  11. Delete provision user (self-destruct)
 #
 # Usage:
 #   scripts/setup-zitadel.sh <env> <pat> [org-name]
@@ -90,6 +91,8 @@ done
 ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
 BASE_URL="https://${DOMAIN_BASE}"
 AWS_SM_SECRET="manual-zitadel-scope-mgmt-pat"
+AWS_SM_BREAKGLASS_ID="manual-zitadel-iam-owner-pat"
+BREAKGLASS_USER="break-glass"
 PROJECT_NAME="unique"
 APP_NAME="unique-app"
 
@@ -417,7 +420,45 @@ aws secretsmanager put-secret-value \
 log "PAT written to AWS SM"
 
 #######################################
-# 9. Add Zitadel Actions
+# 9. Create break-glass IAM_OWNER user
+#######################################
+# A human admin can only get a token through the hosted login, so if that login
+# is ever unreachable this machine PAT is the only way back into the instance.
+info "Creating break-glass machine user ${BREAKGLASS_USER}..."
+BG_RESP=$(api POST "/management/v1/users/machine" \
+  "{\"userName\":\"${BREAKGLASS_USER}\",\"name\":\"Break-glass IAM Owner\",\"description\":\"Recovery principal; see docs/security-baseline.md\",\"accessTokenType\":\"ACCESS_TOKEN_TYPE_JWT\"}")
+BG_USER_ID=$(echo "$BG_RESP" | jq -r '.userId // empty')
+if [ -z "$BG_USER_ID" ]; then
+  BG_SEARCH=$(api POST "/v2beta/users" \
+    "{\"queries\":[{\"userNameQuery\":{\"userName\":\"${BREAKGLASS_USER}\",\"method\":\"TEXT_QUERY_METHOD_EQUALS\"}}]}")
+  BG_USER_ID=$(echo "$BG_SEARCH" | jq -r '.result[0].userId // empty')
+fi
+
+if [ -z "$BG_USER_ID" ]; then
+  warn "Could not create or find ${BREAKGLASS_USER}; no break-glass credential stored"
+else
+  api POST "/admin/v1/members" "{\"userId\":\"${BG_USER_ID}\",\"roles\":[\"IAM_OWNER\"]}" >/dev/null 2>&1
+  api PUT "/admin/v1/members/${BG_USER_ID}" '{"roles":["IAM_OWNER"]}' >/dev/null 2>&1
+
+  # Regenerating invalidates the previous token, so the secret is rewritten in
+  # the same run to keep the stored value the working one.
+  BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
+    '{"expirationDate":"2029-01-01T00:00:00Z"}')
+  BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
+  if [ -z "$BG_PAT" ]; then
+    warn "Could not mint a break-glass PAT: $(echo "$BG_PAT_RESP" | jq -c .)"
+  else
+    aws secretsmanager put-secret-value --secret-id "$AWS_SM_BREAKGLASS_ID" \
+      --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null 2>&1 \
+      || aws secretsmanager create-secret --name "$AWS_SM_BREAKGLASS_ID" \
+           --description "Zitadel break-glass IAM_OWNER PAT" \
+           --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null
+    log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
+  fi
+fi
+
+#######################################
+# 10. Add Zitadel Actions
 #######################################
 info "Creating Zitadel action: addGrant..."
 
@@ -458,7 +499,7 @@ else
 fi
 
 #######################################
-# 10. Delete provision user
+# 11. Delete provision user
 #######################################
 info "Looking up provision user..."
 PROV_SEARCH=$(api POST "/v2beta/users" \
@@ -491,7 +532,7 @@ info "Scope Mgmt User: ${SM_USER_ID}"
 info "PAT Secret:      ${AWS_SM_SECRET}"
 echo ""
 #######################################
-# 11. Create admin user (optional)
+# 12. Create admin user (optional)
 #######################################
 if [ -n "$ADMIN_EMAIL" ]; then
   # Extract name parts from email (first.last@domain → First Last)
@@ -549,7 +590,7 @@ if [ -n "$ADMIN_EMAIL" ]; then
 fi
 
 #######################################
-# 12. Patch instance-config.yaml
+# 13. Patch instance-config.yaml
 #######################################
 INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 if [ -f "$INSTANCE_CONFIG" ] && command -v yq &>/dev/null; then
