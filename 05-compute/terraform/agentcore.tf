@@ -1,11 +1,8 @@
 #######################################
 # Bedrock AgentCore
 #######################################
-#
-# AgentCore Web Search is called through the InvokeWebSearch API on the AgentCore
-# data plane. There is nothing to create: the tool is an AWS-owned resource, so
-# enabling it is a grant plus (optionally) the VPC endpoint in 03-infrastructure.
-#######################################
+# Web Search is an AWS-owned managed tool, so there is nothing to create: it is
+# a grant, plus the VPC endpoint in 03-infrastructure.
 
 data "aws_iam_policy_document" "agentcore_web_search" {
   statement {
@@ -31,10 +28,8 @@ resource "aws_iam_role_policy" "assistants_core_agentcore_web_search" {
 #######################################
 # AgentCore Gateway (Web Search over MCP)
 #######################################
-#
-# The gateway exposes web search as an MCP tool, so agents discover it with
-# tools/list instead of calling InvokeWebSearch directly.
-#######################################
+# Exposes web search as an MCP tool, so agents find it with tools/list rather
+# than calling InvokeWebSearch themselves.
 
 data "aws_iam_policy_document" "agentcore_gateway_assume" {
   statement {

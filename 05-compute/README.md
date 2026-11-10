@@ -78,15 +78,26 @@ The managed tool is owned by AWS, so its ARN carries the literal account `aws`
 (`arn:aws:bedrock-agentcore:<region>:aws:tool/web-search.v1`), not this account's
 id. Nothing is created for the API path; it is a grant only.
 
-The gateway path exists for governance: because the agent never holds the search
-permission, target-level domain allow/deny lists are enforced where the calling
-agent cannot see or override them. It is off by default (`enable_agentcore_gateway`)
-because it creates billable resources, and uses `AWS_IAM` authorization so
-in-cluster callers authenticate with their Pod Identity credentials.
+The gateway path is what makes governance possible: a target can carry domain
+allow/deny lists the calling agent cannot read or override, because the agent
+holds only `InvokeGateway` while the gateway's service role reaches web search.
+Two defaults qualify that, and both have to be changed to rely on it:
 
-Both paths stay inside the VPC: the API uses the `bedrock-agentcore` interface
-endpoint and the gateway uses `bedrock-agentcore.gateway`, which is a separate
-PrivateLink service (see `enable_agentcore_endpoint` in 03-infrastructure).
+- The target here sets `ParameterValues = {}`, so **no domain list is configured**.
+  Set `parameterValues.domainFilter` on the target before treating it as a control.
+- `enable_agentcore_web_search` is independent of the gateway and defaults to
+  `true`, so the workload keeps the direct grant and can call web search without
+  passing through the gateway. Gateway-only access means setting it to `false`.
+
+The gateway is off by default (`enable_agentcore_gateway`) because it creates
+billable resources, and uses `AWS_IAM` authorization so in-cluster callers
+authenticate with their Pod Identity credentials.
+
+With `enable_agentcore_endpoint` set, both paths reach the service over
+PrivateLink rather than the internet — the API through `bedrock-agentcore`, the
+gateway through `bedrock-agentcore.gateway`, a separate service. PrivateLink is a
+private connection to an AWS service, not the service running inside the VPC;
+with the endpoints disabled, calls take whatever egress the VPC has.
 
 The gateway's connector target is created with `aws_cloudcontrolapi_resource`
 rather than `aws_bedrockagentcore_gateway_target`, which supports every target
@@ -317,6 +328,10 @@ acr_registry_url = "example.azurecr.io"
 
 # VPC Endpoint
 enable_eks_endpoint           = true
+
+# Bedrock AgentCore
+enable_agentcore_web_search   = true    # direct InvokeWebSearch grant; default true
+enable_agentcore_gateway      = false   # gateway + connector target; default false
 ```
 
 > **Note**: Ingress NLB, ALBs, and CloudFront VPC Origin are configured in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`).

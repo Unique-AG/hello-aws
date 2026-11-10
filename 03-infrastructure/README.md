@@ -321,6 +321,8 @@ alert_email_endpoints = ["ops@example.com"]
 enable_ssm_endpoints            = true
 enable_secrets_manager_endpoint = true
 enable_bedrock_endpoint         = true
+# AgentCore data plane + gateway endpoints (default true)
+enable_agentcore_endpoint       = true
 
 # Route 53 Private Hosted Zone (uncomment and set before deploying)
 # These values come from your landing zone or connectivity account
