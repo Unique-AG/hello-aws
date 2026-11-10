@@ -70,6 +70,15 @@ resources:
         - host: <DOMAIN_IDENTITY>
           http:
             paths:
+              # Ahead of the catch-all below: the login UI is a separate
+              # deployment, and Zitadel itself does not serve this path.
+              - backend:
+                  service:
+                    name: zitadel-login
+                    port:
+                      number: 3000
+                path: /ui/v2/login
+                pathType: Prefix
               - backend:
                   service:
                     name: zitadel

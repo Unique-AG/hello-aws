@@ -73,27 +73,27 @@ DRIFT=0
 #######################################
 # Login V2 must not be required
 #######################################
-# v4 defaults this to true, which sends authorize to a UI this installation does
-# not deploy, breaking every interactive sign-in including the console's.
+# This installation deploys the v2 login UI, so the instance should keep
+# requiring it; a false here means authorize falls back to the legacy login.
 FEATURES=$(api GET "/v2/features/instance")
 if echo "$FEATURES" | jq -e '.code' >/dev/null 2>&1; then
   error "Could not read instance features: $(echo "$FEATURES" | jq -r '.message // .code')"
 fi
 
 LOGIN_V2=$(echo "$FEATURES" | jq -r '.loginV2.required // false')
-if [ "$LOGIN_V2" = "true" ]; then
+if [ "$LOGIN_V2" != "true" ]; then
   DRIFT=1
-  warn "loginV2.required is true; the built-in login is not serving authorize requests"
+  warn "loginV2.required is ${LOGIN_V2}; authorize is falling back to the legacy login"
   if [ "$MODE" = "--apply" ]; then
-    RESP=$(api PUT "/v2/features/instance" '{"loginV2":{"required":false}}')
+    RESP=$(api PUT "/v2/features/instance" '{"loginV2":{"required":true}}')
     if echo "$RESP" | jq -e '.code' >/dev/null 2>&1; then
-      error "Could not clear loginV2: $(echo "$RESP" | jq -r '.message // .code')"
+      error "Could not set loginV2: $(echo "$RESP" | jq -r '.message // .code')"
     fi
-    log "loginV2.required set to false"
+    log "loginV2.required set to true"
     DRIFT=0
   fi
 else
-  log "loginV2.required is false"
+  log "loginV2.required is true"
 fi
 
 #######################################
