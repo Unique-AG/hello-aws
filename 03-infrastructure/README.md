@@ -83,7 +83,7 @@ The infrastructure layer manages the full ingress load balancing stack, keeping 
 - **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
 - **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
 - **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
-- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.rbcn.ai`), used for TLS termination on both ALBs.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination on both ALBs.
 - **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
 
 Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
@@ -331,7 +331,7 @@ enable_bedrock_endpoint         = true
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
 alb_deletion_protection         = false        # Disable for sbx teardown
 enable_cloudfront_vpc_origin    = true
-internal_alb_certificate_domain = "*.sbx.rbcn.ai"
+internal_alb_certificate_domain = "*.sbx.example.com"
 connectivity_account_id         = "198666613175"
 ```
 

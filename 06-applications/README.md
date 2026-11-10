@@ -97,6 +97,8 @@ All parameters in `<env>/instance-config.yaml`:
 ├── scripts/
 │   ├── configure-instance.sh        # Replace placeholders (env-scoped)
 │   ├── validate-instance.sh         # Verify no placeholders remain (env-scoped)
+│   ├── seed-secrets.sh              # Give every secret a value (env-scoped)
+│   ├── validate.sh                  # Validate the rendered manifests
 │   └── test-charts.sh               # Lint, render and verify the vendored charts
 ├── defaults/                        # Base app configurations (env-independent)
 │   ├── ai-services/
@@ -105,8 +107,9 @@ All parameters in `<env>/instance-config.yaml`:
 └── sbx/                             # Environment-specific configuration
     ├── instance-config.yaml         # (gitignored) Real values for this env
     ├── apps/
-    │   ├── system/                   # System app specs (12 apps)
-    │   └── chat/                     # Chat app specs (21 apps)
+    │   ├── system/                   # System app specs (21 apps)
+    │   ├── chat/                     # Chat app specs (21 apps)
+    │   └── conduct/                  # Conduct sandbox app specs (6 apps)
     ├── charts/
     │   ├── backend-service/          # Local Helm chart for backend services
     │   └── web-app/                  # Local Helm chart for web apps
@@ -116,7 +119,7 @@ All parameters in `<env>/instance-config.yaml`:
         ├── cert-manager/             # cert-manager + ClusterIssuer
         ├── external-secrets/         # ESO + ClusterSecretStore + app secrets
         ├── kong/                     # Kong controller, gateway, ingress, plugins
-        ├── storage-class/            # gp3 StorageClass
+        ├── storage-class/            # gp3 and EFS StorageClasses
         ├── reloader/                 # Stakater Reloader
         ├── aws-lb-controller/        # AWS Load Balancer Controller
         ├── keda/                     # KEDA autoscaler
@@ -126,6 +129,9 @@ All parameters in `<env>/instance-config.yaml`:
         ├── qdrant/                   # Qdrant vector database
         ├── litellm/                  # LiteLLM proxy (LLM gateway)
         ├── zitadel/                  # Zitadel identity provider
+        ├── conduct/                  # Conduct sandbox templates and gateway
+        ├── kata-deploy/              # Kata Containers runtime
+        ├── observability/            # Prometheus, Loki, Tempo, Alloy
         ├── ai-services/              # AI service values
         ├── backend-services/         # Backend service values
         └── web-apps/                 # Web app values
@@ -142,30 +148,40 @@ helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
 
 This deploys:
 1. **ArgoCD** (`argo/argo-cd` chart) — GitOps controller, admin-only access (no SSO)
-2. **ApplicationSets** (`argo/argocd-apps` chart) — two ApplicationSets that discover apps from Git:
+2. **ApplicationSets** (`argo/argocd-apps` chart) — three ApplicationSets that discover apps from Git:
    - `system` — watches `sbx/apps/system/*.yaml`
    - `chat` — watches `sbx/apps/chat/*.yaml`
+   - `conduct` — watches `sbx/apps/conduct/*.yaml`
 
 ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initial secret).
 
 ## Application Categories
 
-### System Applications (12)
+### System Applications (21)
 
 | App | autoSync | Description |
 |-----|----------|-------------|
-| storage-class-gp3 | true | gp3 StorageClass for EBS CSI Driver |
-| cert-manager | true | TLS certificate management with Route 53 DNS-01 validation |
-| external-secrets | false | AWS Secrets Manager integration (ClusterSecretStore + app secrets) |
-| reloader | true | Automatic pod restart on ConfigMap/Secret changes |
-| kong | false | API gateway — controller, gateway, CRDs, plugins, ingress |
-| rabbitmq-operator | false | RabbitMQ Cluster Operator |
-| eck | true | Elastic Cloud on Kubernetes operator (single-source, no values) |
-| elasticsearch | false | Elasticsearch cluster |
-| zitadel | false | Identity provider (ExternalSecrets for DB credentials) |
+| agent-sandbox-controller | false | Agent Sandbox controller for Conduct sandboxes |
+| alloy | false | Grafana Alloy — telemetry collection |
 | argocd | false | ArgoCD self-management |
 | aws-lb-controller | true | AWS Load Balancer Controller (NLB/ALB provisioning) |
+| cert-manager | true | TLS certificate management with Route 53 DNS-01 validation |
+| eck-operator | true | Elastic Cloud on Kubernetes operator |
+| es-ingestion | false | Elasticsearch cluster backing ingestion search |
+| external-secrets | false | AWS Secrets Manager integration (ClusterSecretStore + app secrets) |
+| gateway-api-crds | false | Gateway API CRDs (required by Kong) |
+| kata-deploy | false | Kata Containers runtime for peer-pod sandboxes |
 | keda | true | Event-driven autoscaling (ServerSideApply for CRDs) |
+| kong | false | API gateway — controller, gateway, CRDs, plugins, ingress |
+| kube-prometheus-stack | false | Prometheus, Alertmanager and Grafana |
+| loki | false | Log aggregation |
+| rabbitmq-operator | false | RabbitMQ Cluster Operator |
+| reloader | true | Automatic pod restart on ConfigMap/Secret changes |
+| sbx-namespace | false | The `sbx` namespace that sandboxes run in |
+| storage-class-efs | true | EFS StorageClass (ReadWriteMany volumes) |
+| storage-class-gp3 | true | gp3 StorageClass for EBS CSI Driver |
+| tempo | false | Distributed tracing backend |
+| zitadel | false | Identity provider (ExternalSecrets for DB credentials) |
 
 ### Chat Applications (21)
 
@@ -180,6 +196,19 @@ client-insights-exporter
 **Web Apps:** chat, admin, knowledge-upload, theme
 
 **Data:** rabbitmq (cluster instance), qdrant (vector database), litellm (LLM gateway + embedding proxy)
+
+### Conduct Applications (6)
+
+Sandboxed code execution for Conduct spaces; all deploy into the `sbx` namespace.
+
+| App | autoSync | Description |
+|-----|----------|-------------|
+| conduct-foundation | false | Conduct foundation resources |
+| peer-pods | false | Peer-pods cloud-api-adaptor and controller |
+| sbx-ecr-pull | false | ECR pull credentials for the sandbox namespace |
+| sbx-gateway | false | Sandbox gateway |
+| sbx-templates | false | Sandbox templates (peer-pod backed) |
+| sbx-templates-fargate | false | Sandbox templates (Fargate backed) |
 
 ## LiteLLM — Bedrock Model Configuration
 
@@ -254,6 +283,11 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 | `cert-manager` | unique | Route 53 | DNS-01 certificate validation |
 | `external-secrets` | unique | Secrets Manager + KMS | Secret retrieval |
 | `ebs-csi-controller-sa` | kube-system | EBS | Volume provisioning (EKS addon, not ArgoCD-managed) |
+| `efs-csi-controller-sa` | kube-system | EFS | ReadWriteMany volume provisioning (EKS addon) |
+| `kube-prometheus-stack-prometheus` | unique | Managed Prometheus | Metric remote-write |
+| `kube-prometheus-stack-grafana` | unique | Managed Prometheus | Metric queries |
+| `loki` | unique | S3 | Log chunk storage |
+| `tempo` | unique | S3 | Trace storage |
 
 ### Chat
 
