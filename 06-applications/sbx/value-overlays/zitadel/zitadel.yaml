@@ -6,9 +6,12 @@ image:
   # appVersion, and its setup migration is broken on newer PostgreSQL.
   tag: v4.13.1
 
-# v4 ships a separate login UI; this deployment keeps the built-in login.
+# v4's login UI, which the instance requires by default. Its service user and
+# token were created at instance setup and live in the `login-client` secret.
 login:
-  enabled: false
+  enabled: true
+  image:
+    tag: v4.13.1
 
 # The chart defaults this to docker.io/alpine/k8s, whose layers come from
 # in-region S3 and are refused by the gateway endpoint policy.
