@@ -101,3 +101,6 @@ fargate_profiles = {
 # Conduct sandbox isolation — the self-managed boundary. Enables the pod VM launch
 # template; the guest authenticates to the registry with auth.json, not with AWS.
 podvm_ami_id = "ami-0be984e3b13ddb79d"
+
+# AgentCore gateway exposing Web Search as an MCP tool (billable per tool call).
+enable_agentcore_gateway = true
