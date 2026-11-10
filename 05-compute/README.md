@@ -47,11 +47,12 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+15 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
 | EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) + KMS encrypt/decrypt for EBS encryption |
+| EFS CSI Driver | `kube-system` | `efs-csi-controller-sa` | `AmazonEFSCSIDriverPolicy` (managed) |
 | Cluster Secrets | `unique` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` + AgentCore `InvokeWebSearch` (and `InvokeGateway` when the gateway is enabled) |
@@ -60,6 +61,10 @@ Ten IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:Assum
 | Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
+| Prometheus | `unique` | `kube-prometheus-stack-prometheus` | Managed Prometheus `RemoteWrite`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
+| Grafana | `unique` | `kube-prometheus-stack-grafana` | Managed Prometheus `QueryMetrics`, `GetLabels`, `GetSeries`, `GetMetricMetadata` + CloudWatch `GetMetricData`, `ListMetrics`, `GetMetricStatistics`, `DescribeAlarmsForMetric` + Logs `StartQuery`, `DescribeLogGroups`, `GetLogGroupFields` |
+| Loki | `unique` | `loki` | S3 `ListBucket` + object CRUD on its chunk store + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Tempo | `unique` | `tempo` | S3 `ListBucket` + object CRUD on its trace store + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
 | Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |
 
 Bedrock roles grant access to foundation models (`arn:aws:bedrock:*::foundation-model/*`), and inference profiles in the deployment region: the system cross-region profiles (`inference-profile/*`, whose ARNs carry the account) and, for LiteLLM, the application profiles (`application-inference-profile/*`).
@@ -275,7 +280,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Access Control
 
 - **EKS Auth**: API-only mode, access entries (no `aws-auth` ConfigMap)
-- **Pod Identity**: 9 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
+- **Pod Identity**: 15 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
 - **ACR Credentials**: Write-only (`secret_string_wo`) + ephemeral variables — never in Terraform state or plan files
 
 ### Audit and Compliance
