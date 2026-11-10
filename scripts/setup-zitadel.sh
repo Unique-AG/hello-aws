@@ -430,28 +430,37 @@ else
     warn "Could not grant IAM_OWNER to ${BREAKGLASS_USER}: $(echo "$BG_MEMBER" | jq -r '.message // .code')"
     warn "Skipping the PAT: a stored credential without IAM_OWNER cannot recover the instance."
   else
-    # Minting invalidates the stored token immediately, so decide where the new
-    # one goes before asking for it.
-    if aws secretsmanager describe-secret --secret-id "$AWS_SM_BREAKGLASS_ID" \
-         --region "$AWS_REGION" >/dev/null 2>&1; then
+    # Minting invalidates the stored token at once, so resolve where the new one
+    # goes first; only a real "not found" means create, never a denial.
+    BG_WRITE=()
+    if BG_DESC_ERR=$(aws secretsmanager describe-secret --secret-id "$AWS_SM_BREAKGLASS_ID" \
+         --region "$AWS_REGION" 2>&1 >/dev/null); then
       BG_WRITE=(aws secretsmanager put-secret-value --secret-id "$AWS_SM_BREAKGLASS_ID")
-    else
+    elif echo "$BG_DESC_ERR" | grep -q 'ResourceNotFoundException'; then
       BG_WRITE=(aws secretsmanager create-secret --name "$AWS_SM_BREAKGLASS_ID"
         --description "Zitadel break-glass IAM_OWNER PAT")
+    else
+      warn "Cannot read ${AWS_SM_BREAKGLASS_ID}: ${BG_DESC_ERR}"
+      warn "Skipping the PAT so the stored credential stays valid."
     fi
 
-    BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
-      '{"expirationDate":"2029-01-01T00:00:00Z"}')
-    BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
-    if [ -z "$BG_PAT" ]; then
-      warn "Could not mint a break-glass PAT: $(echo "$BG_PAT_RESP" | jq -c .)"
-    elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
-      log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
+    if [ "${#BG_WRITE[@]}" -eq 0 ]; then
+      : # already reported above; leave the stored credential alone
     else
-      # The new PAT has already invalidated whatever was stored, so say so
-      # rather than leaving a secret that silently no longer works.
-      warn "Minted a break-glass PAT but could not store it in ${AWS_SM_BREAKGLASS_ID}."
-      warn "The previously stored value is now invalid; re-run this step once the write succeeds."
+      BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
+        '{"expirationDate":"2029-01-01T00:00:00Z"}')
+      BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
+
+      if [ -z "$BG_PAT" ]; then
+        warn "Could not mint a break-glass PAT: $(echo "$BG_PAT_RESP" | jq -c .)"
+      elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
+        log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
+      else
+        # The new PAT already invalidated whatever was stored, so say so rather
+        # than leaving a secret that silently no longer works.
+        warn "Minted a break-glass PAT but could not store it in ${AWS_SM_BREAKGLASS_ID}."
+        warn "The stored value is now invalid; re-run this step once the write succeeds."
+      fi
     fi
   fi
 fi

@@ -51,15 +51,26 @@ DOMAIN_IDENTITY=$(yq -r '.domain.identity // ""' "$INSTANCE_CONFIG")
 [ -n "$DOMAIN_IDENTITY" ] || error "domain.identity missing from ${INSTANCE_CONFIG}"
 ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
 
-# Bounded so a hung host fails the check rather than the job timeout, and
-# non-zero on a transport error so a caller can tell that from an error body.
+# Bounded so a hung host fails the check rather than the job timeout. Prints the
+# body and returns non-zero on a transport error or any non-2xx, so a rejected
+# write can never be read as a successful one.
 api() {
   local method="$1" endpoint="$2" data="${3:-}"
-  local args=(-s --connect-timeout 10 --max-time 30 -X "$method" "${ZITADEL_HOST}${endpoint}"
+  local args=(-s --connect-timeout 10 --max-time 30 -w '\n%{http_code}'
+    -X "$method" "${ZITADEL_HOST}${endpoint}"
     -H "Authorization: Bearer ${PAT}"
     -H "Content-Type: application/json")
   [ -n "$data" ] && args+=(-d "$data")
-  curl "${args[@]}"
+
+  local out status body
+  out=$(curl "${args[@]}") || { echo "could not reach ${ZITADEL_HOST}" >&2; return 1; }
+  status=${out##*$'\n'}
+  body=${out%$'\n'*}
+  printf '%s' "$body"
+  if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+    echo "HTTP ${status} from ${endpoint}" >&2
+    return 1
+  fi
 }
 
 # A gateway can answer with HTML or nothing, which jq would read as absent
@@ -85,7 +96,7 @@ DRIFT=0
 # This installation deploys the v2 login UI, so the instance should keep
 # requiring it; a false here means authorize falls back to the legacy login.
 FEATURES=$(api GET "/v2/features/instance") \
-  || error "Could not reach ${ZITADEL_HOST} (connection or timeout)"
+  || error "Could not read instance features (see the message above)"
 require_json "$FEATURES" "The instance features response"
 if echo "$FEATURES" | jq -e '.code' >/dev/null 2>&1; then
   error "Could not read instance features: $(echo "$FEATURES" | jq -r '.message // .code')"
@@ -99,7 +110,7 @@ if [ "$LOGIN_V2" != "true" ]; then
   warn "loginV2.required is ${LOGIN_V2}; authorize is falling back to the legacy login"
   if [ "$MODE" = "--apply" ]; then
     RESP=$(api PUT "/v2/features/instance" '{"loginV2":{"required":true}}') \
-      || error "Could not reach ${ZITADEL_HOST} while applying (connection or timeout)"
+      || error "The feature update was rejected (see the message above)"
     require_json "$RESP" "The feature update response"
     if echo "$RESP" | jq -e '.code' >/dev/null 2>&1; then
       error "Could not set loginV2: $(echo "$RESP" | jq -r '.message // .code')"
