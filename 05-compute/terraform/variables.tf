@@ -264,3 +264,15 @@ variable "podvm_root_volume_size" {
   type        = number
   default     = 30
 }
+
+variable "enable_agentcore_web_search" {
+  description = "Grant assistants-core permission to call AgentCore Web Search"
+  type        = bool
+  default     = true
+}
+
+variable "enable_agentcore_gateway" {
+  description = "Create the AgentCore gateway exposing Web Search as an MCP tool"
+  type        = bool
+  default     = false
+}

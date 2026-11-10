@@ -149,6 +149,12 @@ variable "enable_bedrock_endpoint" {
   default     = true
 }
 
+variable "enable_agentcore_endpoint" {
+  description = "Enable Bedrock AgentCore data plane Interface Endpoint"
+  type        = bool
+  default     = true
+}
+
 variable "enable_sts_endpoint" {
   description = "Enable STS Interface Endpoint (required for IRSA token exchange)"
   type        = bool
