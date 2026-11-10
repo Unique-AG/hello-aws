@@ -62,7 +62,7 @@ Five managed addons, all deployed after the node group is ready:
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 | Prometheus | `unique` | `kube-prometheus-stack-prometheus` | Managed Prometheus `RemoteWrite`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
-| Grafana | `unique` | `kube-prometheus-stack-grafana` | Managed Prometheus `QueryMetrics`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
+| Grafana | `unique` | `kube-prometheus-stack-grafana` | Managed Prometheus `QueryMetrics`, `GetLabels`, `GetSeries`, `GetMetricMetadata` + CloudWatch `GetMetricData`, `ListMetrics`, `GetMetricStatistics`, `DescribeAlarmsForMetric` + Logs `StartQuery`, `DescribeLogGroups`, `GetLogGroupFields` |
 | Loki | `unique` | `loki` | S3 `ListBucket` + object CRUD on its chunk store |
 | Tempo | `unique` | `tempo` | S3 `ListBucket` + object CRUD on its trace store |
 | Peer Pods | `sbx` | `cloud-api-adaptor`, `peerpodctrl-controller-manager` | EC2 `RunInstances` on a `PeerPod`-tagged instance, `TerminateInstances` on the same tag, `CreateTags` on create only, plus the Describes the adaptor calls. Also grant and decrypt on the general KMS key — the pod VM AMI is encrypted, so EC2 creates a grant on the caller's behalf at launch |

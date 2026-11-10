@@ -49,7 +49,7 @@ def compare(label: str, doc_value: int | None, real_value: int, how: str) -> Non
 
 # --- Pod Identity roles -----------------------------------------------------
 associations = sum(
-    len(re.findall(r'resource\s+"aws_eks_pod_identity_association"', p.read_text()))
+    len(re.findall(r'resource\s+"aws_eks_pod_identity_association"', p.read_text(encoding="utf-8")))
     for p in (ROOT / "05-compute/terraform").glob("*.tf")
 )
 compare(

@@ -285,7 +285,7 @@ Workloads that require AWS EKS Pod Identity (pre-provisioned in `05-compute/terr
 | `ebs-csi-controller-sa` | kube-system | EBS | Volume provisioning (EKS addon, not ArgoCD-managed) |
 | `efs-csi-controller-sa` | kube-system | EFS | ReadWriteMany volume provisioning (EKS addon) |
 | `kube-prometheus-stack-prometheus` | unique | Managed Prometheus | Metric remote-write |
-| `kube-prometheus-stack-grafana` | unique | Managed Prometheus | Metric queries |
+| `kube-prometheus-stack-grafana` | unique | Managed Prometheus + CloudWatch | Metric and log queries |
 | `loki` | unique | S3 | Log chunk storage |
 | `tempo` | unique | S3 | Trace storage |
 

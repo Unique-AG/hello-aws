@@ -15,7 +15,10 @@ concurrency:
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 5 * * 1-5"   # 07:00 CEST (05:00 UTC), Mon–Fri
+    # Ahead of the watchdog's dense window, which starts at 05:00. Only one run
+    # can be pending in the shared concurrency group, so a smoke run queued
+    # behind a watchdog would be replaced by the next watchdog five minutes on.
+    - cron: "30 4 * * 1-5"   # 06:30 CEST (04:30 UTC), Mon–Fri
 
 jobs:
   smoke:

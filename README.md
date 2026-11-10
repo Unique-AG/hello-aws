@@ -166,7 +166,7 @@ kms-df-unique-sbx-use1-state         # KMS alias (account-unique)
 eks-df-unique-sbx-use1               # EKS cluster name
 ```
 
-For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `org_moniker = "df"` with `product = "unique-pr42"`, producing resource names like `s3-df-unique-pr42-sbx-use1-state` that are isolated from the main deployment and can be torn down without risk.
+For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product_moniker` values to avoid name collisions with long-lived environments — resource names are built from the monikers, so changing `product` alone does not isolate them. For example, a short-lived PR environment could use `org_moniker = "df"` with `product_moniker = "pr42"`, producing resource names like `s3-df-pr42-sbx-use1-state` that are isolated from the main deployment and can be torn down without risk. `product_moniker` is limited to 10 characters.
 
 **Important**: This file must be created manually before deploying the bootstrap layer. Copy `common.auto.tfvars.template` to `common.auto.tfvars` and update the values for your organization and product.
 
