@@ -144,6 +144,11 @@ zitadel:
       LoginPolicy:
         AllowDomainDiscovery: true
         AllowRegister: false
+      # v4 defaults LoginV2.Required to true, which sends authorize to a UI this
+      # chart does not deploy. Only applied when an instance is created.
+      Features:
+        LoginV2:
+          Required: false
       PrivacyPolicy:
         TOSLink: https://www.unique.ch/terms
         PrivacyLink: https://www.unique.ch/privacy
