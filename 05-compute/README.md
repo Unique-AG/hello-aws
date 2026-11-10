@@ -47,7 +47,7 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-Fifteen IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+15 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|

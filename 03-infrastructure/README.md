@@ -56,7 +56,7 @@ The VPC default security group is locked down with **no ingress or egress rules*
 VPC endpoints provide **private connectivity** to AWS services without internet access:
 
 - **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket, application-data and ai-data S3 buckets, and ECR layer bucket)
-- **Interface Endpoints**: SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, Bedrock AgentCore, Bedrock AgentCore Gateway, STS, KMS, EC2, EKS, EKS Auth
+- **Interface Endpoints** (18): SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, Bedrock AgentCore, Bedrock AgentCore Gateway, STS, KMS, EC2, EKS, EKS Auth
 - **Private Access**: All AWS service access stays within the VPC
 
 The S3 gateway endpoint is associated with all route tables (public, private, and isolated) regardless of NAT Gateway status.
@@ -140,7 +140,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### VPC Endpoints
 
-- **Interface Endpoints**: SSM, Secrets Manager, ECR (API + DKR), CloudWatch (Logs + Metrics), Prometheus, Bedrock, Bedrock Runtime, Bedrock AgentCore (data plane + gateway), STS, KMS, EC2, EKS, EKS Auth, EC2 Messages, SSM Messages
+- **Interface Endpoints**: see the list under [VPC Endpoints](#vpc-endpoints) above — kept in one place so the two cannot drift apart
 - **Gateway Endpoints**: S3 (with policy scoped to Terraform state, application S3 buckets, and ECR layers)
 - **Security Group**: Restricted ingress/egress to VPC CIDR
 

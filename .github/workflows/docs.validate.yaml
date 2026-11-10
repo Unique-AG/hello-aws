@@ -1,0 +1,32 @@
+name: '[docs] Validate'
+
+# The layer READMEs carry hand-written counts of things Terraform declares. This
+# fails the PR when the two disagree, so a new endpoint, role, profile or app
+# spec cannot land while the prose still describes the old shape.
+on:
+  pull_request:
+    paths:
+      - '03-infrastructure/README.md'
+      - '03-infrastructure/terraform/vpc-endpoints.tf'
+      - '04-data-and-ai/README.md'
+      - '04-data-and-ai/terraform/variables.tf'
+      - '05-compute/README.md'
+      - '05-compute/terraform/*.tf'
+      - '06-applications/README.md'
+      - '06-applications/sbx/apps/**'
+      - 'scripts/check-docs-drift.py'
+      - '.github/workflows/docs.validate.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      # Standard library only, so there is nothing to install or pin.
+      - name: Check documented counts against the repository
+        run: python3 scripts/check-docs-drift.py
