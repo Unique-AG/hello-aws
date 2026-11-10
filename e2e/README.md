@@ -53,11 +53,12 @@ only if your DNS differs.
 
 Two workflows under `.github/workflows/`:
 
-- `e2e-watchdog.yaml` — watchdog (browser + API).
-- `e2e-smoke.yaml` — smoke (browser + API).
+- `e2e-watchdog.yaml` — watchdog (browser + API), every 5 minutes through the
+  day and hourly overnight, plus dispatch.
+- `e2e-smoke.yaml` — smoke (browser + API), weekday mornings, plus dispatch.
 
-Both run on `workflow_dispatch` only. Each file carries a commented-out
-`schedule` block; uncomment it to put the suite back on a timer.
+A fork that does not want the timers can delete the `schedule` blocks; both
+workflows still run on `workflow_dispatch`.
 
 No tenant credentials live in this repo. Each job assumes the GitHub OIDC role
 from `01-bootstrap` (`secrets.AWS_ROLE_ARN` — an ARN, not a credential) with no
