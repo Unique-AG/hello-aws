@@ -97,3 +97,6 @@ fargate_profiles = {
     }
   }
 }
+
+# AgentCore gateway exposing Web Search as an MCP tool (billable per tool call).
+enable_agentcore_gateway = true

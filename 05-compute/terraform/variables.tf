@@ -270,3 +270,9 @@ variable "enable_agentcore_web_search" {
   type        = bool
   default     = true
 }
+
+variable "enable_agentcore_gateway" {
+  description = "Create the AgentCore gateway exposing Web Search as an MCP tool"
+  type        = bool
+  default     = false
+}
