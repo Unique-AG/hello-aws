@@ -37,13 +37,8 @@ routes:
   hostname: hello.aws.unique.dev
   skipCrdCheck: true
 
-resources:
-  limits:
-    cpu: 100m
-    memory: 256Mi
-  requests:
-    cpu: 50m
-    memory: 128Mi
+# No resources block: this file merges after defaults/web-apps/<app>.yaml,
+# so a blanket one would override each app's sizing and throttle the big ones.
 
 podAnnotations:
   reloader.stakater.com/auto: "true"
