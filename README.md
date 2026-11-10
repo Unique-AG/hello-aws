@@ -160,13 +160,13 @@ Common configuration values are defined in `common.auto.tfvars` at the repositor
 These values are critical because the naming module uses them to generate globally unique resource names. AWS resources such as S3 buckets, IAM roles, and KMS aliases must be unique within an account or globally across AWS. The naming module combines `org_moniker`, `product`, `environment`, and region into deterministic prefixes:
 
 ```
-s3-df-unique-sbx-euc2-state          # S3 bucket (globally unique)
-iam-df-unique-sbx-euc2-deploy        # IAM role (account-unique)
-kms-df-unique-sbx-euc2-state         # KMS alias (account-unique)
-eks-df-unique-sbx-euc2               # EKS cluster name
+s3-df-unique-sbx-use1-state          # S3 bucket (globally unique)
+iam-df-unique-sbx-use1-deploy        # IAM role (account-unique)
+kms-df-unique-sbx-use1-state         # KMS alias (account-unique)
+eks-df-unique-sbx-use1               # EKS cluster name
 ```
 
-For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product` values to avoid name collisions with long-lived environments. For example, a short-lived PR environment could use `org_moniker = "df"` with `product = "unique-pr42"`, producing resource names like `s3-df-unique-pr42-sbx-euc2-state` that are isolated from the main deployment and can be torn down without risk.
+For ephemeral environments (e.g., PR previews, feature branches, load tests), use distinct `org_moniker` or `product_moniker` values to avoid name collisions with long-lived environments — resource names are built from the monikers, so changing `product` alone does not isolate them. For example, a short-lived PR environment could use `org_moniker = "df"` with `product_moniker = "pr42"`, producing resource names like `s3-df-pr42-x-use1-tfstate` — the environment is carried as its short code (`sbx` is `x`) and bootstrap appends `-tfstate`. `product_moniker` is limited to 10 characters. A preview also needs its own `backend-config.hcl`: changing a moniker does not repoint existing state, so reusing the sbx backend would have the preview manage the sbx resources. Monikers do not isolate everything either — several Secrets Manager entries in `04-data-and-ai` (`grafana-admin-password`, `alertmanager-slack-webhook-url`, `argocd-github-app`, `google-search-api-key`) are created under fixed names, so a preview in the same account and region collides with the existing environment on those. Run previews in a separate account, or rename those secrets.
 
 **Important**: This file must be created manually before deploying the bootstrap layer. Copy `common.auto.tfvars.template` to `common.auto.tfvars` and update the values for your organization and product.
 
