@@ -35,9 +35,22 @@ cp secrets-sources.yaml.template sbx/secrets-sources.yaml
 ./scripts/seed-secrets.sh sbx
 ./scripts/seed-secrets.sh sbx --check   # confirm none were missed
 
-# 7. Bootstrap ArgoCD
+# 7. Mirror the third-party artifacts no reachable registry carries
+#    Run the "[img] Mirror third-party artifacts" workflow in your fork against
+#    the branch you are deploying — it reads mirror-artifacts.yaml from the ref
+#    it runs on, so a run on main copies nothing added only to deploy. Let it
+#    finish: apps listed there cannot start until it has, and it is
+#    dispatch-only, so nothing triggers it for you. It assumes the fork's
+#    AWS_ROLE_ARN secret, the OIDC role from 01-bootstrap, since it writes to
+#    your ECR.
+
+# 8. Bootstrap ArgoCD
 helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
 ```
+
+Re-run the mirror workflow after any change to `mirror-artifacts.yaml`, on the
+branch that carries the change and before syncing the apps that use it — a new
+entry is only a declaration until the workflow copies the image.
 
 `seed-secrets.sh --check` writes nothing and exits non-zero while any required
 secret is still empty, so it also answers "was this environment ever seeded?"

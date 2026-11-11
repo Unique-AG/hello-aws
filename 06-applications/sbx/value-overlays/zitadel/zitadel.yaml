@@ -24,6 +24,8 @@ tools:
       tag: "latest@sha256:350a8a76f45fdb8217a6e48f7e001a270ef8beb103032b815dbdceb5be9e1a24"
   wait4x:
     image:
+      # Defaults to Docker Hub, which no pull-through rule serves; mirrored.
+      repository: mirror/wait4x/wait4x
       tag: "3.6"
 nodeSelector:
   scalability: steady

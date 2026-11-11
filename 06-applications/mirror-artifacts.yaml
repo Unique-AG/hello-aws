@@ -27,3 +27,9 @@ artifacts:
   - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21
     digest: sha256:c65e5d1aa22ac7b9151b8e7707530a801551fc198fcc32565898b2e9b482185c
     target: mirror/bitnamicharts/rabbitmq-cluster-operator:4.3.21
+
+  # The Zitadel chart's init-container wait, which defaults to Docker Hub. The
+  # login deployment needs it; the server has no init containers.
+  - source: wait4x/wait4x:3.6
+    digest: sha256:bec7ac18547781d854562c3729d3195c3880116d6758c49fdf4573ad58805f14
+    target: mirror/wait4x/wait4x:3.6
