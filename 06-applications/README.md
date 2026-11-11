@@ -190,11 +190,15 @@ registered, and a resync in that gap fails the same way:
 ```bash
 kubectl get applications -n unique | grep -v Synced
 
-kubectl wait --for=condition=Established --timeout=5m \
+# --for=create first: waiting on a condition of a CRD that does not exist yet
+# returns NotFound immediately instead of waiting for it.
+kubectl wait --for=create --timeout=5m \
   crd/rabbitmqclusters.rabbitmq.com \
-  crd/sandboxtemplates.extensions.agents.x-k8s.io
-
-argocd app sync rabbitmq-chat sbx-templates   # or Sync in the UI
+  crd/sandboxtemplates.extensions.agents.x-k8s.io &&
+  kubectl wait --for=condition=Established --timeout=5m \
+    crd/rabbitmqclusters.rabbitmq.com \
+    crd/sandboxtemplates.extensions.agents.x-k8s.io &&
+  argocd app sync rabbitmq-chat sbx-templates   # or Sync in the UI
 ```
 
 A later push to the deploy branch also clears it, since a new revision starts a fresh sync.
