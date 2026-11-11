@@ -20,8 +20,34 @@ kubeEtcd:
 kubeProxy:
   enabled: false
 
+# Third-party images route through this account's ECR pull-through cache: their
+# layer blobs sit in in-region S3, which the VPC's gateway endpoint policy denies.
+prometheusOperator:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: quay.io/prometheus-operator/prometheus-operator
+  prometheusConfigReloader:
+    image:
+      registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+      repository: quay.io/prometheus-operator/prometheus-config-reloader
+  thanosImage:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: quay.io/thanos/thanos
+  admissionWebhooks:
+    deployment:
+      image:
+        registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+        repository: quay.io/prometheus-operator/admission-webhook
+    patch:
+      image:
+        registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+        repository: registry.k8s.io/ingress-nginx/kube-webhook-certgen
+
 alertmanager:
   alertmanagerSpec:
+    image:
+      registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+      repository: quay.io/prometheus/alertmanager
     replicas: 1
     alertmanagerConfigMatcherStrategy:
       type: None
@@ -79,6 +105,15 @@ alertmanager:
 
 grafana:
   enabled: true
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: mirror/grafana/grafana
+  # fsGroup 472 on a gp3 volume already sets ownership; this only pulled busybox.
+  initChownData:
+    enabled: false
+  # Runs only under `helm test`, which Argo CD never invokes.
+  testFramework:
+    enabled: false
   replicas: 1
   serviceMonitor:
     enabled: false
@@ -96,6 +131,9 @@ grafana:
       enabled: true
       org_role: Editor
   sidecar:
+    image:
+      registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+      repository: quay.io/kiwigrid/k8s-sidecar
     dashboards:
       annotations:
         grafana_folder: kubernetes
@@ -159,6 +197,9 @@ kube-state-metrics:
       memory: 128Mi
 
 prometheus-node-exporter:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: quay.io/prometheus/node-exporter
   priorityClassName: system-node-critical
   resources:
     requests:
@@ -176,6 +217,9 @@ prometheus-node-exporter:
 
 prometheus:
   prometheusSpec:
+    image:
+      registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+      repository: quay.io/prometheus/prometheus
     replicas: 1
     retention: 2h
     retentionSize: 15GB

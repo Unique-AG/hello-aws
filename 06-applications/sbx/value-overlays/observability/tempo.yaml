@@ -1,6 +1,9 @@
 replicas: 1
 
 tempo:
+  # Fully qualified: the chart has no registry key, and grafana/tempo is
+  # published to Docker Hub only, which this cluster cannot fetch layers from.
+  repository: <ECR_REGISTRY_THIRDPARTY_BARE>/mirror/grafana/tempo
   metricsGenerator:
     enabled: true
     remoteWriteUrl: "http://kube-prometheus-stack-prometheus.unique:9090/api/v1/write"
