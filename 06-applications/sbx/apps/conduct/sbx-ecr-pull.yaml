@@ -2,7 +2,7 @@
 # external-secrets, because these resources belong to the sbx namespace.
 spec:
   name: sbx-ecr-pull
-  autoSync: false
+  autoSync: true
   syncOptions:
     - SkipDryRunOnMissingResource=true
   sources:

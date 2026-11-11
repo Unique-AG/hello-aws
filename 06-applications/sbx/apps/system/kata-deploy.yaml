@@ -2,7 +2,7 @@
 # in peer-pod VMs. Chart and image come from the upstream public registry.
 spec:
   name: kata-deploy
-  autoSync: false
+  autoSync: true
   sources:
     - repoURL: ghcr.io/kata-containers/kata-deploy-charts
       chart: kata-deploy

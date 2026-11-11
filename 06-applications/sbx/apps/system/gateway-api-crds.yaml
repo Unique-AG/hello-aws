@@ -2,7 +2,7 @@
 # installed them: the gateway-api-crds release only writes a version marker.
 spec:
   name: gateway-api-crds
-  autoSync: false
+  autoSync: true
   source:
     repoURL: https://github.com/kubernetes-sigs/gateway-api
     targetRevision: v1.2.1

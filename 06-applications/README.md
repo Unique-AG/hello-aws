@@ -158,6 +158,38 @@ This deploys:
 
 ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initial secret).
 
+### When an app depends on a CRD another app installs
+
+Every app syncs automatically (`autoSync: true` in its spec), and the ApplicationSets
+order resources *within* an Application but not the Applications themselves. An app that
+applies a custom resource can therefore run before the operator that registers its kind —
+`rabbitmq-chat` before `rabbitmq-operator`, `sbx-templates` before `agent-sandbox-controller`.
+
+The sync policy retries five times over roughly 5m45s, which covers an operator starting
+from cold. Past that the retries are spent, and Argo CD does **not** re-drive a failed sync
+for the same revision — `selfHeal` does not rescue it either. The app stays `Failed` even
+once the CRD exists.
+
+On a first bootstrap, check for this and resync by hand if needed. Wait for the CRD to be
+`Established` rather than for the operator pod — the pod is ready before the kind is
+registered, and a resync in that gap fails the same way:
+
+```bash
+kubectl get applications -n unique | grep -v Synced
+
+# --for=create first: waiting on a condition of a CRD that does not exist yet
+# returns NotFound immediately instead of waiting for it.
+kubectl wait --for=create --timeout=5m \
+  crd/rabbitmqclusters.rabbitmq.com \
+  crd/sandboxtemplates.extensions.agents.x-k8s.io &&
+  kubectl wait --for=condition=Established --timeout=5m \
+    crd/rabbitmqclusters.rabbitmq.com \
+    crd/sandboxtemplates.extensions.agents.x-k8s.io &&
+  argocd app sync rabbitmq-chat sbx-templates   # or Sync in the UI
+```
+
+A later push to the deploy branch also clears it, since a new revision starts a fresh sync.
+
 ## Application Categories
 
 ### System Applications (21)

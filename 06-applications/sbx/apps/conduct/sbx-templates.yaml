@@ -3,7 +3,7 @@
 # for a Sandbox and the controller builds pods from this template.
 spec:
   name: sbx-templates
-  autoSync: false
+  autoSync: true
   # ArgoCD dry-run-validates every task before any wave executes, so an absent
   # agent-sandbox CRD would fail the whole sync instead of just this app.
   syncOptions:
