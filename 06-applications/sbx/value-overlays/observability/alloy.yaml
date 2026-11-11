@@ -1,3 +1,9 @@
+# grafana/alloy is published to Docker Hub only, whose layer blobs sit in
+# in-region S3; the mirror puts a copy in this account's ECR instead.
+image:
+  registry: 217381566492.dkr.ecr.us-east-1.amazonaws.com
+  repository: mirror/grafana/alloy
+
 serviceMonitor:
   enabled: true
 

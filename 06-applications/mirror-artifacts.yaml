@@ -32,3 +32,26 @@ artifacts:
   - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21
     digest: sha256:c65e5d1aa22ac7b9151b8e7707530a801551fc198fcc32565898b2e9b482185c
     target: mirror/bitnamicharts/rabbitmq-cluster-operator:4.3.21
+
+  # Grafana publishes its images to Docker Hub only, and the observability stack
+  # is four charts deep in them. Not on ghcr.io or any registry with a PT rule.
+  - source: grafana/grafana:12.0.0
+    digest: sha256:263cbefd5d9b179893c47c415daab4da5c1f3d6770154741eca4f45c81119884
+    target: mirror/grafana/grafana:12.0.0
+
+  - source: grafana/loki:3.4.2
+    digest: sha256:58a6c186ce78ba04d58bfe2a927eff296ba733a430df09645d56cdc158f3ba08
+    target: mirror/grafana/loki:3.4.2
+
+  - source: grafana/alloy:v1.7.0
+    digest: sha256:afcc9d32975dd567b2e7c87f0c2f0e4ebf9385ecc36e1c0d44ba42de6dcf291c
+    target: mirror/grafana/alloy:v1.7.0
+
+  - source: grafana/tempo:2.6.1
+    digest: sha256:ef4384fce6e8ad22b95b243d8fc165628cda655376fd50e7850536ad89d71d50
+    target: mirror/grafana/tempo:2.6.1
+
+  # Loki's gateway. The unprivileged variant is not on public.ecr.aws.
+  - source: nginxinc/nginx-unprivileged:1.27-alpine
+    digest: sha256:65e3e85dbaed8ba248841d9d58a899b6197106c23cb0ff1a132b7bfe0547e4c0
+    target: mirror/nginxinc/nginx-unprivileged:1.27-alpine
