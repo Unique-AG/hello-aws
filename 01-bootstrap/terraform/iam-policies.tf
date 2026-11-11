@@ -102,7 +102,8 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "s3:GetBucketPolicyStatus",
       "secretsmanager:*", "logs:*", "cloudwatch:*", "sns:*",
       "budgets:*", "acm:*", "route53:*", "ram:*",
-      "cloudfront:*", "bedrock:*", "aps:*", "grafana:*",
+      # bedrock-agentcore is its own service prefix, not covered by bedrock:*.
+      "cloudfront:*", "bedrock:*", "bedrock-agentcore:*", "aps:*", "grafana:*",
       "codebuild:*", "events:*", "ssm:*",
       # ECR enhanced scanning (05-compute) turns Amazon Inspector on and off for ECR.
       "inspector2:Enable", "inspector2:Disable", "inspector2:BatchGetAccountStatus",
@@ -121,6 +122,21 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "iam:PutUserPolicy", "iam:GetUserPolicy", "iam:DeleteUserPolicy", "iam:ListUserPolicies",
       "iam:CreatePolicy", "iam:DeletePolicy", "iam:GetPolicy", "iam:GetPolicyVersion",
       "iam:ListPolicyVersions", "iam:CreateServiceLinkedRole",
+    ]
+    resources = ["*"]
+  }
+
+  # Cloud Control API actions carry the cloudformation: prefix though no stack
+  # is involved; DescribeType reads the schema and runs before any write.
+  statement {
+    sid    = "AllowCloudControlAPI"
+    effect = "Allow"
+    actions = [
+      "cloudformation:CreateResource", "cloudformation:GetResource",
+      "cloudformation:UpdateResource", "cloudformation:DeleteResource",
+      "cloudformation:ListResources", "cloudformation:GetResourceRequestStatus",
+      "cloudformation:CancelResourceRequest", "cloudformation:ListResourceRequests",
+      "cloudformation:DescribeType",
     ]
     resources = ["*"]
   }
