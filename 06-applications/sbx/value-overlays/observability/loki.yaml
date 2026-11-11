@@ -3,7 +3,12 @@ global:
 
 deploymentMode: SingleBinary
 
+# Third-party images route through this account's ECR pull-through cache or a
+# mirror: their layer blobs sit in in-region S3, which the gateway endpoint denies.
 loki:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: mirror/grafana/loki
   commonConfig:
     replication_factor: 1
   auth_enabled: false
@@ -54,6 +59,24 @@ loki:
     working_directory: /var/loki/compactor
     retention_enabled: true
     delete_request_store: s3
+
+gateway:
+  image:
+    registry: <ECR_REGISTRY_THIRDPARTY_BARE>
+    repository: mirror/nginxinc/nginx-unprivileged
+
+# These three take a fully-qualified repository: the chart has no registry key.
+memcached:
+  image:
+    repository: public.ecr.aws/docker/library/memcached
+
+memcachedExporter:
+  image:
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/prometheus/memcached-exporter
+
+sidecar:
+  image:
+    repository: <ECR_REGISTRY_THIRDPARTY_BARE>/quay.io/kiwigrid/k8s-sidecar
 
 serviceAccount:
   name: loki
