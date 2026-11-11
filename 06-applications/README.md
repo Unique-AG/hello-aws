@@ -171,6 +171,27 @@ This deploys:
 
 ArgoCD UI is accessible at `https://<DOMAIN_ARGOCD>` (admin password from initial secret).
 
+### When an app depends on a CRD another app installs
+
+Every app syncs automatically (`autoSync: true` in its spec), and the ApplicationSets
+order resources *within* an Application but not the Applications themselves. An app that
+applies a custom resource can therefore run before the operator that registers its kind —
+`rabbitmq-chat` before `rabbitmq-operator`, `sbx-templates` before `agent-sandbox-controller`.
+
+The sync policy retries five times over roughly 5m45s, which covers an operator starting
+from cold. Past that the retries are spent, and Argo CD does **not** re-drive a failed sync
+for the same revision — `selfHeal` does not rescue it either. The app stays `Failed` even
+once the CRD exists.
+
+On a first bootstrap, check for this once the cluster settles and resync by hand if needed:
+
+```bash
+kubectl get applications -n unique | grep -v Synced
+argocd app sync rabbitmq-chat sbx-templates   # or Sync in the UI
+```
+
+A later push to the deploy branch also clears it, since a new revision starts a fresh sync.
+
 ## Application Categories
 
 ### System Applications (21)
