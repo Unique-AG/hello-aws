@@ -12,6 +12,10 @@ const SEED = seedFile('exampleText.txt');
  * UI — creating it as the service user causes a 403 in the browser.
  */
 test('@smoke browser — upload a file in Knowledge Base', async ({ page }) => {
+  // Above the default 120s: the two waits below can claim 90s of it between
+  // them, which leaves the toast assertion short of its own deadline.
+  test.setTimeout(150_000);
+
   const token = getBrowserUserToken();
   const scopeId = await createFolder(token, `smoke-kb-${Date.now()}`);
   try {
