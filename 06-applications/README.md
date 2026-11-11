@@ -35,9 +35,18 @@ cp secrets-sources.yaml.template sbx/secrets-sources.yaml
 ./scripts/seed-secrets.sh sbx
 ./scripts/seed-secrets.sh sbx --check   # confirm none were missed
 
-# 7. Bootstrap ArgoCD
+# 7. Mirror the third-party artifacts no reachable registry carries
+#    Run the "[img] Mirror third-party artifacts" workflow in your fork and let
+#    it finish. Apps whose images are listed in mirror-artifacts.yaml cannot
+#    start until it has, and it is dispatch-only — nothing triggers it for you.
+
+# 8. Bootstrap ArgoCD
 helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
 ```
+
+Re-run the mirror workflow after any change to `mirror-artifacts.yaml`, before
+syncing the apps that use it — a new entry is only a declaration until the
+workflow copies the image.
 
 `seed-secrets.sh --check` writes nothing and exits non-zero while any required
 secret is still empty, so it also answers "was this environment ever seeded?"
