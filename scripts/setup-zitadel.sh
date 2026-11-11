@@ -447,23 +447,43 @@ else
     if [ "${#BG_WRITE[@]}" -eq 0 ]; then
       : # already reported above; leave the stored credential alone
     else
-      # PATs are additive: minting does not revoke earlier ones, so note what
-      # exists now and delete it only once the replacement is safely stored.
-      BG_OLD_PATS=$(api POST "/management/v1/users/${BG_USER_ID}/pats/_search" '{}' \
-        | jq -r '[(.result // [])[].id] | join(" ")')
+      # PATs are additive: minting does not revoke earlier ones. Without a
+      # reliable list, a new token would leave privileged ones unrevoked.
+      BG_PATS_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats/_search" '{}')
+      if echo "$BG_PATS_RESP" | jq -e '.code' >/dev/null 2>&1; then
+        warn "Could not list existing PATs: $(echo "$BG_PATS_RESP" | jq -r '.message // .code')"
+        warn "Skipping rotation; minting now would leave earlier IAM_OWNER tokens valid."
+        BG_PAT=""
+        BG_OLD_PATS=""
+      else
+        BG_OLD_PATS=$(echo "$BG_PATS_RESP" | jq -r '[(.result // [])[].id] | join(" ")')
 
-      BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
-        '{"expirationDate":"2029-01-01T00:00:00Z"}')
-      BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
-      BG_PAT_ID=$(echo "$BG_PAT_RESP" | jq -r '.tokenId // empty')
+        # Setup is documented as the recovery path, so it may well be running
+        # with this very token; revoking it mid-run would break what follows.
+        BG_CALLER=$(api GET "/auth/v1/users/me" | jq -r '.user.id // empty')
+        if [ -n "$BG_CALLER" ] && [ "$BG_CALLER" = "$BG_USER_ID" ]; then
+          warn "Running as ${BREAKGLASS_USER}; leaving its existing tokens in place."
+          BG_OLD_PATS=""
+        fi
+
+        BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
+          '{"expirationDate":"2029-01-01T00:00:00Z"}')
+        BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
+        BG_PAT_ID=$(echo "$BG_PAT_RESP" | jq -r '.tokenId // empty')
+      fi
 
       if [ -z "$BG_PAT" ]; then
-        warn "Could not mint a break-glass PAT: $(echo "$BG_PAT_RESP" | jq -c .)"
+        warn "No break-glass PAT was stored this run."
       elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
         log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
         for BG_OLD in $BG_OLD_PATS; do
-          api DELETE "/management/v1/users/${BG_USER_ID}/pats/${BG_OLD}" >/dev/null 2>&1 \
-            || warn "Could not revoke superseded PAT ${BG_OLD}; it stays valid until expiry"
+          # curl exits 0 on an HTTP error, so read the status rather than it.
+          BG_DEL=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
+            "${ZITADEL_HOST}/management/v1/users/${BG_USER_ID}/pats/${BG_OLD}" \
+            -H "Authorization: Bearer ${PAT}" -H "Content-Type: application/json" || echo 000)
+          if [ "$BG_DEL" -lt 200 ] || [ "$BG_DEL" -ge 300 ]; then
+            warn "Could not revoke superseded PAT ${BG_OLD} (HTTP ${BG_DEL}); it stays valid until expiry"
+          fi
         done
       else
         # The earlier token still works, so the instance stays recoverable; the
