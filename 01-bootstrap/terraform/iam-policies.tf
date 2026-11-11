@@ -123,9 +123,8 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     resources = ["*"]
   }
 
-  # Cloud Control API covers resources the AWS provider has no native type for.
-  # Its actions carry the cloudformation: prefix although no stack is involved;
-  # DescribeType reads the resource schema and runs before any write.
+  # Cloud Control API actions carry the cloudformation: prefix though no stack
+  # is involved; DescribeType reads the schema and runs before any write.
   statement {
     sid    = "AllowCloudControlAPI"
     effect = "Allow"
