@@ -1,6 +1,6 @@
 spec:
   name: kong
-  autoSync: false
+  autoSync: true
   sources:
     - chart: kong-plugins
       repoURL: ghcr.io/unique-ag/helm-charts

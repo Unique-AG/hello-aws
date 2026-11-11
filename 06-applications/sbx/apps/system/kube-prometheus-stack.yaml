@@ -1,6 +1,6 @@
 spec:
   name: kube-prometheus-stack
-  autoSync: false
+  autoSync: true
   sources:
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"

@@ -3,7 +3,7 @@
 # values.yaml for why.
 spec:
   name: peer-pods
-  autoSync: false
+  autoSync: true
   syncOptions:
     - SkipDryRunOnMissingResource=true
   sources:

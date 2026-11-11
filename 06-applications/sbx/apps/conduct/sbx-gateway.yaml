@@ -2,7 +2,7 @@
 # ACR with the uniquecr OCI repository credential.
 spec:
   name: sbx-gateway
-  autoSync: false
+  autoSync: true
   # Argo CD cannot run the chart's helm lookup, so it would mint a new MITM CA on
   # every render; keep the one in the cluster.
   syncOptions:

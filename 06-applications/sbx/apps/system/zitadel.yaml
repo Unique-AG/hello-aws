@@ -1,6 +1,6 @@
 spec:
   name: zitadel
-  autoSync: false
+  autoSync: true
   sources:
     - chart: zitadel
       repoURL: https://charts.zitadel.com

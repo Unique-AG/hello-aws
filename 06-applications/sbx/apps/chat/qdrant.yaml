@@ -1,6 +1,6 @@
 spec:
   name: qdrant
-  autoSync: false
+  autoSync: true
   source:
     chart: qdrant
     repoURL: https://qdrant.github.io/qdrant-helm

@@ -2,7 +2,7 @@
 # drop sandboxConfig and Conduct cannot be enabled.
 spec:
   name: assistants-core
-  autoSync: false
+  autoSync: true
   sources:
     - repoURL: uniquecr.azurecr.io
       chart: helm/assistants-core

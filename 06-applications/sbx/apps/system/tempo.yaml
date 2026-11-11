@@ -1,6 +1,6 @@
 spec:
   name: tempo
-  autoSync: false
+  autoSync: true
   sources:
     - chart: tempo
       repoURL: https://grafana.github.io/helm-charts

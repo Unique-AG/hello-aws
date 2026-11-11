@@ -3,7 +3,7 @@
 # 2026.40. In the system group so its CRDs precede the conduct group.
 spec:
   name: agent-sandbox-controller
-  autoSync: false
+  autoSync: true
   sources:
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: agent-sandbox-controller

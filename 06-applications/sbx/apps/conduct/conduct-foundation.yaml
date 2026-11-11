@@ -2,7 +2,7 @@
 # and the admission policy that keeps Fargate sandboxes on Fargate.
 spec:
   name: conduct-foundation
-  autoSync: false
+  autoSync: true
   syncOptions:
     - SkipDryRunOnMissingResource=true
   sources:

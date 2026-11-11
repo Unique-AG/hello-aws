@@ -1,6 +1,6 @@
 spec:
   name: rabbitmq-chat
-  autoSync: false
+  autoSync: true
   source:
     repoURL: <GITHUB_REPO_URL>
     targetRevision: <GIT_TARGET_REVISION>
