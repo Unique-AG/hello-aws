@@ -183,10 +183,17 @@ from cold. Past that the retries are spent, and Argo CD does **not** re-drive a 
 for the same revision — `selfHeal` does not rescue it either. The app stays `Failed` even
 once the CRD exists.
 
-On a first bootstrap, check for this once the cluster settles and resync by hand if needed:
+On a first bootstrap, check for this and resync by hand if needed. Wait for the CRD to be
+`Established` rather than for the operator pod — the pod is ready before the kind is
+registered, and a resync in that gap fails the same way:
 
 ```bash
 kubectl get applications -n unique | grep -v Synced
+
+kubectl wait --for=condition=Established --timeout=5m \
+  crd/rabbitmqclusters.rabbitmq.com \
+  crd/sandboxtemplates.extensions.agents.x-k8s.io
+
 argocd app sync rabbitmq-chat sbx-templates   # or Sync in the UI
 ```
 
