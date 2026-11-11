@@ -40,7 +40,9 @@ cp secrets-sources.yaml.template sbx/secrets-sources.yaml
 #    the branch you are deploying — it reads mirror-artifacts.yaml from the ref
 #    it runs on, so a run on main copies nothing added only to deploy. Let it
 #    finish: apps listed there cannot start until it has, and it is
-#    dispatch-only, so nothing triggers it for you.
+#    dispatch-only, so nothing triggers it for you. It assumes the fork's
+#    AWS_ROLE_ARN secret, the OIDC role from 01-bootstrap, since it writes to
+#    your ECR.
 
 # 8. Bootstrap ArgoCD
 helmfile -e sbx -f argo-bootstrap.yaml.gotmpl sync
