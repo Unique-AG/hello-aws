@@ -3,7 +3,7 @@
 # name, so it can coexist with the peer-pods one.
 spec:
   name: sbx-templates-fargate
-  autoSync: false
+  autoSync: true
   syncOptions:
     - SkipDryRunOnMissingResource=true
   sources:

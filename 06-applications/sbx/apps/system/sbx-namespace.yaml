@@ -2,7 +2,7 @@
 # system group so both exist before the conduct group syncs into sbx.
 spec:
   name: sbx-namespace
-  autoSync: false
+  autoSync: true
   sources:
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"

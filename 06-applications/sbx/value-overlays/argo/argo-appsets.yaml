@@ -53,6 +53,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # Retries a sync that failed before its CRD existed. Kept short: a
+          # retry holds the revision, delaying any fix pushed behind it.
+          retry:
+            limit: 5
+            backoff:
+              duration: 15s
+              factor: 2
+              maxDuration: 2m
           {{- end }}
           syncOptions:
             - CreateNamespace=true
@@ -115,6 +123,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # Retries a sync that failed before its CRD existed. Kept short: a
+          # retry holds the revision, delaying any fix pushed behind it.
+          retry:
+            limit: 5
+            backoff:
+              duration: 15s
+              factor: 2
+              maxDuration: 2m
           {{- end }}
           syncOptions:
             - CreateNamespace=true
@@ -179,6 +195,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # Retries a sync that failed before its CRD existed. Kept short: a
+          # retry holds the revision, delaying any fix pushed behind it.
+          retry:
+            limit: 5
+            backoff:
+              duration: 15s
+              factor: 2
+              maxDuration: 2m
           {{- end }}
           syncOptions:
             - CreateNamespace=true

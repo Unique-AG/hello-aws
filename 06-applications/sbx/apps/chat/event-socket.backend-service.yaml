@@ -1,6 +1,6 @@
 spec:
   name: backend-service-event-socket
-  autoSync: false
+  autoSync: true
   sources:
     - repoURL: ghcr.io/unique-ag/helm-charts
       chart: backend-service

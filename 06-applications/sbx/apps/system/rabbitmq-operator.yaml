@@ -1,6 +1,6 @@
 spec:
   name: rabbitmq-operator
-  autoSync: false
+  autoSync: true
   sources:
     - chart: rabbitmq-cluster-operator
       # ArgoCD's repo-server cannot reach Docker Hub's blob store; use the mirror.

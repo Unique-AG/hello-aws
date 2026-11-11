@@ -1,6 +1,6 @@
 spec:
   name: loki
-  autoSync: false
+  autoSync: true
   sources:
     - chart: loki
       repoURL: https://grafana.github.io/helm-charts
