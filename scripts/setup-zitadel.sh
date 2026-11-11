@@ -12,13 +12,16 @@
 #   5. Create all project roles
 #   6. Grant project to customer organization
 #   7. Create scope-management service user + PAT → AWS Secrets Manager
-#   8. Add Zitadel Actions (addGrant)
-#   9. Delete provision user (self-destruct)
+#   8. Create break-glass IAM_OWNER user + PAT → AWS Secrets Manager
+#   9. Add Zitadel Actions (addGrant)
+#  10. Delete provision user (self-destruct)
 #
 # Usage:
 #   scripts/setup-zitadel.sh <env> <pat> [org-name]
 #
 # Arguments:
+#   Not safe to run concurrently: it creates and rotates shared principals.
+#
 #   env       Environment name (e.g., dev, test, prod)
 #   pat       Personal Access Token for a machine user with IAM_OWNER
 #   org-name  Customer organization name (default: "Unique")
@@ -89,6 +92,8 @@ done
 ZITADEL_HOST="https://${DOMAIN_IDENTITY}"
 BASE_URL="https://${DOMAIN_BASE}"
 AWS_SM_SECRET="manual-zitadel-scope-mgmt-pat"
+AWS_SM_BREAKGLASS_ID="manual-zitadel-iam-owner-pat"
+BREAKGLASS_USER="break-glass"
 PROJECT_NAME="unique"
 APP_NAME="unique-app"
 
@@ -402,7 +407,113 @@ aws secretsmanager put-secret-value \
 log "PAT written to AWS SM"
 
 #######################################
-# 8. Add Zitadel Actions
+# 8. Create break-glass IAM_OWNER user
+#######################################
+# A human admin can only get a token through the hosted login, so if that login
+# is ever unreachable this machine PAT is the only way back into the instance.
+info "Creating break-glass machine user ${BREAKGLASS_USER}..."
+BG_RESP=$(api POST "/management/v1/users/machine" \
+  "{\"userName\":\"${BREAKGLASS_USER}\",\"name\":\"Break-glass IAM Owner\",\"description\":\"Recovery principal; see docs/security-baseline.md\",\"accessTokenType\":\"ACCESS_TOKEN_TYPE_JWT\"}")
+BG_USER_ID=$(echo "$BG_RESP" | jq -r '.userId // empty')
+if [ -z "$BG_USER_ID" ]; then
+  BG_SEARCH=$(api POST "/v2beta/users" \
+    "{\"queries\":[{\"userNameQuery\":{\"userName\":\"${BREAKGLASS_USER}\",\"method\":\"TEXT_QUERY_METHOD_EQUALS\"}}]}")
+  BG_USER_ID=$(echo "$BG_SEARCH" | jq -r '.result[0].userId // empty')
+fi
+
+if [ -z "$BG_USER_ID" ]; then
+  warn "Could not create or find ${BREAKGLASS_USER}; no break-glass credential stored"
+else
+  # POST returns code 6 when the member already exists, so only the PUT is
+  # authoritative: a stored PAT without IAM_OWNER is worse than none at all.
+  api POST "/admin/v1/members" "{\"userId\":\"${BG_USER_ID}\",\"roles\":[\"IAM_OWNER\"]}" >/dev/null 2>&1 || true
+  BG_MEMBER=$(api PUT "/admin/v1/members/${BG_USER_ID}" '{"roles":["IAM_OWNER"]}')
+  if echo "$BG_MEMBER" | jq -e '.code' >/dev/null 2>&1; then
+    warn "Could not grant IAM_OWNER to ${BREAKGLASS_USER}: $(echo "$BG_MEMBER" | jq -r '.message // .code')"
+    warn "Skipping the PAT: a stored credential without IAM_OWNER cannot recover the instance."
+  else
+    # Resolve where the new token goes before minting; only a real "not found"
+    # means create, never a denial.
+    BG_WRITE=()
+    if BG_DESC_ERR=$(aws secretsmanager describe-secret --secret-id "$AWS_SM_BREAKGLASS_ID" \
+         --region "$AWS_REGION" 2>&1 >/dev/null); then
+      BG_WRITE=(aws secretsmanager put-secret-value --secret-id "$AWS_SM_BREAKGLASS_ID")
+    elif echo "$BG_DESC_ERR" | grep -q 'ResourceNotFoundException'; then
+      BG_WRITE=(aws secretsmanager create-secret --name "$AWS_SM_BREAKGLASS_ID"
+        --description "Zitadel break-glass IAM_OWNER PAT")
+    else
+      warn "Cannot read ${AWS_SM_BREAKGLASS_ID}: ${BG_DESC_ERR}"
+      warn "Skipping the PAT so the stored credential stays valid."
+    fi
+
+    if [ "${#BG_WRITE[@]}" -eq 0 ]; then
+      : # already reported above; leave the stored credential alone
+    else
+      # PATs are additive: minting does not revoke earlier ones. Without a
+      # reliable list, a new token would leave privileged ones unrevoked.
+      BG_PATS_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats/_search" '{}')
+      if echo "$BG_PATS_RESP" | jq -e '.code' >/dev/null 2>&1; then
+        warn "Could not list existing PATs: $(echo "$BG_PATS_RESP" | jq -r '.message // .code')"
+        warn "Skipping rotation; minting now would leave earlier IAM_OWNER tokens valid."
+        BG_PAT=""
+        BG_OLD_PATS=""
+      else
+        BG_OLD_PATS=$(echo "$BG_PATS_RESP" | jq -r '[(.result // [])[].id] | join(" ")')
+
+        # Setup is documented as the recovery path, so it may well be running
+        # with this very token; revoking it mid-run would break what follows.
+        BG_CALLER=$(api GET "/auth/v1/users/me" | jq -r '.user.id // empty')
+        if [ -n "$BG_CALLER" ] && [ "$BG_CALLER" = "$BG_USER_ID" ]; then
+          warn "Running as ${BREAKGLASS_USER}; leaving its existing tokens in place."
+          BG_OLD_PATS=""
+        fi
+
+        BG_PAT_RESP=$(api POST "/management/v1/users/${BG_USER_ID}/pats" \
+          '{"expirationDate":"2029-01-01T00:00:00Z"}')
+        BG_PAT=$(echo "$BG_PAT_RESP" | jq -r '.token // empty')
+        BG_PAT_ID=$(echo "$BG_PAT_RESP" | jq -r '.tokenId // empty')
+      fi
+
+      # Projections are eventually consistent, so prove the token authenticates
+      # before it becomes the stored credential, not after.
+      BG_VERIFY=000
+      if [ -n "$BG_PAT" ]; then
+        for _ in 1 2 3 4 5; do
+          BG_VERIFY=$(curl -s -o /dev/null -w '%{http_code}' "${ZITADEL_HOST}/auth/v1/users/me" \
+            -H "Authorization: Bearer ${BG_PAT}" || echo 000)
+          [ "$BG_VERIFY" = "200" ] && break
+          sleep 2
+        done
+      fi
+
+      if [ -z "$BG_PAT" ]; then
+        warn "No break-glass PAT was stored this run."
+      elif [ "$BG_VERIFY" != "200" ]; then
+        warn "The new break-glass PAT did not authenticate (HTTP ${BG_VERIFY})."
+        warn "The stored credential is unchanged; delete the unused token ${BG_PAT_ID}."
+      elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
+        log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
+        for BG_OLD in $BG_OLD_PATS; do
+          # curl exits 0 on an HTTP error, so read the status rather than it.
+          BG_DEL=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
+            "${ZITADEL_HOST}/management/v1/users/${BG_USER_ID}/pats/${BG_OLD}" \
+            -H "Authorization: Bearer ${PAT}" -H "Content-Type: application/json" || echo 000)
+          if [ "$BG_DEL" -lt 200 ] || [ "$BG_DEL" -ge 300 ]; then
+            warn "Could not revoke superseded PAT ${BG_OLD} (HTTP ${BG_DEL}); it stays valid until expiry"
+          fi
+        done
+      else
+        # The earlier token still works, so the instance stays recoverable; the
+        # new one is live and unreferenced until someone removes it.
+        warn "Minted a break-glass PAT but could not store it in ${AWS_SM_BREAKGLASS_ID}."
+        warn "The stored PAT still works. Delete the orphaned token ${BG_PAT_ID} or store it by hand."
+      fi
+    fi
+  fi
+fi
+
+#######################################
+# 9. Add Zitadel Actions
 #######################################
 info "Creating Zitadel action: addGrant..."
 
@@ -443,7 +554,7 @@ else
 fi
 
 #######################################
-# 9. Delete provision user
+# 10. Delete provision user
 #######################################
 info "Looking up provision user..."
 PROV_SEARCH=$(api POST "/v2beta/users" \
@@ -476,7 +587,7 @@ info "Scope Mgmt User: ${SM_USER_ID}"
 info "PAT Secret:      ${AWS_SM_SECRET}"
 echo ""
 #######################################
-# 10. Create admin user (optional)
+# 11. Create admin user (optional)
 #######################################
 if [ -n "$ADMIN_EMAIL" ]; then
   # Extract name parts from email (first.last@domain → First Last)
@@ -534,7 +645,7 @@ if [ -n "$ADMIN_EMAIL" ]; then
 fi
 
 #######################################
-# 11. Patch instance-config.yaml
+# 12. Patch instance-config.yaml
 #######################################
 INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 if [ -f "$INSTANCE_CONFIG" ] && command -v yq &>/dev/null; then

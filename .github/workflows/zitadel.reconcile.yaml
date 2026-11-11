@@ -1,0 +1,59 @@
+name: '[idp] Reconcile Zitadel instance'
+
+# Zitadel instance settings apply only when the instance is created, so an
+# upstream default change drifts silently while Argo CD still reports healthy.
+# Checks daily and reports; correcting is a deliberate dispatch.
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Correct drift instead of only reporting it'
+        type: boolean
+        required: false
+        default: false
+  schedule:
+    - cron: '41 6 * * *'   # 07:41 CEST (06:41 UTC), off the hour
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: zitadel-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+      ENVIRONMENT: sbx
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # The rendered config lives on the deploy branch; main holds placeholders.
+      - name: Fetch the rendered instance config
+        run: |
+          set -euo pipefail
+          git fetch origin "deploy/${ENVIRONMENT}" --depth=1
+          git show "origin/deploy/${ENVIRONMENT}:06-applications/${ENVIRONMENT}/instance-config.yaml" \
+            > "06-applications/${ENVIRONMENT}/instance-config.yaml"
+
+      - name: Reconcile
+        env:
+          APPLY: ${{ inputs.apply }}
+        run: |
+          set -euo pipefail
+          PAT=$(aws secretsmanager get-secret-value \
+            --secret-id manual-zitadel-iam-owner-pat \
+            --region "$AWS_REGION" --query SecretString --output text)
+          echo "::add-mask::${PAT}"
+          ARGS=("$ENVIRONMENT")
+          [ "${APPLY}" = "true" ] && ARGS+=("--apply")
+          ZITADEL_PAT="$PAT" scripts/reconcile-zitadel-instance.sh "${ARGS[@]}"
