@@ -53,6 +53,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # A failed automated sync is not retried on its own, so an app whose
+          # CRD is not installed yet would stay failed once the CRD appears.
+          retry:
+            limit: 5
+            backoff:
+              duration: 30s
+              factor: 2
+              maxDuration: 10m
           {{- end }}
           syncOptions:
             - CreateNamespace=true
@@ -115,6 +123,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # A failed automated sync is not retried on its own, so an app whose
+          # CRD is not installed yet would stay failed once the CRD appears.
+          retry:
+            limit: 5
+            backoff:
+              duration: 30s
+              factor: 2
+              maxDuration: 10m
           {{- end }}
           syncOptions:
             - CreateNamespace=true
@@ -179,6 +195,14 @@ applicationsets:
           automated:
             prune: true
             selfHeal: true
+          # A failed automated sync is not retried on its own, so an app whose
+          # CRD is not installed yet would stay failed once the CRD appears.
+          retry:
+            limit: 5
+            backoff:
+              duration: 30s
+              factor: 2
+              maxDuration: 10m
           {{- end }}
           syncOptions:
             - CreateNamespace=true
