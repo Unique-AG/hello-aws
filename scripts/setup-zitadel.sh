@@ -474,26 +474,25 @@ else
         BG_PAT_ID=$(echo "$BG_PAT_RESP" | jq -r '.tokenId // empty')
       fi
 
-      if [ -z "$BG_PAT" ]; then
-        warn "No break-glass PAT was stored this run."
-      elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
-        log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
-
-        # Projections are eventually consistent, so prove the new token
-        # authenticates before revoking the one it replaces.
-        BG_VERIFY=000
+      # Projections are eventually consistent, so prove the token authenticates
+      # before it becomes the stored credential, not after.
+      BG_VERIFY=000
+      if [ -n "$BG_PAT" ]; then
         for _ in 1 2 3 4 5; do
           BG_VERIFY=$(curl -s -o /dev/null -w '%{http_code}' "${ZITADEL_HOST}/auth/v1/users/me" \
             -H "Authorization: Bearer ${BG_PAT}" || echo 000)
           [ "$BG_VERIFY" = "200" ] && break
           sleep 2
         done
-        if [ "$BG_VERIFY" != "200" ]; then
-          warn "The new break-glass PAT did not authenticate (HTTP ${BG_VERIFY})."
-          warn "Leaving earlier tokens in place so a working credential remains."
-          BG_OLD_PATS=""
-        fi
+      fi
 
+      if [ -z "$BG_PAT" ]; then
+        warn "No break-glass PAT was stored this run."
+      elif [ "$BG_VERIFY" != "200" ]; then
+        warn "The new break-glass PAT did not authenticate (HTTP ${BG_VERIFY})."
+        warn "The stored credential is unchanged; delete the unused token ${BG_PAT_ID}."
+      elif "${BG_WRITE[@]}" --secret-string "$BG_PAT" --region "$AWS_REGION" >/dev/null; then
+        log "Break-glass PAT written to ${AWS_SM_BREAKGLASS_ID}"
         for BG_OLD in $BG_OLD_PATS; do
           # curl exits 0 on an HTTP error, so read the status rather than it.
           BG_DEL=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE \
