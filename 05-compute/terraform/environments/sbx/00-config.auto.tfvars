@@ -52,9 +52,11 @@ eks_node_groups = {
   # once the shim is in place.
   sandbox = {
     instance_types = ["m6i.large"]
-    desired_size   = 1
-    min_size       = 0
-    max_size       = 3
+    # Three: a warm pod reserves its sandbox's whole memory on the node even
+    # though the work runs in a peer-pod VM, so an m6i.large holds exactly one.
+    desired_size = 3
+    min_size     = 0
+    max_size     = 3
     labels = {
       lifecycle   = "ephemeral"
       scalability = "rapid"
