@@ -25,9 +25,10 @@ sandboxTemplate:
   runtimeClassName: kata-vm-isolation
   # Nodes authenticate to ECR by IAM; the chart's default secret is absent here.
   imagePullSecrets: []
-  # One warm pod VM: a cold peer-pod start pays a full image pull into a fresh VM.
+  # Three warm pod VMs. The smoke suite claims sandboxes one after another, and
+  # refilling a claimed pod needs a cold VM launch that outlasts the 180s budget.
   warmPool:
-    replicas: 1
+    replicas: 3
   # The CA sbx-gateway generates, so the sandbox trusts the proxy.
   egressProxyCA:
     enabled: true
