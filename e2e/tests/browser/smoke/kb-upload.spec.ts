@@ -21,9 +21,9 @@ test('@smoke browser — upload a file in Knowledge Base', async ({ page }) => {
   try {
     await page.goto(`${config.knowledgeUploadAppURL}/${scopeId}`);
 
-    // Wait on the control, not networkidle: this app never reaches that state, so
-    // the bare wait spent the whole test budget and reported no cause.
-    const uploadButton = page.getByRole('button').filter({ hasText: 'Upload Files' });
+    // Wait on the control, not networkidle: this app never reaches that state.
+    // Anchored because Chromium exposes the wrapped file input as its own button.
+    const uploadButton = page.getByRole('button').filter({ hasText: /^\s*Upload\s*$/ });
     await expect(uploadButton, 'the Knowledge Upload app should render its upload control')
       .toBeVisible({ timeout: 30_000 });
     const fileInput = uploadButton.locator('input[type="file"]');
