@@ -41,3 +41,21 @@ internalServices:
       name: backend-service-ingestion
       namespace: unique
       servicePort: 80
+
+# The chat API hands the agent a public upload URL, so the generated-file PUT
+# goes to the API host rather than the internal Service the other calls use.
+egressGateway:
+  allowHosts:
+    <DOMAIN_API>: true
+  allowPaths:
+    <DOMAIN_API>:
+      - /scoped/ingestion/upload
+  allowMethods:
+    <DOMAIN_API>:
+      - PUT
+  # Keyed by host: without this the sandbox would reach that upstream without
+  # the identity the gateway injects from the source pod's own labels.
+  injectRequestHeaders:
+    <DOMAIN_API>:
+      x-user-id: "${context:source_pod.labels.unique.app/user-id}"
+      x-company-id: "${context:source_pod.labels.unique.app/company-id}"
