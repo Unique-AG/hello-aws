@@ -23,3 +23,14 @@ spec:
               metadata:
                 name: kata-vm-isolation
               handler: kata-remote
+              # Only the sandbox pool has the shim. A toleration permits that node,
+              # it does not select it, so without this pods land anywhere and fail.
+              scheduling:
+                nodeSelector:
+                  katacontainers.io/kata-runtime: "true"
+                  kata-deploy.katacontainers.io/default: "true"
+                tolerations:
+                  - key: workload
+                    operator: Equal
+                    value: sandbox
+                    effect: NoSchedule
