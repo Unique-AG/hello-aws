@@ -91,7 +91,7 @@ test.describe.serial('@smoke @conduct API — Conduct sandbox', () => {
     // The ingestion worker materialises the record after the answer returns, so
     // read it back on a poll; a timeout here reports the last value it saw.
     const content = await pollUntil(
-      () => contentById(token, file!.contentId),
+      () => contentById(token, file!.contentId, turn.chatId),
       (c) => typeof c?.byteSize === 'number',
       { timeoutMs: CONTENT_POLL_MS, label: `content ${file!.contentId} to carry byteSize` },
     );

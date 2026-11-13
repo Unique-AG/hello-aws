@@ -53,14 +53,15 @@ export async function uploadFileToKB(
   return second.contentUpsert.id as string;
 }
 
-const CONTENT_BY_ID = `query ContentByIdWithMetadata($contentIds: [String!]!) {
-  contentById(contentIds: $contentIds) {
+const CONTENT_BY_ID = `query ContentByIdWithMetadata($contentIds: [String!]!, $chatId: String) {
+  contentById(contentIds: $contentIds, chatId: $chatId) {
     id mimeType ownerType key title byteSize ingestionState ingestionProgress metadata
   }
 }`;
 
-export async function contentById(token: string, contentId: string): Promise<any> {
-  const data = await gql(URL, token, CONTENT_BY_ID, { contentIds: [contentId] });
+/** A file generated inside a chat is scoped to it, so those lookups must pass chatId. */
+export async function contentById(token: string, contentId: string, chatId?: string): Promise<any> {
+  const data = await gql(URL, token, CONTENT_BY_ID, { contentIds: [contentId], chatId });
   return data.contentById[0];
 }
 
