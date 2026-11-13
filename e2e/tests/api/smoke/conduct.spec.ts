@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getServiceUserToken } from '../../../auth/token';
 import { deleteAssistant } from '../../../lib/chat';
+import { pollUntil } from '../../../lib/http';
 import { contentById } from '../../../lib/ingestion';
 import {
   TURN_TIMEOUT_MS,
@@ -84,7 +85,13 @@ test.describe.serial('@smoke @conduct API — Conduct sandbox', () => {
     const file = parseFileBlock(turn.answer.text);
     expect(file, 'the answer should carry a generated-file block').toBeDefined();
     expect(file!.title).toBe(fileName);
-    const content = await contentById(token, file!.contentId);
+    // The ingestion worker materialises the record after the answer returns, so
+    // read it back on a poll; a timeout here reports the last value it saw.
+    const content = await pollUntil(
+      () => contentById(token, file!.contentId),
+      (c) => typeof c?.byteSize === 'number',
+      { timeoutMs: 60_000, label: `content ${file!.contentId} to carry byteSize` },
+    );
     // 22 bytes as asked, or 23 if the agent ends the file with a newline.
     expect([22, 23], 'the stored file should hold the written text').toContain(content?.byteSize);
   });
