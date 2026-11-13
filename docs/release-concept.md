@@ -339,9 +339,13 @@ names.
    (`git tag -a 202X.XX.X -m 202X.XX.X <validated-sha> && git push origin 202X.XX.X`), which
    names that commit explicitly. Dispatching the **`[rel] Release`** workflow instead tags the
    **tip of `main`** — the same thing only while the tip is still the commit you validated, so
-   check that before using it.
+   check that before using it. That caveat applies only when the tag does not yet exist: once
+   it does, a dispatch republishes the commit the tag names, so retrying a failed publish is
+   safe.
 2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless the target commit
-   is on `main` and the app specs at that commit pin the version being tagged.
+   is on `main` and the app specs at that commit pin the version being tagged. The pin check
+   only compares values **shaped like a release version**: a chart pinned to its own semver is
+   ignored by design, but so is a pin like `latest`, which therefore passes unexamined.
 3. **Required, not yet enforced by the workflow** — hold these yourself until the gate ships:
    - the end-to-end suites passed **at that commit**, against `sbx` as it stands now; a later
      push to `deploy` invalidates that evidence and the suites must re-run;
