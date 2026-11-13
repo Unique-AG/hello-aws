@@ -42,8 +42,9 @@ eks_node_groups = {
   }
 
   # Conduct sandbox hosts. The sandbox workload itself runs in a per-sandbox
-  # peer-pod EC2 instance, so these nodes only carry the kata shim and the
-  # adaptor -- they do not need to be large.
+  # peer-pod EC2 instance, so these nodes execute almost nothing -- but the
+  # scheduler still reserves each sandbox's full request here, so node size is
+  # set by how many sandboxes must fit, not by what they actually run.
   #
   # Tainted so nothing but sandbox components lands here. Deliberately no
   # startup taint: EKS reconciles managed node group taints, so one removed by
@@ -51,9 +52,12 @@ eks_node_groups = {
   # the RuntimeClass instead, which selects the node label kata-deploy sets
   # once the shim is in place.
   sandbox = {
-    instance_types = ["m6i.large"]
-    # Three: a warm pod reserves its sandbox's whole memory on the node even
-    # though the work runs in a peer-pod VM, so an m6i.large holds exactly one.
+    # xlarge, not large: a warm pod reserves its sandbox's whole memory on the
+    # node even though the work runs in a peer-pod VM, so a large held exactly
+    # one and the warm pool filled the group, leaving a claim nowhere to land.
+    instance_types = ["m6i.xlarge"]
+    # Three nodes across the AZs, three sandboxes each: the warm pool plus room
+    # for concurrent claims and for a rollout to schedule before the old pods go.
     desired_size = 3
     min_size     = 0
     max_size     = 3
