@@ -202,6 +202,19 @@ rather than silently rendering an empty or placeholder string.
   published as a **GitHub Release**. It corresponds to a Unique platform release — see the
   [Unique Release Notes & Calendar](https://docs.unique.ai/it-operators/installing-and-upgrading-unique/release-notes-and-calendar)
   for what each version changes, dependency upgrades, and any newly-required configuration.
+- **Two dimensions.** A version names the Unique release it deploys *and* the revision of this
+  deployment:
+  - `202X.XX.X` — deploys that Unique release.
+  - `202X.XX.X-aws.N` — the **same** Unique release, next revision of the deployment. Cut this
+    when a fix changes only this repository (an egress policy, a Terraform or proxy setting, a
+    test) and moves no Unique component; the component table against the previous release is
+    then empty, which is correct. Without this dimension a deployment fix cannot be released at
+    all until Unique publishes a new version.
+  - The release workflow compares the app-spec pins against the part **before** `-aws.`, so an
+    `-aws` revision touches no app spec.
+
+  These tags sort correctly under `git` and `sort -V`. Do not feed them to a semver precedence
+  comparator: `-aws.N` sits in the pre-release slot while meaning the opposite.
 - **GitHub Release.** The GitHub Release wraps the tag with human-facing notes — what changed,
   dependency upgrades, and any newly-required configuration — and is what consumers **watch**
   to learn a new version is available.
@@ -252,17 +265,24 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 
 ## How a release flows
 
-1. **Cut on `main`** — bump the chart + image versions in the affected app specs
+1. **Prepare on `main`** — bump the chart + image versions in the affected app specs
    (`apps/*.yaml`) and update `defaults/` for any new or newly-required release config, and the
    Terraform module/provider versions for the release. Open a PR; CI gates it; squash-merge.
-2. **Tag and publish** — tag the merge commit `202X.XX.X`; the release workflow publishes the
-   GitHub Release with notes. This is the release.
-3. **Adopt per environment** — set the environment's adopted release tag (see
-   [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)) and supply any new instance
-   values in `<env>/value-overlays/`, then push. The Terraform pipeline applies that
-   environment's infrastructure; ArgoCD reconciles its apps.
-4. **Verify** — confirm infrastructure applied cleanly and applications are healthy
-   (see the runbook).
+   **No tag yet.**
+2. **Adopt for validation** — bring that merge commit into `deploy` for the validation
+   environment and supply any new instance values in `<env>/value-overlays/`, then push (see
+   [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)). The Terraform pipeline
+   applies that environment's infrastructure; ArgoCD reconciles its apps.
+3. **Validate** — infrastructure applied cleanly, applications healthy, and the end-to-end
+   suites pass against that environment.
+4. **Publish** — tag the validated commit `202X.XX.X`. The release workflow refuses to publish
+   unless that commit was validated and the environment has not moved since. **This is the
+   release.**
+5. **Adopt elsewhere** — further environments adopt the published release.
+
+A release is published only after it has run somewhere. A published release is immutable: the
+tag cannot be moved and the notes cannot be rewritten, so this ordering is the last point at
+which a mistake is still cheap.
 
 ---
 
@@ -280,18 +300,14 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 6. If the release needs operator action (new instance values, renamed flags, manual steps),
    add it to the PR as `docs/releases/202X.XX.X.md`; it heads the release notes.
 7. Open a PR to `main`; CI must be green; review the per-layer plan.
-8. Squash-merge, then **tag `202X.XX.X`** — either push the tag
-   (`git tag -a 202X.XX.X -m 202X.XX.X <merge-sha> && git push origin 202X.XX.X`) or run
-   the **`[rel] Release`** workflow from the Actions tab with the version, which tags the tip
-   of `main`. The workflow (`.github/workflows/release.yaml`) refuses a tag that is not on
-   `main` or whose app specs pin a different version, then **publishes the GitHub Release**
-   titled `Release 202X.XX.X`: a link to that Unique release's notes on docs.unique.ai, the
-   upgrade notes, a component version table diffed against the previous release
-   (`scripts/release-notes.sh`), and the merged pull requests.
+8. Squash-merge. **Do not tag yet** — the tag is cut in Part D, once the release has run in an
+   environment.
 
 ### Part B — Adopt a release in an environment (on `deploy`)
-1. **Bring the release into the environment** — merge the release into the `deploy` branch so
-   the environment's `apps/`, `defaults/`, and the layer 01–05 Terraform are at `202X.XX.X`.
+1. **Bring the release into the environment** — merge it into the `deploy` branch so the
+   environment's `apps/`, `defaults/`, and the layer 01–05 Terraform are at `202X.XX.X`. For the
+   validation environment this is the Part A merge commit, which is not yet tagged; for every
+   other environment it is a published release.
    Supply any new instance values flagged with `unset_default_value` under
    `<env>/value-overlays/`. Commit.
 2. **Push — this is the deployment:**
@@ -311,8 +327,25 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
 - ArgoCD apps **Synced + Healthy** for the environment.
 - End to end: open a space, send a chat message, upload a document, ask a question that
   requires retrieval, and confirm a fresh sign-in works.
+- The end-to-end suites pass against this environment. For the validation environment this is
+  the evidence Part D gates on, so run them at the commit you intend to tag.
 
-### Part D — Rollback
+### Part D — Publish the release
+1. Run the **`[rel] Release`** workflow from the Actions tab with the version, or push the tag
+   (`git tag -a 202X.XX.X -m 202X.XX.X <validated-sha> && git push origin 202X.XX.X`).
+2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless **all** hold:
+   - the target commit is on `main`;
+   - the app specs at that commit pin this version (the part before `-aws.`);
+   - the end-to-end suites passed **at that commit**, against the validation environment as it
+     stands now — a later push to `deploy` invalidates the evidence and the suites must re-run.
+3. It then **publishes the GitHub Release** titled `Release 202X.XX.X`: a link to that Unique
+   release's notes on docs.unique.ai, the upgrade notes from `docs/releases/<tag>.md`, a
+   component version table diffed against the previous release (`scripts/release-notes.sh`),
+   and the merged pull requests.
+
+A refusal here is the gate working. Validate the commit, or do not publish it.
+
+### Part E — Rollback
 - **Applications:** re-point the environment to the previous release tag and reconcile, or
   roll the app back in ArgoCD. Schema migrations are forward-only — a version revert runs
   older code against a newer database schema, so prefer fixing forward for services that ran
