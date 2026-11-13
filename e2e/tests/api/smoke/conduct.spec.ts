@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { getServiceUserToken } from '../../../auth/token';
 import { deleteAssistant } from '../../../lib/chat';
+import { pollUntil } from '../../../lib/http';
 import { contentById } from '../../../lib/ingestion';
 import {
   TURN_TIMEOUT_MS,
@@ -14,6 +15,9 @@ import {
 
 // Each check needs code to really execute, so it passes only when a sandbox ran the agent's tools.
 // The tests share one space; the first turn may wait for a cold sandbox.
+// How long to wait for the ingestion worker; it is part of its test's budget below.
+const CONTENT_POLL_MS = 60_000;
+
 test.describe.serial('@smoke @conduct API — Conduct sandbox', () => {
   let token: string;
   let spaceId: string | undefined;
@@ -70,7 +74,7 @@ test.describe.serial('@smoke @conduct API — Conduct sandbox', () => {
   });
 
   test('a generated file is stored and linked in the answer', async () => {
-    test.setTimeout(TURN_TIMEOUT_MS + 60_000);
+    test.setTimeout(TURN_TIMEOUT_MS + CONTENT_POLL_MS + 60_000);
     const fileName = 'conduct-ce-smoke.txt';
     const turn = await firstTurn(
       token,
@@ -84,7 +88,13 @@ test.describe.serial('@smoke @conduct API — Conduct sandbox', () => {
     const file = parseFileBlock(turn.answer.text);
     expect(file, 'the answer should carry a generated-file block').toBeDefined();
     expect(file!.title).toBe(fileName);
-    const content = await contentById(token, file!.contentId);
+    // The ingestion worker materialises the record after the answer returns, so
+    // read it back on a poll; a timeout here reports the last value it saw.
+    const content = await pollUntil(
+      () => contentById(token, file!.contentId),
+      (c) => typeof c?.byteSize === 'number',
+      { timeoutMs: CONTENT_POLL_MS, label: `content ${file!.contentId} to carry byteSize` },
+    );
     // 22 bytes as asked, or 23 if the agent ends the file with a newline.
     expect([22, 23], 'the stored file should hold the written text').toContain(content?.byteSize);
   });
