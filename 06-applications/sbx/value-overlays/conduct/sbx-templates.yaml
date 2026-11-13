@@ -41,9 +41,13 @@ sandboxTemplate:
   extraEnv:
     - name: UNIQUE_API_BASE
       value: http://backend-service-chat.unique.svc.cluster.local/public
-    # Bedrock rejects two of the eleven anthropic-beta values the agent sends.
-    # This drops the pre-release ones and keeps the ones cloud providers accept.
+    # Drops the pre-release anthropic-beta values the model host rejects,
+    # keeping the ones cloud providers accept.
     - name: CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS
+      value: "1"
+    # The agent only advertises the cache-TTL beta when it asks for a 1h cache.
+    # Pinning the GA 5m TTL keeps caching on and stops that value being sent.
+    - name: FORCE_PROMPT_CACHING_5M
       value: "1"
   # Never enable: ships unredacted customer data to the log store.
   allowInsecureLogging: false
