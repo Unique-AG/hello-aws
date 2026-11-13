@@ -58,6 +58,11 @@ eks_node_groups = {
     instance_types = ["m6i.xlarge"]
     # Three nodes across the AZs, three sandboxes each: the warm pool plus room
     # for concurrent claims and for a rollout to schedule before the old pods go.
+    #
+    # Changing instance_types replaces the node group, and the group has a fixed
+    # name with no create_before_destroy -- so Terraform destroys it before
+    # creating the replacement and Conduct has no capacity in between. Deliberate
+    # here; an environment with users wants a second group and a migration.
     desired_size = 3
     min_size     = 0
     max_size     = 3
