@@ -349,7 +349,11 @@ names.
    - the smoke suite has a successful run **at that commit** whose published evidence shows
      **no failures, nothing flaky, nothing skipped, and at least one test run**;
    - that run validated the **current** `deploy/sbx`, and the deploy branch did not move during
-     the run. A later push invalidates the evidence and the suite must run again.
+     the run. A later push invalidates the evidence and the suite must run again;
+   - the `deploy/sbx` revision it validated **pins this version too** — otherwise the suite
+     passed against a cluster that is not running the release. The deploy branch advances by
+     cherry-pick, so the release commit is never its ancestor and the two revisions cannot be
+     compared directly; what they pin can be.
 
    This applies to an `-aws.N` revision exactly as to a version bump. A deployment-only fix is
    not inherently safer: configuration is where breakage tends to come from, and the suites

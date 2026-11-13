@@ -103,10 +103,10 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          run_id=$(gh run list --workflow=e2e-smoke.yaml --limit 100 \
-            --json databaseId,headSha,conclusion,createdAt \
-            --jq "[.[] | select(.headSha == \"${TARGET}\" and .conclusion == \"success\")]
-                  | sort_by(.createdAt) | last | .databaseId // empty")
+          run_id=$(gh run list --workflow=e2e-smoke.yaml --commit "$TARGET" --limit 20 \
+            --json databaseId,conclusion,createdAt \
+            --jq '[.[] | select(.conclusion == "success")]
+                  | sort_by(.createdAt) | last | .databaseId // empty')
           if [[ -z "$run_id" ]]; then
             echo "::error::No successful e2e-smoke run at ${TARGET}; validate the commit first."
             exit 1
@@ -132,6 +132,33 @@ jobs:
             echo "deploy/sbx is now ${deploy_now}"
             exit 1
           fi
+          # The evidence proves the suite passed against deploy/sbx as it stands.
+          # It does not prove that revision carries this release: the deploy branch
+          # advances by cherry-pick, so the release commit is never its ancestor
+          # and the SHAs cannot be compared. Compare what they pin instead.
+          tree=$(mktemp -d)
+          git archive "$deploy_now" 06-applications 2>/dev/null | tar -x -C "$tree" || {
+            echo "::error::Could not read 06-applications at deploy/sbx ${deploy_now}."
+            exit 1
+          }
+          # shellcheck disable=SC2016 # $v is a yq variable
+          deploy_pins=$(find "$tree"/06-applications/*/apps -name '*.yaml' -print0 \
+            | xargs -0 yq -N -r '
+                (((.spec.sources // []) + [.spec.source]) | .[] | select(. != null)
+                  | .helm.valuesObject.image.tag // "", .targetRevision // "")
+                | tostring | select(test("^20[0-9]{2}\\.[0-9]+\\.[0-9]+$"))
+                | filename + ": " + .')
+          if [[ -z "$deploy_pins" ]]; then
+            echo "::error::Found no pinned versions at deploy/sbx; the check cannot confirm anything."
+            exit 1
+          fi
+          stale=$(printf '%s\n' "$deploy_pins" | grep -v ": ${BASE}\$" || true)
+          if [[ -n "$stale" ]]; then
+            echo "::error::deploy/sbx does not pin ${BASE}, so the validated cluster is not running this release:"
+            printf '%s\n' "$stale" | sed "s|${tree}/||"
+            exit 1
+          fi
+
           echo "Validated by e2e-smoke run ${run_id} against deploy/sbx ${deploy_now}:"
           jq -c '.stats' "${work}/validation.json"
 
