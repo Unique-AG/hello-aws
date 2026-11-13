@@ -318,7 +318,13 @@ names.
      completion.
    - **Applications:** ArgoCD shows the environment's apps out of sync; review each diff
      (version bumps + new release config only), reconcile, and wait for **Healthy**.
-3. Environments adopt independently — roll out to `sbx`, validate, then `prod`.
+3. **Wait for the sandbox warm pool before testing.** A release that changes the sandbox image
+   recycles the whole pool. Each replacement must schedule, boot its pod VM and pull the new
+   image for the first time, so the first Conduct turn after adoption can exceed the
+   orchestrator's 180-second readiness budget and fail. It succeeds once the pool is warm —
+   a cold-start cost of the upgrade, not a fault. Infrastructure that changes the sandbox
+   nodes themselves replaces them, so expect the same there.
+4. Environments adopt independently — roll out to `sbx`, validate, then `prod`.
 
 > **Note:** application versions are pinned **per environment** (in each env's app specs), so
 > environments can run different app versions at once. The Terraform layer code is
