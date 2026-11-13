@@ -269,8 +269,9 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
    (`apps/*.yaml`) and update `defaults/` for any new or newly-required release config, and the
    Terraform module/provider versions for the release. Open a PR; CI gates it; squash-merge.
    **No tag yet.**
-2. **Adopt for validation** — bring that merge commit into `deploy` for the validation
-   environment and supply any new instance values in `<env>/value-overlays/`, then push (see
+2. **Adopt for validation** — bring that merge commit into `deploy` for **`sbx`** (the
+   validation environment; in a fork, whichever environment you stage on) and supply any new
+   instance values in `<env>/value-overlays/`, then push (see
    [Part B](#part-b--adopt-a-release-in-an-environment-on-deploy)). The Terraform pipeline
    applies that environment's infrastructure; ArgoCD reconciles its apps.
 3. **Validate** — infrastructure applied cleanly, applications healthy, and the end-to-end
@@ -306,8 +307,8 @@ which a mistake is still cheap.
 ### Part B — Adopt a release in an environment (on `deploy`)
 1. **Bring the release into the environment** — merge it into the `deploy` branch so the
    environment's `apps/`, `defaults/`, and the layer 01–05 Terraform are at `202X.XX.X`. For the
-   validation environment this is the Part A merge commit, which is not yet tagged; for every
-   other environment it is a published release.
+   validation environment — **`sbx`** — this is the Part A merge commit, which is not yet
+   tagged; for every other environment it is a published release.
    Supply any new instance values flagged with `unset_default_value` under
    `<env>/value-overlays/`. Commit.
 2. **Push — this is the deployment:**
@@ -327,8 +328,8 @@ which a mistake is still cheap.
 - ArgoCD apps **Synced + Healthy** for the environment.
 - End to end: open a space, send a chat message, upload a document, ask a question that
   requires retrieval, and confirm a fresh sign-in works.
-- The end-to-end suites pass against this environment. For the validation environment this is
-  the evidence Part D gates on, so run them at the commit you intend to tag.
+- The end-to-end suites pass against this environment. On **`sbx`** this is the evidence
+  Part D gates on, so run them at the commit you intend to tag.
 
 ### Part D — Publish the release
 1. Run the **`[rel] Release`** workflow from the Actions tab with the version, or push the tag
@@ -336,8 +337,12 @@ which a mistake is still cheap.
 2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless **all** hold:
    - the target commit is on `main`;
    - the app specs at that commit pin this version (the part before `-aws.`);
-   - the end-to-end suites passed **at that commit**, against the validation environment as it
-     stands now — a later push to `deploy` invalidates the evidence and the suites must re-run.
+   - the end-to-end suites passed **at that commit**, against `sbx` as it stands now — a later
+     push to `deploy` invalidates the evidence and the suites must re-run.
+
+   This applies to an `-aws.N` revision exactly as it does to a version bump. A deployment-only
+   fix is not inherently safer: configuration is where breakage tends to come from, and the
+   suites take minutes.
 3. It then **publishes the GitHub Release** titled `Release 202X.XX.X`: a link to that Unique
    release's notes on docs.unique.ai, the upgrade notes from `docs/releases/<tag>.md`, a
    component version table diffed against the previous release (`scripts/release-notes.sh`),
