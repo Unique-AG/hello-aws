@@ -324,6 +324,17 @@ names.
    orchestrator's 180-second readiness budget and fail. It succeeds once the pool is warm —
    a cold-start cost of the upgrade, not a fault. Infrastructure that changes the sandbox
    nodes themselves replaces them, so expect the same there.
+
+   Proceed when the pool is back to its configured size, every pod `Running` and on the new
+   image:
+
+   ```
+   kubectl get pods -n <sandbox-namespace> -l app.kubernetes.io/name=sandbox-runtime \
+     -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,IMAGE:.spec.containers[0].image'
+   ```
+
+   Pods left `Error` from before the upgrade do not count against it; the controller replaces
+   them.
 4. Environments adopt independently — roll out to `sbx`, validate, then `prod`.
 
 > **Note:** application versions are pinned **per environment** (in each env's app specs), so
