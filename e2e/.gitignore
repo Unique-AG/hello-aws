@@ -5,5 +5,7 @@ node_modules/
 playwright-report/
 test-results/
 blob-report/
+results.json
+validation.json
 playwright/.cache/
 package-lock.json

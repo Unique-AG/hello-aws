@@ -56,8 +56,15 @@ components_at() {
 
 echo "Release ${TAG}"
 echo
+# An -aws.N revision deploys the same Unique release as its base version, so the
+# changelog link and the line below both name the base.
+BASE="${TAG%%-aws.*}"
+if [[ "$BASE" != "$TAG" ]]; then
+  echo "Deploys Unique AI ${BASE}; this is revision ${TAG##*-aws.} of the deployment."
+  echo
+fi
 # 2026.42.10 -> .../release-notes-2026/release-2026-42 (week zero-padded, as on docs.unique.ai).
-if [[ "$TAG" =~ ^(20[0-9]{2})\.([0-9]{1,2})\.[0-9]+$ ]]; then
+if [[ "$BASE" =~ ^(20[0-9]{2})\.([0-9]{1,2})\.[0-9]+$ ]]; then
   printf 'Full Changelog: https://docs.unique.ai/it-operators/installing-and-upgrading-unique/release-notes-and-calendar/release-notes-%s/release-%s-%02d\n\n' \
     "${BASH_REMATCH[1]}" "${BASH_REMATCH[1]}" "$((10#${BASH_REMATCH[2]}))"
 fi

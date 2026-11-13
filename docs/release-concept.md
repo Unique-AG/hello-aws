@@ -211,8 +211,7 @@ rather than silently rendering an empty or placeholder string.
     then empty, which is correct. Without this dimension a deployment fix cannot be released at
     all until Unique publishes a new version.
   - The publish guard compares the app-spec pins against the part **before** `-aws.`, so an
-    `-aws` revision touches no app spec. **Not yet implemented:** `release.yaml` rejects any
-    version carrying a suffix, so an `-aws` tag cannot be published until it is updated.
+    `-aws` revision touches no app spec.
 
   List these tags with `git tag --sort=version:refname` — the default listing is lexical, so
   `-aws.10` would sort before `-aws.2`. Do not feed them to a semver precedence comparator:
@@ -342,18 +341,26 @@ names.
    check that before using it. That caveat applies only when the tag does not yet exist: once
    it does, a dispatch republishes the commit the tag names, so retrying a failed publish is
    safe.
-2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless the target commit
-   is on `main` and the app specs at that commit pin the version being tagged. The pin check
-   only compares values **shaped like a release version**: a chart pinned to its own semver is
-   ignored by design, but so is a pin like `latest`, which therefore passes unexamined.
-3. **Required, not yet enforced by the workflow** — hold these yourself until the gate ships:
-   - the end-to-end suites passed **at that commit**, against `sbx` as it stands now; a later
-     push to `deploy` invalidates that evidence and the suites must re-run;
-   - for an `-aws.N` revision, the pin comparison uses the part before `-aws.`.
+2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless **all** hold:
+   - the target commit is on `main`;
+   - the app specs at that commit pin the version — the part before `-aws.` for a revision.
+     The pin check compares values **shaped like a release version**: a chart pinned to its own
+     semver is ignored by design, but so is a pin like `latest`, which passes unexamined;
+   - the smoke suite has a successful run **at that commit** whose published evidence shows
+     **no failures, nothing flaky, nothing skipped, and at least one test run**;
+   - that run validated the **current** `deploy/sbx`, and the deploy branch did not move during
+     the run. A later push invalidates the evidence and the suite must run again;
+   - the `deploy/sbx` revision it validated **pins this version too** — otherwise the suite
+     passed against a cluster that is not running the release. The deploy branch advances by
+     cherry-pick, so the release commit is never its ancestor and the two revisions cannot be
+     compared directly; what they pin can be.
 
-   The validation requirement applies to an `-aws.N` revision exactly as to a version bump. A
-   deployment-only fix is not inherently safer: configuration is where breakage tends to come
-   from, and the suites take minutes.
+   This applies to an `-aws.N` revision exactly as to a version bump. A deployment-only fix is
+   not inherently safer: configuration is where breakage tends to come from, and the suites
+   take minutes.
+
+   Nothing flaky counts as passing. A test that failed and succeeded on retry is a turn that
+   failed against the release, and the run conclusion alone will not show it.
 4. It then **publishes the GitHub Release** titled `Release 202X.XX.X`: a link to that Unique
    release's notes on docs.unique.ai, the upgrade notes from `docs/releases/<tag>.md`, a
    component version table diffed against the previous release (`scripts/release-notes.sh`),

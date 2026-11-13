@@ -37,6 +37,10 @@ jobs:
       E2E_SECRET_ID: manual-e2e-aws-credentials
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - name: Record the deploy revision this run validates against
+        # Read before and after the suite: a push to the deploy branch mid-run
+        # would mean the evidence no longer describes one cluster state.
+        run: echo "DEPLOY_SHA_START=$(git ls-remote origin refs/heads/deploy/sbx | cut -f1)" >> "$GITHUB_ENV"
       - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "22"
@@ -62,6 +66,25 @@ jobs:
             printf '%s=\n' "$n" >> "$GITHUB_ENV"
           done
       - run: npm run test:smoke
+      - name: Publish validation evidence
+        # Counts only. The JSON report carries test output and artifacts are
+        # public on this repository, so it is read here and never uploaded.
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          jq -n \
+            --arg target "$GITHUB_SHA" \
+            --arg deploy_start "$DEPLOY_SHA_START" \
+            --arg deploy_end "$(git ls-remote origin refs/heads/deploy/sbx | cut -f1)" \
+            --argjson stats "$(jq -c '.stats' results.json)" \
+            '{target: $target, deploy_start: $deploy_start, deploy_end: $deploy_end, stats: $stats}' \
+            | tee validation.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ !cancelled() }}
+        with:
+          name: e2e-validation
+          path: e2e/validation.json
+          retention-days: 90
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ !cancelled() }}
         with:
