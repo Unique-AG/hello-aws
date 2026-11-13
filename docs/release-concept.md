@@ -210,11 +210,13 @@ rather than silently rendering an empty or placeholder string.
     test) and moves no Unique component; the component table against the previous release is
     then empty, which is correct. Without this dimension a deployment fix cannot be released at
     all until Unique publishes a new version.
-  - The release workflow compares the app-spec pins against the part **before** `-aws.`, so an
-    `-aws` revision touches no app spec.
+  - The publish guard compares the app-spec pins against the part **before** `-aws.`, so an
+    `-aws` revision touches no app spec. **Not yet implemented:** `release.yaml` rejects any
+    version carrying a suffix, so an `-aws` tag cannot be published until it is updated.
 
-  These tags sort correctly under `git` and `sort -V`. Do not feed them to a semver precedence
-  comparator: `-aws.N` sits in the pre-release slot while meaning the opposite.
+  List these tags with `git tag --sort=version:refname` — the default listing is lexical, so
+  `-aws.10` would sort before `-aws.2`. Do not feed them to a semver precedence comparator:
+  `-aws.N` sits in the pre-release slot while meaning the opposite.
 - **GitHub Release.** The GitHub Release wraps the tag with human-facing notes — what changed,
   dependency upgrades, and any newly-required configuration — and is what consumers **watch**
   to learn a new version is available.
@@ -281,9 +283,10 @@ bootstrap (01) → governance (02) → infrastructure (03) → ┬→ data-and-a
    release.**
 5. **Adopt elsewhere** — further environments adopt the published release.
 
-A release is published only after it has run somewhere. A published release is immutable: the
-tag cannot be moved and the notes cannot be rewritten, so this ordering is the last point at
-which a mistake is still cheap.
+A release is published only after it has run somewhere. The tag of a published release cannot
+be moved, so this ordering is the last point at which a mistake is still cheap. Re-running the
+release workflow for an existing tag regenerates its notes, but never changes the commit it
+names.
 
 ---
 
@@ -332,18 +335,22 @@ which a mistake is still cheap.
   Part D gates on, so run them at the commit you intend to tag.
 
 ### Part D — Publish the release
-1. Run the **`[rel] Release`** workflow from the Actions tab with the version, or push the tag
-   (`git tag -a 202X.XX.X -m 202X.XX.X <validated-sha> && git push origin 202X.XX.X`).
-2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless **all** hold:
-   - the target commit is on `main`;
-   - the app specs at that commit pin this version (the part before `-aws.`);
-   - the end-to-end suites passed **at that commit**, against `sbx` as it stands now — a later
-     push to `deploy` invalidates the evidence and the suites must re-run.
+1. **Tag the validated commit.** Push the tag
+   (`git tag -a 202X.XX.X -m 202X.XX.X <validated-sha> && git push origin 202X.XX.X`), which
+   names that commit explicitly. Dispatching the **`[rel] Release`** workflow instead tags the
+   **tip of `main`** — the same thing only while the tip is still the commit you validated, so
+   check that before using it.
+2. The workflow (`.github/workflows/release.yaml`) refuses to publish unless the target commit
+   is on `main` and the app specs at that commit pin the version being tagged.
+3. **Required, not yet enforced by the workflow** — hold these yourself until the gate ships:
+   - the end-to-end suites passed **at that commit**, against `sbx` as it stands now; a later
+     push to `deploy` invalidates that evidence and the suites must re-run;
+   - for an `-aws.N` revision, the pin comparison uses the part before `-aws.`.
 
-   This applies to an `-aws.N` revision exactly as it does to a version bump. A deployment-only
-   fix is not inherently safer: configuration is where breakage tends to come from, and the
-   suites take minutes.
-3. It then **publishes the GitHub Release** titled `Release 202X.XX.X`: a link to that Unique
+   The validation requirement applies to an `-aws.N` revision exactly as to a version bump. A
+   deployment-only fix is not inherently safer: configuration is where breakage tends to come
+   from, and the suites take minutes.
+4. It then **publishes the GitHub Release** titled `Release 202X.XX.X`: a link to that Unique
    release's notes on docs.unique.ai, the upgrade notes from `docs/releases/<tag>.md`, a
    component version table diffed against the previous release (`scripts/release-notes.sh`),
    and the merged pull requests.
