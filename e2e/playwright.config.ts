@@ -20,8 +20,10 @@ export default defineConfig({
   // user, so parallel workers would race the same session/spaces.
   workers: 1,
   timeout: 2 * 60 * 1000,
+  // The JSON report is not uploaded: it carries test output, and artifacts are
+  // public here. CI reads its counts and publishes only those.
   reporter: process.env.CI
-    ? [['html', { open: 'never' }], ['list']]
+    ? [['html', { open: 'never' }], ['list'], ['json', { outputFile: 'results.json' }]]
     : [['list']],
   use: {
     // Tests navigate with absolute URLs (config.chatAppURL etc.), so no baseURL.
