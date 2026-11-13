@@ -6,7 +6,7 @@ spec:
   sources:
     - repoURL: uniquecr.azurecr.io
       chart: helm/assistants-core
-      targetRevision: "2026.46.0"
+      targetRevision: "2026.46.1"
       helm:
         releaseName: assistants-core
         valueFiles:
@@ -14,4 +14,4 @@ spec:
           - $values/06-applications/sbx/value-overlays/ai-services/assistants-core.yaml
         valuesObject:
           image:
-            tag: "2026.46.0"
+            tag: "2026.46.1"
