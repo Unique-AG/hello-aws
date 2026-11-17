@@ -162,7 +162,8 @@ resource "aws_ecr_lifecycle_policy" "default" {
 #
 # For authenticated registries (Docker Hub, ACR), credentials must be stored
 # in AWS Secrets Manager with the pattern: ecr-pullthroughcache/<registry-url>
-# Secret value: JSON with "username" and "password" fields
+# Secret value: JSON with "username" and "accessToken" fields -- ECR rejects
+# "password", and the cache then fails to authenticate upstream.
 #######################################
 
 # Secrets Manager secret for Azure Container Registry credentials
