@@ -325,12 +325,13 @@ names.
    a cold-start cost of the upgrade, not a fault. Infrastructure that changes the sandbox
    nodes themselves replaces them, so expect the same there.
 
-   Proceed when the pool is back to its configured size, every pod `Running` and on the new
+   Proceed when the pool is back to its configured size with every pod **ready** — not merely
+   `Running`, since a sandbox accepts work only once its readiness probe passes — and on the new
    image:
 
    ```
    kubectl get pods -n <sandbox-namespace> -l app.kubernetes.io/name=sandbox-runtime \
-     -o custom-columns='NAME:.metadata.name,STATUS:.status.phase,IMAGE:.spec.containers[0].image'
+     -o custom-columns='NAME:.metadata.name,READY:.status.containerStatuses[0].ready,IMAGE:.spec.containers[0].image'
    ```
 
    Pods left `Error` from before the upgrade do not count against it; the controller replaces
