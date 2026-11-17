@@ -37,6 +37,24 @@ INLINE_REF = re.compile(r"^\s*remoteRef:\s*\{.*?\bkey\s*:\s*(?P<key>[^,}\s]+)")
 KEY_LINE = re.compile(r"^\s*key:\s*(?P<key>.+?)\s*$")
 
 
+def strip_comment(line: str) -> str:
+    """Drop a YAML comment: a '#' outside quotes, at line start or after space.
+
+    Without this a trailing comment is read as content, the pattern stops
+    matching, and the check passes while the conflict is still there.
+    """
+    quote = None
+    for i, ch in enumerate(line):
+        if quote is not None:
+            if ch == quote:
+                quote = None
+        elif ch in "\"'":
+            quote = ch
+        elif ch == "#" and (i == 0 or line[i - 1] in " \t"):
+            return line[:i]
+    return line
+
+
 def unquote(value: str) -> str:
     return value.strip().strip('"').strip("'")
 
@@ -45,7 +63,7 @@ def optional_secret_ids() -> dict[str, int]:
     """Secret ids declared optional, mapped to their line number."""
     found: dict[str, int] = {}
     for lineno, line in enumerate(MANIFEST.read_text(encoding="utf-8").splitlines(), 1):
-        entry = ENTRY.match(line)
+        entry = ENTRY.match(strip_comment(line))
         if not entry:
             continue
         fields = {m["key"]: unquote(m["value"]) for m in FIELD.finditer(entry["body"])}
@@ -64,7 +82,7 @@ def external_secret_refs() -> list[tuple[str, Path, int]]:
         text = path.read_text(encoding="utf-8")
         if "kind: ExternalSecret" not in text:
             continue
-        lines = text.splitlines()
+        lines = [strip_comment(raw) for raw in text.splitlines()]
         for i, line in enumerate(lines):
             inline = INLINE_REF.match(line)
             if inline:
