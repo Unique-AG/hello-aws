@@ -38,9 +38,9 @@ FIELD = re.compile(r"(?P<key>[A-Za-z_][\w-]*)\s*:\s*(?P<value>[^,}]+)")
 KIND = re.compile(r"\bkind\s*:\s*[\"']?ExternalSecret[\"']?")
 REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?(?:remoteRef|extract):\s*$")
 REF_INLINE = re.compile(
-    r"^\s*(?:-\s*)?(?:remoteRef|extract):\s*\{.*?\bkey\s*:\s*(?P<key>[^,}\s]+)"
+    r"^\s*(?:-\s*)?(?:remoteRef|extract):\s*\{.*?\bkey\s*:\s*(?P<ref>[^,}\s]+)"
 )
-KEY_LINE = re.compile(r"^\s*key:\s*(?P<key>.+?)\s*$")
+KEY_LINE = re.compile(r"^\s*key:\s*(?P<ref>.+?)\s*$")
 
 
 def strip_comment(line: str) -> str:
@@ -65,7 +65,7 @@ def unquote(value: str) -> str:
     return value.strip().strip('"').strip("'")
 
 
-def optional_secret_ids() -> dict[str, int]:
+def optional_ids() -> dict[str, int]:
     """Secret ids declared optional, mapped to their line number."""
     found: dict[str, int] = {}
     for lineno, line in enumerate(MANIFEST.read_text(encoding="utf-8").splitlines(), 1):
@@ -81,7 +81,7 @@ def optional_secret_ids() -> dict[str, int]:
     return found
 
 
-def external_secret_refs() -> list[tuple[str, Path, int]]:
+def store_refs() -> list[tuple[str, Path, int]]:
     """Every (key, file, line) an ExternalSecret reads from the store."""
     refs: list[tuple[str, Path, int]] = []
     for path in sorted(SEARCH_ROOT.rglob("*.yaml")):
@@ -92,7 +92,7 @@ def external_secret_refs() -> list[tuple[str, Path, int]]:
         for i, line in enumerate(lines):
             inline = REF_INLINE.match(line)
             if inline:
-                refs.append((unquote(inline["key"]), path, i + 1))
+                refs.append((unquote(inline["ref"]), path, i + 1))
                 continue
             block = REF_BLOCK.match(line)
             if not block:
@@ -105,9 +105,9 @@ def external_secret_refs() -> list[tuple[str, Path, int]]:
                     continue
                 if len(nxt) - len(nxt.lstrip()) <= len(block["indent"]):
                     break
-                key = KEY_LINE.match(nxt)
-                if key:
-                    refs.append((unquote(key["key"]), path, j + 1))
+                hit = KEY_LINE.match(nxt)
+                if hit:
+                    refs.append((unquote(hit["ref"]), path, j + 1))
                     break
     return refs
 
@@ -117,16 +117,19 @@ def main() -> int:
         print(f"missing {MANIFEST.relative_to(ROOT)}", file=sys.stderr)
         return 1
 
-    optional = optional_secret_ids()
-    refs = external_secret_refs()
+    optional = optional_ids()
+    refs = store_refs()
 
+    # `ident` is the store key as written in the manifest -- an address, never
+    # a value; nothing here opens a secret store.
     failures = [
-        f"{secret!r} is optional ({MANIFEST.relative_to(ROOT)}:{optional[secret]}) "
+        f"{ident!r} is optional ({MANIFEST.relative_to(ROOT)}:{optional[ident]}) "
         f"but read by an ExternalSecret ({path.relative_to(ROOT)}:{lineno}).\n"
         f"    Without a value it cannot sync, its target is never created, and "
         f"anything mounting that target will not start.\n"
         f"    Either drop the optional marker, or stop reading it through ESO."
-        for secret, path, lineno in ((k, p, n) for k, p, n in refs if k in optional)
+        for ident, path, lineno in refs
+        if ident in optional
     ]
 
     if failures:
