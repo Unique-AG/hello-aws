@@ -111,9 +111,9 @@ grafana:
       allow_embedding: true
     auth:
       sigv4_auth_enabled: true
+    # Every viewer signs in: the data sources query with the pod's role, not the viewer's.
     auth.anonymous:
-      enabled: true
-      org_role: Editor
+      enabled: false
   sidecar:
     image:
       registry: <ECR_REGISTRY_THIRDPARTY_BARE>
@@ -165,6 +165,14 @@ grafana:
     enabled: true
     storageClassName: gp3
     size: 10Gi
+  # That volume is ReadWriteOnce, so the running pod has to go before its
+  # replacement can attach it: no surge, or the rollout deadlocks and no
+  # config change ever lands.
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
 
 kube-state-metrics:
   # Route through ECR pull-through cache: registry.k8s.io's S3 mirror returns
