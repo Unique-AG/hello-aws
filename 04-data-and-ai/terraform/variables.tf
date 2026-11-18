@@ -192,6 +192,12 @@ variable "encryption_key_ingestion_secret_name" {
   default     = "encryption-key-ingestion"
 }
 
+variable "elasticsearch_password_ingestion_secret_name" {
+  description = "Secret name for the ingestion service's Elasticsearch password"
+  type        = string
+  default     = "elasticsearch-password-ingestion"
+}
+
 variable "qdrant_api_key_secret_name" {
   description = "Secret name for the Qdrant API key"
   type        = string

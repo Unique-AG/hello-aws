@@ -1,11 +1,34 @@
 resources:
+  # The role the ingestion service runs as. ECK reads this file under the key
+  # roles.yml; it holds no credential, but ECK takes roles from a Secret only.
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: elasticsearch-ingestion-roles
+      namespace: unique
+    stringData:
+      roles.yml: |
+        ingestion_app:
+          indices:
+            - names: ["chunks_*", "chat-chunks*"]
+              privileges:
+                - create_index
+                - manage
+                - read
+                - write
+                - view_index_metadata
+
   - apiVersion: elasticsearch.k8s.elastic.co/v1
     kind: Elasticsearch
     metadata:
       name: elasticsearch-ingestion
     spec:
       version: 9.0.2
-      auth: {}
+      auth:
+        roles:
+          - secretName: elasticsearch-ingestion-roles
+        fileRealm:
+          - secretName: elasticsearch-ingestion-user
       nodeSets:
         - name: default
           count: 1 # In production, run cluster with 3 nodes

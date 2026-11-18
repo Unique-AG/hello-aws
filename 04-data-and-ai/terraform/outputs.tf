@@ -135,6 +135,7 @@ output "secret_arns" {
     encryption_key_node_chat_lxm      = aws_secretsmanager_secret.encryption_key_node_chat_lxm.arn
     encryption_key_ingestion          = aws_secretsmanager_secret.encryption_key_ingestion.arn
     qdrant_api_key                    = aws_secretsmanager_secret.qdrant_api_key.arn
+    elasticsearch_password_ingestion  = aws_secretsmanager_secret.elasticsearch_password_ingestion.arn
     zitadel_db_user_password          = aws_secretsmanager_secret.zitadel_db_user_password.arn
     zitadel_master_key                = aws_secretsmanager_secret.zitadel_master_key.arn
     zitadel_firstinstance_password    = aws_secretsmanager_secret.zitadel_firstinstance_password.arn

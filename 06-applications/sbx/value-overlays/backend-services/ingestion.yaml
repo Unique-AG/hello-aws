@@ -9,7 +9,7 @@ env:
   AZURE_OPENAI_API_ENDPOINT: http://litellm.unique.svc:4000
   ELASTICSEARCH_CA_BUNDLE: /etc/ssl/elastic/ca.crt
   ELASTICSEARCH_URL: https://elasticsearch-ingestion-es-http.unique.svc:9200
-  ELASTICSEARCH_USERNAME: elastic
+  ELASTICSEARCH_USERNAME: ingestion
   FEATURE_FLAG_ENABLE_ELASTICSEARCH_INDEXING: "true"
   FEATURE_FLAG_ENABLE_SEARCH_ADAPTER_ELASTICSEARCH_UN_9883: "true"
   STORAGE_PROVIDER: s3
@@ -19,8 +19,8 @@ envVars:
   - name: ELASTICSEARCH_PASSWORD
     valueFrom:
       secretKeyRef:
-        name: elasticsearch-ingestion-es-elastic-user
-        key: elastic
+        name: elasticsearch-ingestion-user
+        key: password
   - name: RABBITMQ_USERNAME
     valueFrom:
       secretKeyRef:

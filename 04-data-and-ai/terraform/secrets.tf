@@ -154,6 +154,16 @@ resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
   tags = { Name = var.encryption_key_ingestion_secret_name, Purpose = "encryption-key" }
 }
 
+resource "aws_secretsmanager_secret" "elasticsearch_password_ingestion" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.elasticsearch_password_ingestion_secret_name
+  description             = "Elasticsearch password for the ingestion service's own user"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.elasticsearch_password_ingestion_secret_name, Purpose = "service-password" }
+}
+
 resource "aws_secretsmanager_secret" "qdrant_api_key" {
   #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
   name                    = var.qdrant_api_key_secret_name
