@@ -1,17 +1,24 @@
-# Policy allowing incoming traffic to come only from the same namespace
-kind: NetworkPolicy
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: qdrant-network-policy
-spec:
-  podSelector:
-    matchLabels:
-      app.kubernetes.io/name: qdrant
-      app.kubernetes.io/instance: qdrant
-  ingress:
-    - from:
-        - namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: unique
-  policyTypes:
-    - Ingress
+# Qdrant accepts connections from the unique namespace only. The namespace that
+# matters here is sbx, where Conduct runs agent-authored code on the same
+# cluster; nothing there has reason to reach the vector store directly.
+#
+# resources: is what the bedag raw chart renders. A bare manifest in this file
+# is a values file nothing reads, which is how this policy sat unapplied.
+resources:
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: qdrant-network-policy
+      namespace: unique
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: qdrant
+          app.kubernetes.io/instance: qdrant
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: unique
