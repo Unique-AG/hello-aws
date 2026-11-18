@@ -25,9 +25,8 @@ resources:
     spec:
       version: 9.0.2
       auth:
-        # Only once ingestion is signing in as its own user: this removes the
-        # superuser and the secret holding its password.
-        disableElasticUser: true
+        # The superuser stays until ingestion is signing in as its own user and
+        # indexing is confirmed; disabling it is a change of its own.
         roles:
           - secretName: elasticsearch-ingestion-roles
         fileRealm:
