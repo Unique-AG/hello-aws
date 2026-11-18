@@ -32,8 +32,14 @@ SEARCH_ROOT = ROOT / "06-applications"
 ENTRY = re.compile(r"^\s*-\s*\{(?P<body>.*)\}\s*$")
 FIELD = re.compile(r"(?P<key>[A-Za-z_][\w-]*)\s*:\s*(?P<value>[^,}]+)")
 
-REMOTE_REF = re.compile(r"^\s*remoteRef:\s*$")
-INLINE_REF = re.compile(r"^\s*remoteRef:\s*\{.*?\bkey\s*:\s*(?P<key>[^,}\s]+)")
+# ESO addresses the store through `remoteRef` or `dataFrom[].extract`. Either may
+# be quoted, open a sequence item, or be written as a block or a flow mapping;
+# a form this misses is a conflict reported as clean.
+KIND = re.compile(r"\bkind\s*:\s*[\"']?ExternalSecret[\"']?")
+REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?(?:remoteRef|extract):\s*$")
+REF_INLINE = re.compile(
+    r"^\s*(?:-\s*)?(?:remoteRef|extract):\s*\{.*?\bkey\s*:\s*(?P<key>[^,}\s]+)"
+)
 KEY_LINE = re.compile(r"^\s*key:\s*(?P<key>.+?)\s*$")
 
 
@@ -80,19 +86,26 @@ def external_secret_refs() -> list[tuple[str, Path, int]]:
     refs: list[tuple[str, Path, int]] = []
     for path in sorted(SEARCH_ROOT.rglob("*.yaml")):
         text = path.read_text(encoding="utf-8")
-        if "kind: ExternalSecret" not in text:
+        if not KIND.search(text):
             continue
         lines = [strip_comment(raw) for raw in text.splitlines()]
         for i, line in enumerate(lines):
-            inline = INLINE_REF.match(line)
+            inline = REF_INLINE.match(line)
             if inline:
                 refs.append((unquote(inline["key"]), path, i + 1))
                 continue
-            if not REMOTE_REF.match(line):
+            block = REF_BLOCK.match(line)
+            if not block:
                 continue
-            # The key sits in the mapping that opens on the next line.
-            for j in range(i + 1, min(i + 6, len(lines))):
-                key = KEY_LINE.match(lines[j])
+            # The key sits in the mapping this line opens. Blank lines and
+            # stripped comments are not its end; a dedent is.
+            for j in range(i + 1, len(lines)):
+                nxt = lines[j]
+                if not nxt.strip():
+                    continue
+                if len(nxt) - len(nxt.lstrip()) <= len(block["indent"]):
+                    break
+                key = KEY_LINE.match(nxt)
                 if key:
                     refs.append((unquote(key["key"]), path, j + 1))
                     break
