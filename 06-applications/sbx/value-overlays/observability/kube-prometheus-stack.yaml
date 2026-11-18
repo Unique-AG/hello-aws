@@ -111,9 +111,9 @@ grafana:
       allow_embedding: true
     auth:
       sigv4_auth_enabled: true
+    # Every viewer signs in: the data sources query with the pod's role, not the viewer's.
     auth.anonymous:
-      enabled: true
-      org_role: Editor
+      enabled: false
   sidecar:
     image:
       registry: 217381566492.dkr.ecr.us-east-1.amazonaws.com
