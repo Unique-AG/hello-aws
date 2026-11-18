@@ -14,12 +14,16 @@ So the two sides have to agree: a secret is either required, or it is not read
 through External Secrets Operator.
 
 Scope: this matches YAML, it does not parse it. It covers the block form every
-manifest here uses, flow mappings on one line or left open across lines,
-quoted field
-names and comments. It does not decode escaped field names (`"\u006bey"`), and
-it can be fooled by `key:` inside a quoted value. Those are deliberate: the
-guard is a structural tripwire over this repository's conventions, and the way
-to close that class for good is a real parser, not another pattern.
+manifest here uses, flow mappings written on one line or left open across
+lines, quoted field names, and comments.
+
+It does not: decode escaped field names (`"\\u006bey"`), tell a structural `}`
+or `key:` from one inside a quoted scalar, or follow a value onto the line
+after its key. Those exclusions are deliberate -- each needs quoting and
+nesting tracked across lines, which is parsing, and the honest way to close
+that class is a parser rather than another pattern. What is here is a cheap
+tripwire over the conventions this repository actually uses, and every form it
+does cover has a fixture.
 
 Run from the repository root:  python3 scripts/check-secret-optionality.py
 Exit 0 = the declarations agree, exit 1 = a mismatch, naming both sides.
