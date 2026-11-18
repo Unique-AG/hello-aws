@@ -83,6 +83,16 @@ resources:
     spec:
       data:
         - "remoteRef": {"key": google-search-api-key}
+          secretKey: api-key
+""",
+    "flow mapping opened across lines": """
+resources:
+  - kind: ExternalSecret
+    spec:
+      data:
+        - secretKey: api-key
+          remoteRef: {
+            key: google-search-api-key }
 """,
     "trailing comment after the key": """
 resources:

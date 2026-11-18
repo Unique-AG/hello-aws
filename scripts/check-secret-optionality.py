@@ -13,6 +13,13 @@ because the component that raises alerts was the one that was down.
 So the two sides have to agree: a secret is either required, or it is not read
 through External Secrets Operator.
 
+Scope: this matches YAML, it does not parse it. It covers the block form every
+manifest here uses, single-line and brace-opened flow mappings, quoted field
+names and comments. It does not decode escaped field names (`"\u006bey"`), and
+it can be fooled by `key:` inside a quoted value. Those are deliberate: the
+guard is a structural tripwire over this repository's conventions, and the way
+to close that class for good is a real parser, not another pattern.
+
 Run from the repository root:  python3 scripts/check-secret-optionality.py
 Exit 0 = the declarations agree, exit 1 = a mismatch, naming both sides.
 """
@@ -36,12 +43,14 @@ FIELD = re.compile(r"(?P<key>[A-Za-z_][\w-]*)\s*:\s*(?P<value>[^,}]+)")
 # be quoted, open a sequence item, or be written as a block or a flow mapping;
 # a form this misses is a conflict reported as clean.
 KIND = re.compile(r"\bkind\s*:\s*[\"']?ExternalSecret[\"']?")
-REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*$")
+REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{?\s*$")
 REF_INLINE = re.compile(
     r"^\s*(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{"
     r".*?[\"']?\bkey\b[\"']?\s*:\s*(?P<ref>[^,}\s]+)"
 )
-KEY_LINE = re.compile(r"^\s*[\"']?key[\"']?:\s*(?P<ref>.+?)\s*$")
+KEY_LINE = re.compile(
+    r"^\s*[\"']?key[\"']?:\s*(?P<ref>\"[^\"]*\"|'[^']*'|[^,}\s]+)"
+)
 
 
 def strip_comment(line: str) -> str:
