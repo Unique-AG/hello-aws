@@ -154,6 +154,16 @@ resource "aws_secretsmanager_secret" "encryption_key_ingestion" {
   tags = { Name = var.encryption_key_ingestion_secret_name, Purpose = "encryption-key" }
 }
 
+resource "aws_secretsmanager_secret" "qdrant_api_key" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.qdrant_api_key_secret_name
+  description             = "API key Qdrant requires, and its callers send"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.qdrant_api_key_secret_name, Purpose = "api-key" }
+}
+
 # ---------------------------------------------------------------------------
 # Zitadel — generated credentials (seed script only, containers here)
 # ---------------------------------------------------------------------------

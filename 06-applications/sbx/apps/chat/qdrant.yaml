@@ -1,35 +1,53 @@
 spec:
   name: qdrant
   autoSync: true
-  source:
-    chart: qdrant
-    repoURL: https://qdrant.github.io/qdrant-helm
-    targetRevision: 1.13.1
-    helm:
-      releaseName: qdrant
-      valuesObject:
-        replicaCount: 1
-        image:
-          # Mirrored: Qdrant publishes only to Docker Hub.
-          repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/qdrant/qdrant
-          tag: v1.13.1
-          useUnprivilegedImage: true # auto-appends -unprivileged to the tag
-        updateVolumeFsOwnership: false # as this is a new cluster, the file system was never running as root
-        resources:
-          requests:
-            cpu: 100m
-            memory: 1.8Gi
-          limits:
-            memory: 2Gi
-        nodeSelector:
-          scalability: steady
-          lifecycle: persistent
-        persistence:
-          accessModes:
-            - ReadWriteOnce
-          size: 10Gi
-          storageClassName: gp3
-        startupProbe:
-          enabled: true
-          failureThreshold: 30
-          periodSeconds: 30
+  sources:
+    - chart: qdrant
+      repoURL: https://qdrant.github.io/qdrant-helm
+      targetRevision: 1.13.1
+      helm:
+        releaseName: qdrant
+        valuesObject:
+          replicaCount: 1
+          image:
+            # Mirrored: Qdrant publishes only to Docker Hub.
+            repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/qdrant/qdrant
+            tag: v1.13.1
+            useUnprivilegedImage: true # auto-appends -unprivileged to the tag
+          updateVolumeFsOwnership: false # as this is a new cluster, the file system was never running as root
+          resources:
+            requests:
+              cpu: 100m
+              memory: 1.8Gi
+            limits:
+              memory: 2Gi
+          nodeSelector:
+            scalability: steady
+            lifecycle: persistent
+          persistence:
+            accessModes:
+              - ReadWriteOnce
+            size: 10Gi
+            storageClassName: gp3
+          startupProbe:
+            enabled: true
+            failureThreshold: 30
+            periodSeconds: 30
+          # Set on the pod, not through the chart's apiKey value: that branch
+          # reads the secret with lookup, which is empty under client-side
+          # rendering, and dereferences readOnlyApiKey when it is unset.
+          env:
+            - name: QDRANT__SERVICE__API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qdrant-api-key
+                  key: api-key
+    # The policy is a manifest, so it renders through the raw chart rather than
+    # as values for the qdrant chart.
+    - chart: raw
+      repoURL: https://bedag.github.io/helm-charts
+      targetRevision: 2.0.0
+      helm:
+        releaseName: qdrant-network-policy
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/qdrant/network-policy.yaml
