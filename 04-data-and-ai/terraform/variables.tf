@@ -192,6 +192,12 @@ variable "encryption_key_ingestion_secret_name" {
   default     = "encryption-key-ingestion"
 }
 
+variable "qdrant_api_key_secret_name" {
+  description = "Secret name for the Qdrant API key"
+  type        = string
+  default     = "qdrant-api-key"
+}
+
 variable "zitadel_db_user_password_secret_name" {
   description = "Secret name for Zitadel database user password"
   type        = string

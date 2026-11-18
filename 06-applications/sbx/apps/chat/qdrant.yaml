@@ -32,13 +32,15 @@ spec:
             enabled: true
             failureThreshold: 30
             periodSeconds: 30
-          # Every request carries this key. Its callers read the same value as
-          # QDRANT_API_KEY, which the client sends as the api-key header.
-          apiKey:
-            valueFrom:
-              secretKeyRef:
-                name: qdrant-api-key
-                key: api-key
+          # Set on the pod, not through the chart's apiKey value: that branch
+          # reads the secret with lookup, which is empty under client-side
+          # rendering, and dereferences readOnlyApiKey when it is unset.
+          env:
+            - name: QDRANT__SERVICE__API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: qdrant-api-key
+                  key: api-key
     # The policy is a manifest, so it renders through the raw chart rather than
     # as values for the qdrant chart.
     - chart: raw
