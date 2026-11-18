@@ -36,6 +36,9 @@ secretFrom:
 
 # Environment variables (ConfigMap)
 env:
+  # Replaces the admin page. It does not close the login route, which still
+  # accepts the master key -- the network policy is what narrows the reach.
+  DISABLE_ADMIN_UI: "True"
   # Use the filter table shipped in the image. Left unset it is fetched from the
   # upstream default branch at boot, which would drift between restarts.
   LITELLM_LOCAL_ANTHROPIC_BETA_HEADERS: "True"

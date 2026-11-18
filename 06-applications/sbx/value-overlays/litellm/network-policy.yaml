@@ -1,0 +1,40 @@
+# Who may open a connection to LiteLLM. Every caller holds the master key, so
+# until the callers move to scoped keys, reachability is the boundary.
+#
+# The sandbox namespace is named rather than selected pod by pod: its workloads
+# are agent-authored and short-lived. Traffic from a sandbox on Fargate may not
+# resolve to a namespace for the policy agent, which does not run there, so
+# confirm a sandbox still reaches LiteLLM after this is applied.
+resources:
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: litellm-network-policy
+      namespace: unique
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: litellm
+          app.kubernetes.io/instance: litellm
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            # Named rather than namespace-wide: LiteLLM shares this namespace
+            # with every other service, so the namespace is not a boundary.
+            - podSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/instance
+                    operator: In
+                    values:
+                      - assistants-core
+                      - backend-service-chat
+                      - backend-service-ingestion
+                      - backend-service-ingestion-worker
+                      - backend-service-ingestion-worker-chat
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: sbx
+          ports:
+            - protocol: TCP
+              port: 4000
