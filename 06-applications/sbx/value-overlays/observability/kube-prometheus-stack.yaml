@@ -165,6 +165,10 @@ grafana:
     enabled: true
     storageClassName: gp3
     size: 10Gi
+  # That volume is ReadWriteOnce, so the running pod has to go before its
+  # replacement can attach it -- a rolling update deadlocks and never lands.
+  deploymentStrategy:
+    type: Recreate
 
 kube-state-metrics:
   # Route through ECR pull-through cache: registry.k8s.io's S3 mirror returns
