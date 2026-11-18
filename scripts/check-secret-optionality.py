@@ -36,11 +36,12 @@ FIELD = re.compile(r"(?P<key>[A-Za-z_][\w-]*)\s*:\s*(?P<value>[^,}]+)")
 # be quoted, open a sequence item, or be written as a block or a flow mapping;
 # a form this misses is a conflict reported as clean.
 KIND = re.compile(r"\bkind\s*:\s*[\"']?ExternalSecret[\"']?")
-REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?(?:remoteRef|extract):\s*$")
+REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*$")
 REF_INLINE = re.compile(
-    r"^\s*(?:-\s*)?(?:remoteRef|extract):\s*\{.*?\bkey\s*:\s*(?P<ref>[^,}\s]+)"
+    r"^\s*(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{"
+    r".*?[\"']?\bkey\b[\"']?\s*:\s*(?P<ref>[^,}\s]+)"
 )
-KEY_LINE = re.compile(r"^\s*key:\s*(?P<ref>.+?)\s*$")
+KEY_LINE = re.compile(r"^\s*[\"']?key[\"']?:\s*(?P<ref>.+?)\s*$")
 
 
 def strip_comment(line: str) -> str:
