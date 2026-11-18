@@ -94,6 +94,15 @@ resources:
           remoteRef: {
             key: google-search-api-key }
 """,
+    "flow mapping opened with a member already on the line": """
+resources:
+  - kind: ExternalSecret
+    spec:
+      data:
+        - secretKey: api-key
+          remoteRef: {property: token,
+            key: google-search-api-key }
+""",
     "trailing comment after the key": """
 resources:
   - kind: ExternalSecret

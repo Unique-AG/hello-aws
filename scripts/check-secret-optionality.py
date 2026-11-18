@@ -14,7 +14,8 @@ So the two sides have to agree: a secret is either required, or it is not read
 through External Secrets Operator.
 
 Scope: this matches YAML, it does not parse it. It covers the block form every
-manifest here uses, single-line and brace-opened flow mappings, quoted field
+manifest here uses, flow mappings on one line or left open across lines,
+quoted field
 names and comments. It does not decode escaped field names (`"\u006bey"`), and
 it can be fooled by `key:` inside a quoted value. Those are deliberate: the
 guard is a structural tripwire over this repository's conventions, and the way
@@ -43,7 +44,8 @@ FIELD = re.compile(r"(?P<key>[A-Za-z_][\w-]*)\s*:\s*(?P<value>[^,}]+)")
 # be quoted, open a sequence item, or be written as a block or a flow mapping;
 # a form this misses is a conflict reported as clean.
 KIND = re.compile(r"\bkind\s*:\s*[\"']?ExternalSecret[\"']?")
-REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{?\s*$")
+REF_BLOCK = re.compile(r"^(?P<indent>\s*)(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*$")
+FLOW_OPEN = re.compile(r"^\s*(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{")
 REF_INLINE = re.compile(
     r"^\s*(?:-\s*)?[\"']?(?:remoteRef|extract)[\"']?:\s*\{"
     r".*?[\"']?\bkey\b[\"']?\s*:\s*(?P<ref>[^,}\s]+)"
@@ -104,6 +106,20 @@ def store_refs() -> list[tuple[str, Path, int]]:
             if inline:
                 refs.append((unquote(inline["ref"]), path, i + 1))
                 continue
+            # A flow mapping left open: find the key before the braces balance,
+            # wherever on the opening line it started.
+            if FLOW_OPEN.match(line) and line.count("{") > line.count("}"):
+                depth = line.count("{") - line.count("}")
+                for j in range(i + 1, len(lines)):
+                    hit = KEY_LINE.match(lines[j])
+                    if hit:
+                        refs.append((unquote(hit["ref"]), path, j + 1))
+                        break
+                    depth += lines[j].count("{") - lines[j].count("}")
+                    if depth <= 0:
+                        break
+                continue
+
             block = REF_BLOCK.match(line)
             if not block:
                 continue
