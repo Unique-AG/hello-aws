@@ -74,3 +74,6 @@ common.auto.tfvars
 
 # Pod VM build output — multi-GB disk images
 podvm-build/
+
+# Bytecode from running the checker fixtures
+__pycache__/
