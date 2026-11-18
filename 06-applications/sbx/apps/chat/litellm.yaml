@@ -16,3 +16,10 @@ spec:
         releaseName: litellm
         valueFiles:
           - $values/06-applications/sbx/value-overlays/litellm/litellm.yaml
+    - chart: raw
+      repoURL: https://bedag.github.io/helm-charts
+      targetRevision: 2.0.0
+      helm:
+        releaseName: litellm-network-policy
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/litellm/network-policy.yaml
