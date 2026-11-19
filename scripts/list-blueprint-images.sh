@@ -71,13 +71,16 @@ render_values() {        # source-yaml
     MISSING="${missing[*]}"
     return 1
   fi
-  # Most specs set their image here and in no file: without these the render
+  # Most sources set their image here and in no file: without this the render
   # falls back to chart defaults and names an image the environment never pulls.
+  # Argo CD reads valuesObject and ignores values when both are set, so stop at
+  # the first one rather than layering them.
   for key in valuesObject values; do
     case "$(printf '%s\n' "$src" | yq -N -r ".helm.$key | tag")" in
       '!!map'|'!!str')
-        printf '%s\n' "$src" | yq -N -r ".helm.$key" >"$WORK/inline.$key.yaml"
-        printf '%s\n' "$WORK/inline.$key.yaml" ;;
+        printf '%s\n' "$src" | yq -N -r ".helm.$key" >"$WORK/inline.yaml"
+        printf '%s\n' "$WORK/inline.yaml"
+        break ;;
     esac
   done
   return 0
