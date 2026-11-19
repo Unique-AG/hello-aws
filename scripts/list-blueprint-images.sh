@@ -56,20 +56,47 @@ export HELM_REPOSITORY_CONFIG="$WORK/helm/repositories.yaml"
 is_private() { [[ "$1" == ghcr.io/unique-ag/* || "$1" == uniquecr.azurecr.io* || "$1" == *"<"* ]]; }
 
 MISSING=""
-# Prints the declared value files that exist, and fails naming the ones that do
-# not: ArgoCD fails the sync on a missing file, so a render without it is not
-# what deploys -- it falls back to chart defaults the overlay was there to replace.
-value_files() {          # source-yaml
-  local src="$1" f missing=()
+# Prints every file a source renders with: the value files it declares, then its
+# inline values, which Argo CD lets win. A declared file that is not there fails
+# the sync, so a render without it is not what deploys.
+render_values() {        # source-yaml
+  local src="$1" f missing=() key
   while IFS= read -r f; do
     [[ -n "$f" ]] || continue
     if [[ -f "$f" ]]; then printf '%s\n' "$f"; else missing+=("${f#"$ROOT"/}"); fi
     # $values/<path> refers to the repository root in the ApplicationSet.
   done < <(printf '%s\n' "$src" | yq -N -r '.helm.valueFiles[]?' | sed "s|^\$values/|$ROOT/|")
-  (( ${#missing[@]} == 0 )) && return 0
-  [[ "$(printf '%s\n' "$src" | yq -N -r '.helm.ignoreMissingValueFiles // false')" == "true" ]] && return 0
-  MISSING="${missing[*]}"
-  return 1
+  if (( ${#missing[@]} > 0 )) \
+    && [[ "$(printf '%s\n' "$src" | yq -N -r '.helm.ignoreMissingValueFiles // false')" != "true" ]]; then
+    MISSING="${missing[*]}"
+    return 1
+  fi
+  # Most specs set their image here and in no file: without these the render
+  # falls back to chart defaults and names an image the environment never pulls.
+  for key in valuesObject values; do
+    case "$(printf '%s\n' "$src" | yq -N -r ".helm.$key | tag")" in
+      '!!map'|'!!str')
+        printf '%s\n' "$src" | yq -N -r ".helm.$key" >"$WORK/inline.$key.yaml"
+        printf '%s\n' "$WORK/inline.$key.yaml" ;;
+    esac
+  done
+  return 0
+}
+
+# The registry this environment pulls third-party images from. configure-instance
+# writes it into the overlays from here; before it runs they hold the
+# placeholder, so both sources say the same thing either way.
+thirdparty_registry() {
+  local cfg="$ROOT/06-applications/$ENV/instance-config.yaml" acct region
+  if [[ -f "$cfg" ]]; then
+    acct=$(yq -N -r '.aws.ecr.thirdParty.accountId // ""' "$cfg" 2>/dev/null || true)
+    region=$(yq -N -r '.aws.region // ""' "$cfg" 2>/dev/null || true)
+    if [[ -n "$acct" && "$acct" != "null" && -n "$region" && "$region" != "null" ]]; then
+      printf '%s.dkr.ecr.%s.amazonaws.com' "$acct" "$region"
+      return
+    fi
+  fi
+  printf '%s' '<ECR_REGISTRY_THIRDPARTY_BARE>'
 }
 
 # Walking the YAML rather than grepping the text: a container written as
@@ -123,7 +150,7 @@ while IFS= read -r spec; do
     # parent's condition decides whether it ships at all.
     if [[ -z "$chart" || "$chart" == "null" ]]; then
       [[ -n "$path" && "$path" != "null" && -f "$ROOT/$path/Chart.yaml" ]] || continue
-      if ! value_files "$src" >"$WORK/vf"; then
+      if ! render_values "$src" >"$WORK/vf"; then
         echo "vendored chart $path (value file not found: $MISSING)" >>"$UNRESOLVED"; continue
       fi
       mapfile -t keep <"$WORK/vf"
@@ -140,7 +167,7 @@ while IFS= read -r spec; do
     if is_private "$repo"; then
       echo "$repo/$chart:$ver (private registry)" >>"$UNRESOLVED"; continue
     fi
-    if ! value_files "$src" >"$WORK/vf"; then
+    if ! render_values "$src" >"$WORK/vf"; then
       echo "$repo/$chart:$ver (value file not found: $MISSING)" >>"$UNRESOLVED"; continue
     fi
     mapfile -t keep <"$WORK/vf"
@@ -152,10 +179,16 @@ while IFS= read -r spec; do
   done <"$WORK/sources"
 done < <(find "$APPS" -name '*.yaml' | sort)
 
-# Artefacts copied by hand carry no chart to render. The manifest also lists an
-# OCI chart, which no container scanner can read.
-yq -N -r '.artifacts[] | select((.type // "image") == "image") | .target' \
-  "$ROOT/06-applications/mirror-artifacts.yaml" 2>/dev/null >>"$IMAGES" || true
+# Artefacts copied by hand carry no chart to render. The manifest holds bare
+# repository paths and lists one OCI chart, which no container scanner can read.
+MIRROR="$ROOT/06-applications/mirror-artifacts.yaml"
+if REG="$(thirdparty_registry)" yq -N -r \
+     '.artifacts[] | select((.type // "image") == "image") | strenv(REG) + "/" + .target' \
+     "$MIRROR" >"$WORK/mirror" 2>/dev/null; then
+  cat "$WORK/mirror" >>"$IMAGES"
+else
+  echo "${MIRROR#"$ROOT"/} (could not be read)" >>"$UNRESOLVED"
+fi
 
 # awk rather than grep for both filters and both counts: grep exits 1 on no
 # match, which under pipefail would end the run before it printed the report.
