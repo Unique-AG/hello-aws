@@ -27,6 +27,8 @@ artifacts:
   - source: bitnamicharts/rabbitmq-cluster-operator:4.3.21
     digest: sha256:c65e5d1aa22ac7b9151b8e7707530a801551fc198fcc32565898b2e9b482185c
     target: mirror/bitnamicharts/rabbitmq-cluster-operator:4.3.21
+    # Named so the image inventory does not offer a chart to a container scanner.
+    type: chart
 
   # The Zitadel chart's init-container wait, which defaults to Docker Hub. The
   # login deployment needs it; the server has no init containers.

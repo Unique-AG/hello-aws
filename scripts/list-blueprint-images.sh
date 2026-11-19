@@ -10,9 +10,9 @@
 # Usage:
 #   scripts/list-blueprint-images.sh <env> [--json]
 #
-# Exit 0 and the list on stdout. Charts it cannot reach are named on stderr and
-# counted; the caller decides whether an unresolved chart is a failure, because
-# a silently short list is worse than none.
+# Exit 0 and the list on stdout. Anything it cannot reach is named on stderr
+# and counted; the caller decides whether that is a failure, because a silently
+# short list is worse than none.
 #
 # Coverage, measured against the images running on sbx on 2026-11-18: 38 of 47
 # third-party images, 80%. What it cannot see, and why:
@@ -24,6 +24,7 @@
 #     or from the operator's version mapping.
 #   - Charts on registries needing credentials (our own product charts).
 #   - A few sub-chart images behind conditions this environment does not set.
+#   - Sources that name a directory of plain manifests rather than a chart.
 #
 # So treat the output as a floor, not an inventory: everything listed is
 # deployed, but something deployed may be missing. Anything that must be
@@ -39,83 +40,133 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APPS="$ROOT/06-applications/$ENV/apps"
 [[ -d "$APPS" ]] || { echo "no apps for env '$ENV'" >&2; exit 2; }
 
-for t in helm yq; do command -v "$t" >/dev/null || { echo "missing $t" >&2; exit 2; }; done
+for t in helm yq jq; do command -v "$t" >/dev/null || { echo "missing $t" >&2; exit 2; }; done
 
 WORK=$(mktemp -d); trap 'rm -rf "$WORK"' EXIT
 IMAGES="$WORK/images"; : >"$IMAGES"
 UNRESOLVED="$WORK/unresolved"; : >"$UNRESOLVED"
 
+# Keep every index this run downloads inside this run: a cached index is not
+# refreshed, so a chart published since the last scan would read as unresolved.
+export HELM_REPOSITORY_CACHE="$WORK/helm/cache"
+export HELM_REPOSITORY_CONFIG="$WORK/helm/repositories.yaml"
+
 # Registries holding our own artefacts: covered by the product scan, and not
 # reachable without credentials the nightly job has no reason to hold.
 is_private() { [[ "$1" == ghcr.io/unique-ag/* || "$1" == uniquecr.azurecr.io* || "$1" == *"<"* ]]; }
 
+MISSING=""
+# Prints the declared value files that exist, and fails naming the ones that do
+# not: ArgoCD fails the sync on a missing file, so a render without it is not
+# what deploys -- it falls back to chart defaults the overlay was there to replace.
+value_files() {          # source-yaml
+  local src="$1" f missing=()
+  while IFS= read -r f; do
+    [[ -n "$f" ]] || continue
+    if [[ -f "$f" ]]; then printf '%s\n' "$f"; else missing+=("${f#"$ROOT"/}"); fi
+    # $values/<path> refers to the repository root in the ApplicationSet.
+  done < <(printf '%s\n' "$src" | yq -N -r '.helm.valueFiles[]?' | sed "s|^\$values/|$ROOT/|")
+  (( ${#missing[@]} == 0 )) && return 0
+  [[ "$(printf '%s\n' "$src" | yq -N -r '.helm.ignoreMissingValueFiles // false')" == "true" ]] && return 0
+  MISSING="${missing[*]}"
+  return 1
+}
+
+# Walking the YAML rather than grepping the text: a container written as
+# `- image: x` matches no line filter, and a trailing comment or quote would
+# otherwise reach the list.
+harvest() {              # label; rendered manifests on stdin
+  if yq -N -r '.. | select(tag == "!!map" and has("image")) | .image
+                  | select(tag == "!!str" and . != "")' >"$WORK/batch" 2>/dev/null; then
+    cat "$WORK/batch" >>"$IMAGES"
+  else
+    echo "$1 (rendered output could not be read)" >>"$UNRESOLVED"
+  fi
+}
+
 render() {               # repo chart version values-files...
   local repo="$1" chart="$2" ver="$3"; shift 3
-  local name args=()
-  name="$(printf '%s' "$repo" | tr -c 'a-zA-Z0-9' '-' )"
+  local args=() f
   if [[ "$repo" == oci://* || "$repo" == ghcr.io/* ]]; then
     args=("oci://${repo#oci://}/$chart")
   else
-    helm repo add "$name" "$repo" >/dev/null 2>&1 || return 1
-    args=("$name/$chart")
+    # --repo rather than `helm repo add`: it resolves the version against the
+    # index it fetches now, and leaves nothing in the caller's helm config.
+    args=("$chart" --repo "$repo")
   fi
-  local f
-  for f in "$@"; do [[ -f "$f" ]] && args+=(-f "$f"); done
+  for f in "$@"; do args+=(-f "$f"); done
   helm template release "${args[@]}" --version "$ver" 2>/dev/null
 }
 
+sources_of() {           # spec-file -- one source per line, as JSON
+  yq -N -o=json -I=0 '[.spec.sources[]? // .spec.source] | .[]' "$1" 2>/dev/null
+}
+
 while IFS= read -r spec; do
-  count=$(yq -r '[.spec.sources[]? // .spec.source] | length' "$spec" 2>/dev/null || echo 0)
-  for i in $(seq 0 $((count - 1))); do
-    src=$(yq -r "[.spec.sources[]? // .spec.source][$i]" "$spec" 2>/dev/null) || continue
-    chart=$(echo "$src" | yq -r '.chart // ""'); [[ -n "$chart" && "$chart" != "null" ]] || continue
-    repo=$(echo "$src" | yq -r '.repoURL // ""')
-    ver=$(echo "$src" | yq -r '.targetRevision // ""')
-    if is_private "$repo"; then
-      echo "$repo/$chart:$ver" >>"$UNRESOLVED"; continue
+  rel="${spec#"$ROOT"/}"
+  # A spec yq cannot read is not a spec with no sources: say so, rather than
+  # letting the run look complete without it.
+  if ! sources_of "$spec" >"$WORK/sources"; then
+    echo "app spec $rel (could not be read)" >>"$UNRESOLVED"
+    continue
+  fi
+  while IFS= read -r src; do
+    [[ -n "$src" && "$src" != "null" ]] || continue
+    chart=$(printf '%s\n' "$src" | yq -N -r '.chart // ""')
+    repo=$(printf '%s\n' "$src" | yq -N -r '.repoURL // ""')
+    ver=$(printf '%s\n' "$src" | yq -N -r '.targetRevision // ""')
+    path=$(printf '%s\n' "$src" | yq -N -r '.path // ""')
+
+    # A chart vendored into the repository: the spec names a path, not a
+    # registry. Render it through the spec that deploys it -- a chart another
+    # chart lists under dependencies belongs to that parent's render, where the
+    # parent's condition decides whether it ships at all.
+    if [[ -z "$chart" || "$chart" == "null" ]]; then
+      [[ -n "$path" && "$path" != "null" && -f "$ROOT/$path/Chart.yaml" ]] || continue
+      if ! value_files "$src" >"$WORK/vf"; then
+        echo "vendored chart $path (value file not found: $MISSING)" >>"$UNRESOLVED"; continue
+      fi
+      mapfile -t keep <"$WORK/vf"
+      cargs=(release "$ROOT/$path" --namespace "$ENV")
+      for f in "${keep[@]+"${keep[@]}"}"; do cargs+=(-f "$f"); done
+      if cout=$(helm template "${cargs[@]}" 2>/dev/null); then
+        printf '%s\n' "$cout" | harvest "vendored chart $path"
+      else
+        echo "vendored chart $path (render failed)" >>"$UNRESOLVED"
+      fi
+      continue
     fi
-    # $values/<path> refers to the repository root in the ApplicationSet.
-    mapfile -t vf < <(echo "$src" | yq -r '.helm.valueFiles[]?' | sed "s|^\$values/|$ROOT/|")
-    if out=$(render "$repo" "$chart" "$ver" "${vf[@]+"${vf[@]}"}"); then
-      # Grepping the rendered text rather than walking it: a multi-document
-      # render makes yq's recursive descent awkward, and `image:` is unambiguous.
-      printf '%s\n' "$out" | grep -E '^[[:space:]]*image:[[:space:]]' \
-        | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//' \
-        | grep -vE '^[[:space:]]*$|^null$' >>"$IMAGES" || true
+
+    if is_private "$repo"; then
+      echo "$repo/$chart:$ver (private registry)" >>"$UNRESOLVED"; continue
+    fi
+    if ! value_files "$src" >"$WORK/vf"; then
+      echo "$repo/$chart:$ver (value file not found: $MISSING)" >>"$UNRESOLVED"; continue
+    fi
+    mapfile -t keep <"$WORK/vf"
+    if out=$(render "$repo" "$chart" "$ver" "${keep[@]+"${keep[@]}"}"); then
+      printf '%s\n' "$out" | harvest "$repo/$chart:$ver"
     else
       echo "$repo/$chart:$ver (render failed)" >>"$UNRESOLVED"
     fi
-  done
+  done <"$WORK/sources"
 done < <(find "$APPS" -name '*.yaml' | sort)
 
-# Charts vendored into the repository: deployed like the rest, but no app spec
-# names a registry for them.
-for cdir in "$ROOT"/06-applications/charts/*/; do
-  [[ -f "$cdir/Chart.yaml" ]] || continue
-  cname=$(basename "$cdir")
-  cvals=("$ROOT/06-applications/$ENV/value-overlays/conduct/$cname.yaml")
-  cargs=(release "$cdir" --namespace "$ENV")
-  [[ -f "${cvals[0]}" ]] && cargs+=(-f "${cvals[0]}")
-  if cout=$(helm template "${cargs[@]}" 2>/dev/null); then
-    printf '%s\n' "$cout" | grep -E '^[[:space:]]*image:[[:space:]]' \
-      | sed -E 's/^[[:space:]]*image:[[:space:]]*//; s/^["'"'"']//; s/["'"'"']$//' \
-      | grep -vE '^[[:space:]]*$|^null$' >>"$IMAGES" || true
-  else
-    echo "vendored chart $cname (render failed)" >>"$UNRESOLVED"
-  fi
-done
+# Artefacts copied by hand carry no chart to render. The manifest also lists an
+# OCI chart, which no container scanner can read.
+yq -N -r '.artifacts[] | select((.type // "image") == "image") | .target' \
+  "$ROOT/06-applications/mirror-artifacts.yaml" 2>/dev/null >>"$IMAGES" || true
 
-# Images copied by hand carry no chart to render.
-yq -r '.artifacts[].target' "$ROOT/06-applications/mirror-artifacts.yaml" 2>/dev/null >>"$IMAGES" || true
-
-sort -u "$IMAGES" | grep -vE '^\s*$' >"$WORK/final"
-n=$(grep -c '' "$WORK/final" || echo 0)
-u=$(sort -u "$UNRESOLVED" | grep -c '' || echo 0)
+# awk rather than grep for both filters and both counts: grep exits 1 on no
+# match, which under pipefail would end the run before it printed the report.
+sort -u "$IMAGES" | awk 'NF' >"$WORK/final"
+n=$(awk 'END { print NR + 0 }' "$WORK/final")
+sort -u "$UNRESOLVED" | awk 'NF' >"$WORK/unresolved.sorted"
+u=$(awk 'END { print NR + 0 }' "$WORK/unresolved.sorted")
 
 if $JSON; then
-  printf '{"images":['
-  sed 's/.*/"&"/' "$WORK/final" | paste -sd, -
-  printf '],"unresolved":%s}\n' "$u"
+  printf '{"images":%s,"unresolved":%s}\n' \
+    "$(jq -R -s -c 'split("\n") | map(select(length > 0))' "$WORK/final")" "$u"
 else
   cat "$WORK/final"
 fi
@@ -124,7 +175,7 @@ fi
   echo "---"
   echo "$n image(s) resolved from $ENV"
   if (( u > 0 )); then
-    echo "$u chart(s) NOT resolved — their images are absent from this list:"
-    sort -u "$UNRESOLVED" | sed 's/^/  /'
+    echo "$u source(s) NOT resolved — their images are absent from this list:"
+    sed 's/^/  /' "$WORK/unresolved.sorted"
   fi
 } >&2
