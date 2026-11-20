@@ -123,6 +123,8 @@ gen_password() { openssl rand -base64 48 | tr -d '/+=' | head -c 32; }
 gen_hex()      { openssl rand -hex 32; }
 # Zitadel needs a symbol; gen_password is alphanumeric so DSNs need no escaping.
 gen_complex()  { printf '%sAa1!' "$(openssl rand -base64 48 | tr -d '/+=' | head -c 28)"; }
+# LiteLLM rejects a virtual key that does not start with sk-.
+gen_litellm_key() { printf 'sk-%s' "$(openssl rand -base64 64 | tr -d '/+=' | head -c 40)"; }
 
 #######################################
 # External sources
@@ -284,6 +286,7 @@ seed_one() {
       case "$(field "$e" '.generator')" in
         hex)     value=$(gen_hex) ;;
         complex) value=$(gen_complex) ;;
+        litellm_key) value=$(gen_litellm_key) ;;
         *)       value=$(gen_password) ;;
       esac
       ;;
