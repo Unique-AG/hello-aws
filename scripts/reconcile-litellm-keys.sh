@@ -49,6 +49,13 @@ NAMESPACE="${LITELLM_NAMESPACE:-unique}"
 # inference surface; it excludes key management, spend and UI routes.
 CALLERS="chat ingestion ingestion_worker"
 ALLOWED_ROUTES='["openai_routes"]'
+# Empty means every model the proxy serves: no caller loses one it uses today.
+ALLOWED_MODELS='[]'
+
+sha256() {               # reads stdin
+  if command -v sha256sum >/dev/null 2>&1; then sha256sum | awk '{print $1}'
+  else shasum -a 256 | awk '{print $1}'; fi
+}
 
 #######################################
 # Terraform outputs
@@ -61,8 +68,7 @@ AWS_REGION=$(tf '.aws_region.value')
 SECRET_ARNS=$(tf '.secret_arns.value')
 [ "$AWS_REGION" != "null" ] || error "Terraform outputs do not look like the data layer's."
 
-# Values are read into variables and never echoed; nothing secret is passed on
-# a command line, which is world-readable.
+# Values are read into variables and never echoed, and never reach an argument.
 secret_value() {         # ref -- prints the value, empty when unset
   local arn v
   arn=$(echo "$SECRET_ARNS" | jq -r --arg k "$1" '.[$k] // empty')
@@ -79,36 +85,46 @@ MASTER_KEY=$(secret_value litellm_proxy_master_key) \
 #######################################
 # Reach the proxy
 #######################################
-PORT="${LITELLM_LOCAL_PORT:-14000}"
 KCTL=(kubectl)
 [ -n "${KUBECTL_CONTEXT:-}" ] && KCTL+=(--context "${KUBECTL_CONTEXT}")
-"${KCTL[@]}" -n "$NAMESPACE" port-forward svc/litellm "${PORT}:4000" >/dev/null 2>&1 &
-PF_PID=$!
-trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
-BASE="http://127.0.0.1:${PORT}"
 
-# Any HTTP answer means the forward is up; 401 is an answer. curl prints 000
-# itself when it cannot connect, so a fallback 000 would make this always true.
-CODE=000
+PF_LOG=$(mktemp); chmod 600 "$PF_LOG"
+trap 'kill "${PF_PID:-}" 2>/dev/null || true; rm -f "$PF_LOG"' EXIT
+
+# An empty local port lets the kernel pick a free one. Taking a fixed port and
+# probing it proves nothing: another process answering it would be sent the key.
+"${KCTL[@]}" -n "$NAMESPACE" port-forward svc/litellm "${LITELLM_LOCAL_PORT:-}:4000" \
+  >"$PF_LOG" 2>&1 &
+PF_PID=$!
+
+# Only kubectl's own bind line proves this process owns the listener.
+PORT=""
 for _ in $(seq 1 30); do
-  CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "${BASE}/health/liveliness" 2>/dev/null || true)
-  if [ -n "$CODE" ] && [ "$CODE" != "000" ]; then break; fi
-  kill -0 "$PF_PID" 2>/dev/null || error "kubectl port-forward exited — is the context pointing at ${ENV}?"
+  PORT=$(sed -nE 's#^Forwarding from 127\.0\.0\.1:([0-9]+) .*#\1#p' "$PF_LOG" | head -1)
+  [ -n "$PORT" ] && break
+  kill -0 "$PF_PID" 2>/dev/null \
+    || { cat "$PF_LOG" >&2; error "kubectl port-forward exited before binding — is the context pointing at ${ENV}?"; }
   sleep 1
 done
-[ "$CODE" != "000" ] || error "LiteLLM did not answer on ${BASE} — is the kubectl context pointing at ${ENV}?"
+[ -n "$PORT" ] || { cat "$PF_LOG" >&2; error "kubectl port-forward never reported a local port."; }
+BASE="http://127.0.0.1:${PORT}"
 
-# Failures return empty rather than non-zero: under set -e a failing curl here
-# ends the run with curl's exit code and no explanation.
+# --noproxy: curl sends loopback through http_proxy when one is set, which would
+# put the key on an external plaintext hop. Failures return empty, not non-zero:
+# under set -e a failing curl ends the run with no explanation.
 api() {                  # method path [json-body]
-  local method="$1" path="$2" body="${3:-}"
+  local method="$1" path="$2" body="${3:-}" args=() tmp=""
   if [ -n "$body" ]; then
-    curl -s --max-time 30 -X "$method" "${BASE}${path}" \
-      -H "Authorization: Bearer ${MASTER_KEY}" -H 'content-type: application/json' -d "$body" || true
-  else
-    curl -s --max-time 30 -X "$method" "${BASE}${path}" \
-      -H "Authorization: Bearer ${MASTER_KEY}" || true
+    tmp=$(mktemp); chmod 600 "$tmp"; printf '%s' "$body" >"$tmp"
+    args+=(-H 'content-type: application/json' --data "@${tmp}")
   fi
+  # The bearer arrives on stdin and the body from a 0600 file: an argument is
+  # world-readable through /proc on a shared host.
+  printf 'header = "Authorization: Bearer %s"\n' "$MASTER_KEY" \
+    | curl -s --noproxy '*' --max-time 30 -X "$method" "${BASE}${path}" \
+        ${args[@]+"${args[@]}"} -K - || true
+  [ -n "$tmp" ] && rm -f "$tmp"
+  return 0
 }
 
 info "Environment: ${ENV}   namespace: ${NAMESPACE}   mode: $([ "$APPLY" = true ] && echo apply || echo report)"
@@ -122,6 +138,16 @@ echo "$PROBE" | jq -e '.keys' >/dev/null 2>&1 \
 #######################################
 # Reconcile
 #######################################
+register() {             # alias key -- creates the key as it should be
+  local alias="$1" key="$2" body out
+  body=$(KEY="$key" ALIAS="$alias" ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n \
+    '{key: env.KEY, key_alias: env.ALIAS,
+      allowed_routes: (env.ROUTES | fromjson), models: (env.MODELS | fromjson)}')
+  out=$(api POST "/key/generate" "$body")
+  echo "$out" | jq -e '.key' >/dev/null 2>&1 || { echo "$out" | head -c 160; return 1; }
+  return 0
+}
+
 DRIFT=0
 for c in $CALLERS; do
   alias="hello-aws-${c//_/-}"
@@ -146,37 +172,60 @@ for c in $CALLERS; do
     if [ "$APPLY" = false ]; then
       warn "${alias}: not registered with LiteLLM"; DRIFT=1; continue
     fi
-    body=$(jq -n --arg k "$key" --arg a "$alias" --argjson r "$ALLOWED_ROUTES" \
-      '{key:$k, key_alias:$a, allowed_routes:$r}')
-    out=$(api POST "/key/generate" "$body")
-    echo "$out" | jq -e '.key' >/dev/null 2>&1 \
-      || { warn "${alias}: could not create ($(echo "$out" | head -c 160))"; DRIFT=1; continue; }
+    if ! msg=$(register "$alias" "$key"); then
+      warn "${alias}: could not create (${msg})"; DRIFT=1; continue
+    fi
     log "${alias}: registered, routes ${ALLOWED_ROUTES}"
     continue
   fi
 
-  have=$(echo "$existing" | jq -c '(.allowed_routes // []) | sort')
-  want=$(echo "$ALLOWED_ROUTES" | jq -c 'sort')
+  # LiteLLM stores the sha256 of the key, so this says whether the registration
+  # is still the seeded key: after a rotation the alias resolves to the old one.
+  have_token=$(echo "$existing" | jq -r '.token // ""')
+  want_token=$(printf '%s' "$key" | sha256)
+  if [ "$have_token" != "$want_token" ]; then
+    if [ "$APPLY" = false ]; then
+      warn "${alias}: registered key is not the seeded one (rotated?)"; DRIFT=1; continue
+    fi
+    api POST "/key/delete" "$(ALIAS="$alias" jq -n '{key_aliases: [env.ALIAS]}')" >/dev/null
+    if ! msg=$(register "$alias" "$key"); then
+      warn "${alias}: could not re-register after rotation (${msg})"; DRIFT=1; continue
+    fi
+    log "${alias}: re-registered with the seeded key"
+    continue
+  fi
+
+  have=$(echo "$existing" | jq -c '{routes: ((.allowed_routes // []) | sort), models: ((.models // []) | sort)}')
+  want=$(ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n -c \
+    '{routes: (env.ROUTES | fromjson | sort), models: (env.MODELS | fromjson | sort)}')
   if [ "$have" = "$want" ]; then
     info "${alias}: scope already correct"
     continue
   fi
 
   if [ "$APPLY" = false ]; then
-    warn "${alias}: routes are ${have}, should be ${want}"; DRIFT=1; continue
+    warn "${alias}: scope is ${have}, should be ${want}"; DRIFT=1; continue
   fi
-  body=$(jq -n --arg k "$key" --argjson r "$ALLOWED_ROUTES" '{key:$k, allowed_routes:$r}')
+  body=$(KEY="$key" ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n \
+    '{key: env.KEY, allowed_routes: (env.ROUTES | fromjson), models: (env.MODELS | fromjson)}')
   out=$(api POST "/key/update" "$body")
-  echo "$out" | jq -e '.key // .token' >/dev/null 2>&1 \
-    || { warn "${alias}: could not update ($(echo "$out" | head -c 160))"; DRIFT=1; continue; }
+  if ! echo "$out" | jq -e '.key // .token' >/dev/null 2>&1; then
+    warn "${alias}: could not update ($(echo "$out" | head -c 160))"; DRIFT=1; continue
+  fi
   log "${alias}: scope corrected to ${want}"
 done
 
 unset MASTER_KEY
 
-if [ "$DRIFT" -ne 0 ] && [ "$APPLY" = false ]; then
-  warn "Virtual keys are not in the desired state. Re-run with --apply to correct."
+# Non-zero on any unresolved drift, in either mode: automation that applies and
+# still has failures must not read as success.
+if [ "$DRIFT" -ne 0 ]; then
+  if [ "$APPLY" = false ]; then
+    warn "Virtual keys are not in the desired state. Re-run with --apply to correct."
+  else
+    warn "Some virtual keys could not be brought to the desired state."
+  fi
   exit 1
 fi
-[ "$DRIFT" -eq 0 ] && log "Virtual keys match the desired state."
+log "Virtual keys match the desired state."
 exit 0
