@@ -37,27 +37,15 @@ resource "aws_ecr_repository" "main" {
 # ECR Registry Scanning Configuration
 #######################################
 #
-# Enhanced scanning provides continuous, automated scanning for
-# both operating system and programming language package vulnerabilities.
-# This is a registry-level setting that applies to all repositories.
+# The landing zone owns this registry-level setting now. Forgotten rather than
+# destroyed: destroying the resource resets the registry to BASIC.
 #######################################
 
-resource "aws_ecr_registry_scanning_configuration" "main" {
-  scan_type = var.ecr_enhanced_scanning_enabled ? "ENHANCED" : "BASIC"
+removed {
+  from = aws_ecr_registry_scanning_configuration.main
 
-  dynamic "rule" {
-    for_each = var.ecr_scanning_rules
-    content {
-      scan_frequency = rule.value.scan_frequency
-
-      dynamic "repository_filter" {
-        for_each = rule.value.repository_filters
-        content {
-          filter      = repository_filter.value.filter
-          filter_type = repository_filter.value.filter_type
-        }
-      }
-    }
+  lifecycle {
+    destroy = false
   }
 }
 
