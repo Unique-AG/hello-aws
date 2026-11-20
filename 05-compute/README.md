@@ -197,7 +197,7 @@ A ValidatingAdmissionPolicy in the same directory rejects a Fargate sandbox pod 
 ECR provides **secure container image storage** with automated vulnerability scanning:
 
 - **Repositories**: Per-application, KMS-encrypted, configurable tag mutability and lifecycle policies
-- **Enhanced Scanning**: Registry-level, continuous scanning for all repositories (configurable via `ecr_scanning_rules`)
+- **Scanning**: Registry-level scanning is set by the landing zone, not by this layer; repositories keep their own `scan_on_push`
 - **EventBridge**: Captures ECR image scan findings with CRITICAL or HIGH severity (rule created, SNS target commented out for future use)
 
 ### ECR Pull-Through Cache
@@ -326,9 +326,6 @@ eks_node_groups = {
   }
 }
 
-# ECR
-ecr_enhanced_scanning_enabled = true
-
 # ACR (pull-through cache — "" to disable)
 acr_registry_url = "example.azurecr.io"
 
@@ -392,7 +389,7 @@ enable_agentcore_gateway      = false   # gateway + connector target; default fa
 - `ecr_repository_urls`, `ecr_repository_arns` (maps by repo name)
 - `ecr_registry_url` (base ECR registry URL)
 - `ecr_pull_through_cache_registry_urls`, `ecr_pull_through_cache_rule_ids`
-- `ecr_scanning_configuration_scan_type`, `ecr_image_scan_event_rule_arn`
+- `ecr_image_scan_event_rule_arn`
 
 ### ACR
 - `acr_secret_arn`, `acr_pull_through_cache_url`
