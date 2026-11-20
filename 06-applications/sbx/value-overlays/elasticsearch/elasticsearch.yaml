@@ -25,8 +25,9 @@ resources:
     spec:
       version: 9.0.2
       auth:
-        # The superuser stays until ingestion is signing in as its own user and
-        # indexing is confirmed; disabling it is a change of its own.
+        # Ingestion signs in as its own user now, so the superuser has no caller
+        # left. ECK keeps its own internal users, which this does not touch.
+        disableElasticUser: true
         roles:
           - secretName: elasticsearch-ingestion-roles
         fileRealm:
