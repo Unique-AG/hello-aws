@@ -159,35 +159,6 @@ variable "ecr_lifecycle_policy" {
   default     = null
 }
 
-# ECR Enhanced Scanning Configuration
-variable "ecr_enhanced_scanning_enabled" {
-  description = "Enable enhanced scanning for continuous vulnerability detection (recommended for production)"
-  type        = bool
-  default     = true
-}
-
-variable "ecr_scanning_rules" {
-  description = "List of scanning rules for ECR registry scanning configuration"
-  type = list(object({
-    scan_frequency = string # SCAN_ON_PUSH, CONTINUOUS_SCAN, or MANUAL
-    repository_filters = list(object({
-      filter      = string
-      filter_type = string # WILDCARD
-    }))
-  }))
-  default = [
-    {
-      scan_frequency = "CONTINUOUS_SCAN"
-      repository_filters = [
-        {
-          filter      = "*"
-          filter_type = "WILDCARD"
-        }
-      ]
-    }
-  ]
-}
-
 # ECR Pull Through Cache Configuration
 variable "ecr_pull_through_cache_upstream_registries" {
   description = "List of upstream registry prefixes to cache (e.g., ['docker.io', 'public.ecr.aws', 'uniqueapp.azurecr.io'])"

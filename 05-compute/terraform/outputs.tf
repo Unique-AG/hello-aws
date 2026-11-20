@@ -99,11 +99,6 @@ output "acr_pull_through_cache_url" {
 }
 
 # ECR Image Scanning Outputs
-output "ecr_scanning_configuration_scan_type" {
-  description = "ECR registry scanning type (BASIC or ENHANCED)"
-  value       = aws_ecr_registry_scanning_configuration.main.scan_type
-}
-
 output "ecr_image_scan_event_rule_arn" {
   description = "ARN of the EventBridge rule for ECR image scan findings"
   value       = aws_cloudwatch_event_rule.ecr_image_scan.arn
