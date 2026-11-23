@@ -138,14 +138,48 @@ echo "$PROBE" | jq -e '.keys' >/dev/null 2>&1 \
 #######################################
 # Reconcile
 #######################################
-register() {             # alias key -- creates the key as it should be
-  local alias="$1" key="$2" body out
-  body=$(KEY="$key" ALIAS="$alias" ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n \
+# Asking for the one alias rather than paging the whole list, which caps at 100.
+# keys[] holds either an alias string or the whole object, so take objects only.
+lookup() {               # alias -- the registration as JSON, empty when absent
+  local alias="$1" found
+  found=$(api GET "/key/list?size=100&return_full_object=true&key_alias=${alias}")
+  echo "$found" | jq -e '.keys' >/dev/null 2>&1 || return 1
+  echo "$found" | jq -c --arg a "$alias" \
+    'first(.keys[]? | select(type == "object") | select((.key_alias // "") == $a)) // empty'
+}
+
+scope_of() { jq -c '{routes: ((.allowed_routes // []) | sort), models: ((.models // []) | sort)}'; }
+WANT_SCOPE=$(ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n -c \
+  '{routes: (env.ROUTES | fromjson | sort), models: (env.MODELS | fromjson | sort)}')
+
+desired_body() {         # alias key -- the registration this script wants
+  KEY="$2" ALIAS="$1" ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n \
     '{key: env.KEY, key_alias: env.ALIAS,
-      allowed_routes: (env.ROUTES | fromjson), models: (env.MODELS | fromjson)}')
-  out=$(api POST "/key/generate" "$body")
-  echo "$out" | jq -e '.key' >/dev/null 2>&1 || { echo "$out" | head -c 160; return 1; }
+      allowed_routes: (env.ROUTES | fromjson), models: (env.MODELS | fromjson)}'
+}
+
+# LiteLLM stores the sha256 of the key, so this says whether the registration
+# under this alias is the seeded key with the scope this script owns.
+settled() {              # alias key
+  local alias="$1" key="$2" got
+  got=$(lookup "$alias") || return 1
+  [ -n "$got" ] || return 1
+  [ "$(echo "$got" | jq -r '.token // ""')" = "$(printf '%s' "$key" | sha256)" ] || return 1
+  [ "$(echo "$got" | scope_of)" = "$WANT_SCOPE" ] || return 1
   return 0
+}
+
+# generate upserts by token: when the seeded key is already registered under a
+# different alias it returns .key and changes nothing, so read the state back.
+register() {             # alias key -- creates or corrects, then verifies
+  local alias="$1" key="$2" out
+  out=$(api POST "/key/generate" "$(desired_body "$alias" "$key")")
+  settled "$alias" "$key" && return 0
+  # Held under another alias: move it rather than leave the key under two names.
+  api POST "/key/update" "$(desired_body "$alias" "$key")" >/dev/null
+  settled "$alias" "$key" && return 0
+  printf '%s' "$(echo "$out" | head -c 160)"
+  return 1
 }
 
 DRIFT=0
@@ -158,15 +192,10 @@ for c in $CALLERS; do
     DRIFT=1; continue
   fi
 
-  # Asking for the one alias rather than paging the whole list, which caps at 100.
-  # keys[] holds either an alias string or the whole object, so take objects only.
-  found=$(api GET "/key/list?size=100&return_full_object=true&key_alias=${alias}")
-  if ! echo "$found" | jq -e '.keys' >/dev/null 2>&1; then
-    warn "${alias}: could not be looked up ($(echo "$found" | head -c 160))"
+  if ! existing=$(lookup "$alias"); then
+    warn "${alias}: could not be looked up (is the master key current?)"
     DRIFT=1; continue
   fi
-  existing=$(echo "$found" | jq -c --arg a "$alias" \
-    'first(.keys[]? | select(type == "object") | select((.key_alias // "") == $a)) // empty')
 
   if [ -z "$existing" ]; then
     if [ "$APPLY" = false ]; then
@@ -179,8 +208,8 @@ for c in $CALLERS; do
     continue
   fi
 
-  # LiteLLM stores the sha256 of the key, so this says whether the registration
-  # is still the seeded key: after a rotation the alias resolves to the old one.
+  # After a rotation the alias still resolves to the pre-rotation key, so the
+  # sha256 is what says the registration is still the seeded one.
   have_token=$(echo "$existing" | jq -r '.token // ""')
   want_token=$(printf '%s' "$key" | sha256)
   if [ "$have_token" != "$want_token" ]; then
@@ -195,24 +224,22 @@ for c in $CALLERS; do
     continue
   fi
 
-  have=$(echo "$existing" | jq -c '{routes: ((.allowed_routes // []) | sort), models: ((.models // []) | sort)}')
-  want=$(ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n -c \
-    '{routes: (env.ROUTES | fromjson | sort), models: (env.MODELS | fromjson | sort)}')
-  if [ "$have" = "$want" ]; then
+  have=$(echo "$existing" | scope_of)
+  if [ "$have" = "$WANT_SCOPE" ]; then
     info "${alias}: scope already correct"
     continue
   fi
 
   if [ "$APPLY" = false ]; then
-    warn "${alias}: scope is ${have}, should be ${want}"; DRIFT=1; continue
+    warn "${alias}: scope is ${have}, should be ${WANT_SCOPE}"; DRIFT=1; continue
   fi
-  body=$(KEY="$key" ROUTES="$ALLOWED_ROUTES" MODELS="$ALLOWED_MODELS" jq -n \
-    '{key: env.KEY, allowed_routes: (env.ROUTES | fromjson), models: (env.MODELS | fromjson)}')
-  out=$(api POST "/key/update" "$body")
-  if ! echo "$out" | jq -e '.key // .token' >/dev/null 2>&1; then
-    warn "${alias}: could not update ($(echo "$out" | head -c 160))"; DRIFT=1; continue
+  # Read back rather than trust the response: an update that changed nothing
+  # still answers with the key.
+  api POST "/key/update" "$(desired_body "$alias" "$key")" >/dev/null
+  if ! settled "$alias" "$key"; then
+    warn "${alias}: update did not take effect"; DRIFT=1; continue
   fi
-  log "${alias}: scope corrected to ${want}"
+  log "${alias}: scope corrected to ${WANT_SCOPE}"
 done
 
 unset MASTER_KEY
