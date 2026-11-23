@@ -1,5 +1,21 @@
-# Users with no password: the certificate is the credential, so there is no
-# secret to rotate or leak. Permissions stay wide until per-service scopes are agreed.
+# Each service gets a user named after its certificate's common name, and
+# no password at all: an empty passwordHash creates a passwordless user, so
+# the certificate is the only way in. Permissions stay wide until per-service
+# scopes are agreed.
+#
+# The operator reads the import secret once, at user creation, and does not
+# watch it afterwards — changing one later does not change the live user.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-app-repository
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: app-repository
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -7,6 +23,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-app-repository
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -26,6 +46,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-chat
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: chat
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -33,6 +64,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-chat
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -52,6 +87,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-event-socket
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: event-socket
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -59,6 +105,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-event-socket
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -78,6 +128,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-ingestion-worker
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: ingestion-worker
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -85,6 +146,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-ingestion-worker
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -104,6 +169,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-scope-management
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: scope-management
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -111,6 +187,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-scope-management
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -130,6 +210,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-webhook-scheduler
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: webhook-scheduler
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -137,6 +228,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-webhook-scheduler
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
@@ -156,6 +251,17 @@ spec:
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: rabbitmq-user-webhook-worker
+  namespace: unique
+  labels:
+    rabbitmq.com/topology-operator: "true"
+stringData:
+  username: webhook-worker
+  passwordHash: ""
+---
 apiVersion: rabbitmq.com/v1beta1
 kind: User
 metadata:
@@ -163,6 +269,10 @@ metadata:
   namespace: unique
 spec:
   tags: []
+  # Without this the operator invents a random username and the certificate's
+  # common name matches no user, so every login is refused.
+  importCredentialsSecret:
+    name: rabbitmq-user-webhook-worker
   rabbitmqClusterReference:
     name: rabbitmqcluster-chat
 ---

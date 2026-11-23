@@ -6,9 +6,11 @@ metadata:
   name: rabbitmqcluster-chat
   namespace: unique
 spec:
-  # The management plugin is gone with this image, so the HTTP API that carried
-  # a password in its URL no longer exists. Metrics come from rabbitmq_prometheus.
-  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13
+  # Still the management image. The cluster operator writes enabled_plugins
+  # itself and always includes rabbitmq_management, so a plain image would be
+  # told to load a plugin it does not ship. Removing the management API is an
+  # open question, not something this file settles — see the README.
+  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
   replicas: 1
   tls:
     secretName: rabbitmqcluster-chat-server-tls
@@ -36,6 +38,9 @@ spec:
       ssl_cert_login_from = common_name
       ssl_options.verify = verify_peer
       ssl_options.fail_if_no_peer_cert = true
+      # Per-queue series. Without this the exporter publishes only aggregates
+      # and KEDA has nothing to scale a single queue on.
+      prometheus.return_per_object_metrics = true
   persistence:
     storageClassName: gp3
     storage: "10Gi"

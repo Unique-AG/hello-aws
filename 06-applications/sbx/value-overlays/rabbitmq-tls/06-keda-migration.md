@@ -1,26 +1,51 @@
 # KEDA: scale on Prometheus, not the management API
 
-Step 4 of the README removes the management plugin, which is what
-`TriggerAuthentication/rabbitmqcluster-chat-unique-user` reads. That object takes
-`host_full` from the default-user secret — a URL with the password inline — so it
-has to go in the same step, not after it.
+`TriggerAuthentication/rabbitmqcluster-chat-unique-user` takes `host_full` from
+the default-user secret — a management-API URL with the password inline. It has
+to be deleted in the **same step** as the broker swap, not after it, because the
+step that disables plaintext access also takes away the credential that URL
+carries. The README's step 4 says the same.
 
-Every `ScaledObject` scaling on this broker moves from a `rabbitmq` trigger to a
-`prometheus` one:
+## What the trigger does today
+
+```yaml
+triggers:
+  - type: rabbitmq
+    metadata:
+      protocol: http
+      mode: QueueLength
+      queueName: unique.node.ingestion.queue
+      value: "0.9"            # target ≈ one message per replica
+    authenticationRef:
+      name: rabbitmqcluster-chat-unique-user
+```
+
+with `minReplicaCount: 0` and `maxReplicaCount: 12`.
+
+## The replacement
 
 ```yaml
 triggers:
   - type: prometheus
     metadata:
       serverAddress: http://kube-prometheus-stack-prometheus.unique.svc:9090
-      query: sum(rabbitmq_queue_messages_ready{queue="<queue>"})
-      threshold: "100"
+      query: sum(rabbitmq_queue_messages_ready{queue="unique.node.ingestion.queue"})
+      threshold: "1"          # keeps the ≈ one-message-per-replica target
+      activationThreshold: "0"
 ```
 
-The `rabbitmq_prometheus` plugin stays enabled in `05-rabbitmqcluster-tls.yaml`
-and serves these metrics on port 15692. In-cluster Prometheus needs no
-credential, so no replacement `TriggerAuthentication` is required — this is a
-deletion, not a swap.
+`threshold` carries over the `value: 0.9` target, not an arbitrary number —
+raising it would make the worker scale later than it does now.
+`activationThreshold` is what lets it leave zero replicas; a `prometheus`
+trigger needs it stated, whereas the `rabbitmq` trigger did not.
 
-Per-object queue metrics need `prometheus.return_per_object_metrics = true` in
-the broker config if the queue-level series are not already exported.
+## Prerequisite
+
+`05-rabbitmqcluster-tls.yaml` sets `prometheus.return_per_object_metrics = true`.
+Without it the exporter publishes only aggregates, the per-queue series in the
+query above does not exist, and the query returns empty — which KEDA reads as
+zero load and scales the worker to nothing. Confirm the series is present before
+switching any `ScaledObject` over.
+
+No `TriggerAuthentication` replaces the old one: in-cluster Prometheus needs no
+credential, so this is a deletion rather than a swap.
