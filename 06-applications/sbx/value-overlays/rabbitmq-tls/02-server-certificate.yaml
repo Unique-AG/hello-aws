@@ -1,0 +1,30 @@
+# The broker's own certificate. The SANs must cover every name a client dials,
+# including the per-pod names the operator's headless service hands out.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmqcluster-chat-server
+  namespace: unique
+spec:
+  secretName: rabbitmqcluster-chat-server-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: rabbitmqcluster-chat
+  dnsNames:
+    - rabbitmqcluster-chat
+    - rabbitmqcluster-chat.unique
+    - rabbitmqcluster-chat.unique.svc
+    - rabbitmqcluster-chat.unique.svc.cluster.local
+    - rabbitmqcluster-chat-nodes
+    - rabbitmqcluster-chat-nodes.unique
+    - rabbitmqcluster-chat-nodes.unique.svc
+    - rabbitmqcluster-chat-nodes.unique.svc.cluster.local
+    - '*.rabbitmqcluster-chat-nodes.unique.svc.cluster.local'
+  usages:
+    - server auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer

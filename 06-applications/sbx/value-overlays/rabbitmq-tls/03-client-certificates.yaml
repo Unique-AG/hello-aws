@@ -1,0 +1,134 @@
+# One certificate per service. The common name IS the RabbitMQ user name:
+# the broker reads the identity off the certificate, so a wrong CN is a wrong user.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-app-repository
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-app-repository-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: app-repository
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-chat
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-chat-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: chat
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-event-socket
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-event-socket-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: event-socket
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-ingestion-worker
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-ingestion-worker-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: ingestion-worker
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-scope-management
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-scope-management-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: scope-management
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-webhook-scheduler
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-webhook-scheduler-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: webhook-scheduler
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-client-webhook-worker
+  namespace: unique
+spec:
+  secretName: rabbitmq-client-webhook-worker-tls
+  duration: 2160h # 90 days
+  renewBefore: 360h
+  commonName: webhook-worker
+  usages:
+    - client auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-ca
+    kind: Issuer
