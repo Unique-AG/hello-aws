@@ -9,6 +9,10 @@ resources:
     stringData:
       roles.yml: |
         ingestion_app:
+          # The client pings HEAD / before it will register its search adapter.
+          # Named as the one action, so cluster state and _cat stay refused.
+          cluster:
+            - "cluster:monitor/main"
           indices:
             - names: ["chunks_*", "chat-chunks*"]
               privileges:
