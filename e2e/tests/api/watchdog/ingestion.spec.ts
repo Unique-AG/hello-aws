@@ -6,7 +6,9 @@ import { seedFile } from '../../../lib/resources';
 
 const SEED = seedFile('exampleText.txt');
 
-test('@watchdog API ingestion — upload a .txt and verify chunk content', async () => {
+// Also @smoke: ingestion is a deployment-critical path, so the weekday smoke run
+// should not pass while it is broken.
+test('@watchdog @smoke API ingestion — upload a .txt and verify chunk content', async () => {
   const token = await getServiceUserToken();
   const scopeId = await createFolder(token, `wd-ingest-${Date.now()}`);
   const fileName = 'exampleText.txt';

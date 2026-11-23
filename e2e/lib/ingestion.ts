@@ -66,18 +66,36 @@ export async function contentById(token: string, contentId: string, chatId?: str
 }
 
 export async function waitForIngestionFinished(token: string, contentId: string, timeoutMs: number): Promise<any> {
-  return pollUntil(
-    async () => {
-      const c = await contentById(token, contentId);
-      // Fail fast on a terminal failure state instead of spinning to timeout.
-      if (c && /FAIL|ERROR/i.test(String(c.ingestionState ?? ''))) {
-        throw new Error(`Ingestion failed for ${contentId}: state=${c.ingestionState}`);
-      }
-      return c;
-    },
-    (c) => c?.ingestionState === 'FINISHED',
-    { timeoutMs, label: `content ${contentId} ingestionState=FINISHED` },
-  );
+  const seen: string[] = [];
+  try {
+    return await pollUntil(
+      async () => {
+        const c = await contentById(token, contentId);
+        const state = c ? String(c.ingestionState ?? 'null') : 'not-visible';
+        if (seen[seen.length - 1] !== state) seen.push(state);
+        // Fail fast on a terminal failure state instead of spinning to timeout.
+        if (c && /FAIL|ERROR/i.test(String(c.ingestionState ?? ''))) {
+          throw new Error(`Ingestion failed for ${contentId}: state=${c.ingestionState}`);
+        }
+        return c;
+      },
+      (c) => c?.ingestionState === 'FINISHED',
+      { timeoutMs, label: `content ${contentId} ingestionState=FINISHED` },
+    );
+  } catch (e) {
+    // A bare "Last value: undefined" says nothing about why. The states actually
+    // seen separate "never started" from "started and stalled".
+    throw new Error(
+      [
+        (e as Error).message,
+        `  states seen: ${seen.join(' -> ') || '(none)'}`,
+        `  ending in "not-visible" means the content was rolled back mid-pipeline;`,
+        `  the reason is in the worker, not here:`,
+        `    kubectl logs -n unique -l app.kubernetes.io/name=backend-service-ingestion-worker \\`,
+        `      | grep -E 'Error while ingesting|DLQ'`,
+      ].join('\n'),
+    );
+  }
 }
 
 export async function getFirstChunk(token: string, contentId: string): Promise<any> {
