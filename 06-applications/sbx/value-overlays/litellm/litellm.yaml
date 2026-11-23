@@ -112,6 +112,10 @@ proxy_config:
         model: bedrock/cohere.embed-v4:0
         model_id: arn:aws:bedrock:us-east-1:217381566492:application-inference-profile/n8ogrl4txi7n
         aws_region_name: us-east-1
+        # OpenAI-compatible clients send encoding_format by default, and this
+        # model answers 400 to any value. drop_params alone keeps it: Bedrock
+        # accepts the field in general, just not here.
+        additional_drop_params: ["encoding_format"]
 
   general_settings:
     master_key: os.environ/PROXY_MASTER_KEY
