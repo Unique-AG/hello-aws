@@ -174,6 +174,36 @@ resource "aws_secretsmanager_secret" "qdrant_api_key" {
   tags = { Name = var.qdrant_api_key_secret_name, Purpose = "api-key" }
 }
 
+resource "aws_secretsmanager_secret" "litellm_virtual_key_chat" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.litellm_virtual_key_chat_secret_name
+  description             = "LiteLLM virtual key the chat service sends instead of the master key"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_virtual_key_chat_secret_name, Purpose = "api-key" }
+}
+
+resource "aws_secretsmanager_secret" "litellm_virtual_key_ingestion" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.litellm_virtual_key_ingestion_secret_name
+  description             = "LiteLLM virtual key the ingestion service sends instead of the master key"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_virtual_key_ingestion_secret_name, Purpose = "api-key" }
+}
+
+resource "aws_secretsmanager_secret" "litellm_virtual_key_ingestion_worker" {
+  #checkov:skip=CKV2_AWS_57: see docs/security-baseline.md
+  name                    = var.litellm_virtual_key_ingestion_worker_secret_name
+  description             = "LiteLLM virtual key the ingestion worker sends instead of the master key"
+  recovery_window_in_days = var.secrets_recovery_window_days
+  kms_key_id              = local.infrastructure.kms_key_secrets_manager_arn
+
+  tags = { Name = var.litellm_virtual_key_ingestion_worker_secret_name, Purpose = "api-key" }
+}
+
 # ---------------------------------------------------------------------------
 # Zitadel — generated credentials (seed script only, containers here)
 # ---------------------------------------------------------------------------
