@@ -278,7 +278,7 @@ fi
 # Seed
 #######################################
 SEEDED=0; SKIPPED=0; LEFT_EMPTY=0
-LITELLM_MASTER_KEY=""
+LITELLM_CHAT_KEY=""
 
 seed_one() {
   local name="$1" sid="$2" state="$3" kind="$4" e="$5"
@@ -324,9 +324,9 @@ while read -r e; do
   if has_value "$sid"; then state=populated; else state=empty; fi
   seed_one "$name" "$sid" "$state" "$kind" "$e"
 
-  # Keep the litellm key in hand; the endpoint definitions embed it.
-  if [[ "$name" == "litellm-proxy-master-key" ]]; then
-    LITELLM_MASTER_KEY=$(aws secretsmanager get-secret-value --secret-id "$sid" \
+  # Keep chat's own key in hand; the endpoint definitions embed it.
+  if [[ "$name" == "litellm-virtual-key-chat" ]]; then
+    LITELLM_CHAT_KEY=$(aws secretsmanager get-secret-value --secret-id "$sid" \
       --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo "")
   fi
 done < <(entries)
@@ -374,13 +374,13 @@ fi
 if wanted azure-openai-endpoint-definitions; then
 LITELLM_OVERLAY="${APPS_DIR}/${ENV}/value-overlays/litellm/litellm.yaml"
 # --only skips the loop that would have kept the key, so read it back here.
-if [[ -z "$LITELLM_MASTER_KEY" ]]; then
-  LITELLM_SID=$(target_id "$(entries | jq -c 'select(.name=="litellm-proxy-master-key")')")
-  [[ -n "$LITELLM_SID" ]] && LITELLM_MASTER_KEY=$(aws secretsmanager get-secret-value \
+if [[ -z "$LITELLM_CHAT_KEY" ]]; then
+  LITELLM_SID=$(target_id "$(entries | jq -c 'select(.name=="litellm-virtual-key-chat")')")
+  [[ -n "$LITELLM_SID" ]] && LITELLM_CHAT_KEY=$(aws secretsmanager get-secret-value \
     --secret-id "$LITELLM_SID" --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo "")
   unset LITELLM_SID
 fi
-if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
+if [[ -n "$LITELLM_CHAT_KEY" && -f "$LITELLM_OVERLAY" ]]; then
   if has_value "$ENDPOINT_ARN" && [[ "$FORCE" == "false" ]]; then
     info "azure-openai-endpoint-definitions: already set"; SKIPPED=$((SKIPPED+1))
   else
@@ -389,7 +389,7 @@ if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
       warn "azure-openai-endpoint-definitions: no models found in $(basename "$LITELLM_OVERLAY") — left empty"
       LEFT_EMPTY=$((LEFT_EMPTY+1))
     else
-      jq -n --arg key "$LITELLM_MASTER_KEY" --arg region "$AWS_REGION" --argjson models "$MODELS" \
+      jq -n --arg key "$LITELLM_CHAT_KEY" --arg region "$AWS_REGION" --argjson models "$MODELS" \
         '[{endpoint:"http://litellm.unique.svc:4000", key:$key, location:$region,
            models: ($models | map(
              # node-chat keys its endpoint config on "<modelName>-<modelVersion>", so a
@@ -403,11 +403,11 @@ if [[ -n "$LITELLM_MASTER_KEY" && -f "$LITELLM_OVERLAY" ]]; then
     fi
   fi
 else
-  warn "azure-openai-endpoint-definitions: needs the litellm master key and ${LITELLM_OVERLAY#$PROJECT_ROOT/} — left empty"
+  warn "azure-openai-endpoint-definitions: needs the chat virtual key and ${LITELLM_OVERLAY#$PROJECT_ROOT/} — left empty"
   LEFT_EMPTY=$((LEFT_EMPTY+1))
 fi
 fi
-unset LITELLM_MASTER_KEY
+unset LITELLM_CHAT_KEY
 
 #######################################
 # Derived: S3 IAM access key
