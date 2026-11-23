@@ -15,7 +15,9 @@ import { search, type PublicApiCaller, type SearchType } from '../../../lib/sear
 const NONCE = `uq${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 const DOC = `Ingestion retrieval probe.\n\nThe ingestion probe identifier is ${NONCE}.\n`;
 
-test.describe.serial('@smoke API ingestion — retrieval', () => {
+// Not serial: in serial mode a FULL_TEXT failure skips VECTOR, which is exactly
+// the comparison this test exists to make. beforeAll re-seeds per worker.
+test.describe('@smoke API ingestion — retrieval', () => {
   let caller: PublicApiCaller;
   let scopeId: string | undefined;
   let token: string;
@@ -49,7 +51,9 @@ test.describe.serial('@smoke API ingestion — retrieval', () => {
         scopeIds: scopeId ? [scopeId] : undefined,
       });
 
-      expect(status, `${searchType} search should succeed: ${raw.slice(0, 200)}`).toBe(200);
+      // The endpoint answers 201, not 200; assert the class, not the code.
+      expect(status, `${searchType} search should succeed: ${raw.slice(0, 200)}`).toBeLessThan(300);
+      expect(status, `${searchType} search should succeed: ${raw.slice(0, 200)}`).toBeGreaterThanOrEqual(200);
       expect(hits.length, `${searchType} search returned no hits`).toBeGreaterThan(0);
       expect(
         hits.some((h) => h.text?.includes(NONCE)),
