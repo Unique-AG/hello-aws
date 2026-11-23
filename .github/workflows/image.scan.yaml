@@ -1,0 +1,211 @@
+name: '[sec] Scan deployed images'
+
+# Scans the images an environment actually deploys, rendered from the app specs
+# rather than grepped out of the overlays.
+#
+# The inventory is a floor, not a census: operator-derived images (ECK builds
+# the Elasticsearch reference from spec.version, the RabbitMQ operator does the
+# same) appear as an image field in no manifest, and our own charts sit on
+# registries this job holds no credentials for. Unresolved sources are counted
+# and printed so a short list cannot read as a clean one.
+#
+# Everything found is reported. A scan fails on a HIGH or CRITICAL finding that
+# is actionable: a vulnerability with a fixed version, or a secret in the image.
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to scan'
+        type: string
+        required: false
+        default: 'sbx'
+  schedule:
+    - cron: '23 2 * * *' # 03:23 CET, off the hour
+
+permissions:
+  contents: read
+
+concurrency:
+  group: image-scan
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  YQ_VERSION: v4.54.1
+  YQ_SHA256: 8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      images: ${{ steps.list.outputs.images }}
+      count: ${{ steps.list.outputs.count }}
+      unresolved: ${{ steps.list.outputs.unresolved }}
+    env:
+      ENVIRONMENT: ${{ inputs.environment || 'sbx' }}
+    steps:
+      # The rendered values live on the deploy branch; main holds placeholders,
+      # and a render against a placeholder names an image nothing pulls.
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: deploy/${{ inputs.environment || 'sbx' }}
+
+      # The script comes from trunk so a deploy branch cannot pin an old one.
+      - name: Take the inventory script from main
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          git checkout origin/main -- scripts/list-blueprint-images.sh
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: v4.0.4
+
+      # The script needs yq; the runner image does not ship mikefarah's, and its
+      # syntax differs from the Python one, so pin it rather than take what is there.
+      - name: Install yq
+        run: |
+          set -euo pipefail
+          curl -sSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64" -o yq
+          echo "${YQ_SHA256}  yq" | sha256sum -c -
+          sudo install -m 0755 yq /usr/local/bin/yq
+          yq --version
+
+      - name: Build the inventory
+        id: list
+        run: |
+          set -uo pipefail
+          # Exits 0 with the list on stdout; what it could not reach goes to stderr.
+          scripts/list-blueprint-images.sh "$ENVIRONMENT" --json > inventory.json 2> inventory.err
+          rc=$?
+          COUNT=$(jq -r '.images | length' inventory.json 2>/dev/null || echo 0)
+          UNRESOLVED=$(jq -r '.unresolved' inventory.json 2>/dev/null || echo 0)
+
+          # The diagnostics are written before anything can fail: when nothing
+          # resolves, that stderr is the only thing that says why.
+          {
+            echo "## Inventory — ${ENVIRONMENT}"
+            echo
+            echo "- **${COUNT}** images resolved"
+            echo "- **${UNRESOLVED}** sources not resolved; their images are not scanned"
+            echo
+            echo '```'
+            cat inventory.err 2>/dev/null || echo '(no diagnostics)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$rc" -ne 0 ] || [ "${COUNT:-0}" -eq 0 ]; then
+            echo "::error::The inventory is empty or could not be built; the render did not work."
+            exit 1
+          fi
+
+          {
+            echo "images=$(jq -c '.images' inventory.json)"
+            echo "count=${COUNT}"
+            echo "unresolved=${UNRESOLVED}"
+          } >> "$GITHUB_OUTPUT"
+
+          # A source that stopped resolving is a coverage regression, so say so
+          # without failing the run: the list is known to be partial by design.
+          if [ "${UNRESOLVED:-0}" -gt 0 ]; then
+            echo "::warning::${UNRESOLVED} source(s) did not resolve; their images were not scanned."
+          fi
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: inventory
+          path: |
+            inventory.json
+            inventory.err
+          retention-days: 30
+          if-no-files-found: warn
+
+  scan:
+    needs: inventory
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Only this job authenticates to AWS, so only this job may mint an OIDC token.
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        image: ${{ fromJson(needs.inventory.outputs.images) }}
+    steps:
+      # Only our own mirror needs a login. A public image must still be scanned
+      # when that login is impossible, so both AWS steps are skipped for one.
+      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        if: contains(matrix.image, '.dkr.ecr.')
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to ECR
+        if: contains(matrix.image, '.dkr.ecr.')
+        run: |
+          set -euo pipefail
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login "${ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com" --username AWS --password-stdin
+
+      # JSON rather than table: beside a secret finding the table prints up to
+      # 40 characters of that layer's build history, and the job log is public.
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.74.0
+          scan-type: image
+          image-ref: ${{ matrix.image }}
+          scanners: vuln,secret
+          format: json
+          output: trivy.json
+          # Unfiltered, so the report holds everything; the gate is applied below.
+          exit-code: '0'
+
+      - name: Report, then apply the gate
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          v() { jq "$1" trivy.json; }
+          gate_vulns=$(v '[.Results[]? | (.Vulnerabilities // [])[]
+            | select((.Severity == "HIGH" or .Severity == "CRITICAL")
+                     and ((.FixedVersion // "") != ""))] | length')
+          gate_secrets=$(v '[.Results[]? | (.Secrets // [])[]
+            | select(.Severity == "HIGH" or .Severity == "CRITICAL")] | length')
+          secrets_total=$(v '[.Results[]? | (.Secrets // []) | length] | add // 0')
+
+          {
+            echo "### ${IMAGE}"
+            echo
+            echo "| severity | found | with a fix |"
+            echo "|---|---|---|"
+            for s in CRITICAL HIGH MEDIUM LOW UNKNOWN; do
+              n=$(jq --arg s "$s" '[.Results[]? | (.Vulnerabilities // [])[] | select(.Severity == $s)] | length' trivy.json)
+              f=$(jq --arg s "$s" '[.Results[]? | (.Vulnerabilities // [])[] | select(.Severity == $s and ((.FixedVersion // "") != ""))] | length' trivy.json)
+              echo "| ${s} | ${n} | ${f} |"
+            done
+            echo
+            echo "Secrets: ${secrets_total} (HIGH/CRITICAL: ${gate_secrets})"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "SLUG=$(printf '%s' "$IMAGE" | tr '/:@' '___')" >> "$GITHUB_ENV"
+
+          if [ "$gate_vulns" -gt 0 ] || [ "$gate_secrets" -gt 0 ]; then
+            echo "::error::${IMAGE}: ${gate_vulns} fixable HIGH/CRITICAL vulnerability(ies), ${gate_secrets} HIGH/CRITICAL secret(s)"
+            exit 1
+          fi
+
+      # The full report is an artifact rather than log output, so a finding can
+      # be read in full without putting image build text in a public log.
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
+        with:
+          name: trivy-${{ env.SLUG }}
+          path: trivy.json
+          retention-days: 30
+          if-no-files-found: warn
