@@ -33,15 +33,20 @@ spec:
             enabled: true
             failureThreshold: 30
             periodSeconds: 30
+          # QDRANT__SERVICE__API_KEY is deliberately unset: the application
+          # release deployed here cannot send a key, so requiring one made every
+          # call fail and ingestion stop. The network policy below is what keeps
+          # the service private meanwhile. Restore the env block below once the
+          # application can authenticate — the secret stays provisioned for it.
+          #
+          #   env:
+          #     - name: QDRANT__SERVICE__API_KEY
+          #       valueFrom:
+          #         secretKeyRef: { name: qdrant-api-key, key: api-key }
+          #
           # Set on the pod, not through the chart's apiKey value: that branch
           # reads the secret with lookup, which is empty under client-side
           # rendering, and dereferences readOnlyApiKey when it is unset.
-          env:
-            - name: QDRANT__SERVICE__API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: qdrant-api-key
-                  key: api-key
     # The policy is a manifest, so it renders through the raw chart rather than
     # as values for the qdrant chart.
     - chart: raw
