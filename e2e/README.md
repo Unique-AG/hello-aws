@@ -12,8 +12,26 @@ at your own tenant, and run.**
 | Browser (Chromium) | `@smoke` | broader per-area UI checks (KB, spaces, chat variants) |
 | API (GraphQL) | `@watchdog` | service-user token → ingestion + chat critical path |
 | API (GraphQL) | `@smoke` | scope-management, generate API token, broader API checks |
+| API (GraphQL) | `@smoke` | ingestion retrieval: an ingested document comes back through search |
 | API (GraphQL) | `@smoke @conduct` | Conduct: code runs in the sandbox, the workspace persists across turns, a generated file is stored |
 | Browser (Chromium) | `@smoke @conduct` | Conduct: the answer renders a code-execution card |
+
+## Known failure: ingestion (sbx, as of 2026-11-23)
+
+Both ingestion tests fail, and the retrieval one has never been run green. The
+blueprint's vector database requires an API key; the application release
+deployed here has no setting for one, so every call it makes is rejected and the
+worker dead-letters the message before any indexer runs. The key is present in
+the pod environment — nothing reads it.
+
+Either the application gains that setting, or the vector database's
+`service_api_key` comes back off until it does.
+
+A timeout from `waitForIngestionFinished` prints the states it saw and the
+command that shows the worker's own error, which is where the reason lives.
+Today that reads `QUEUED -> INGESTION_CHUNKING -> not-visible`: the content is
+rolled back and deleted when the indexer fails, which is why looking it up
+afterwards returns nothing rather than a failed state.
 
 ## Prerequisites on your tenant
 
