@@ -204,6 +204,24 @@ variable "qdrant_api_key_secret_name" {
   default     = "qdrant-api-key"
 }
 
+variable "litellm_virtual_key_chat_secret_name" {
+  description = "Secret name for the LiteLLM virtual key used by the chat service"
+  type        = string
+  default     = "litellm-virtual-key-chat"
+}
+
+variable "litellm_virtual_key_ingestion_secret_name" {
+  description = "Secret name for the LiteLLM virtual key used by the ingestion service"
+  type        = string
+  default     = "litellm-virtual-key-ingestion"
+}
+
+variable "litellm_virtual_key_ingestion_worker_secret_name" {
+  description = "Secret name for the LiteLLM virtual key used by the ingestion worker"
+  type        = string
+  default     = "litellm-virtual-key-ingestion-worker"
+}
+
 variable "zitadel_db_user_password_secret_name" {
   description = "Secret name for Zitadel database user password"
   type        = string
