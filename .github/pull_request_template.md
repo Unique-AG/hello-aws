@@ -6,8 +6,9 @@
 
 - [ ] Terraform changes: `./scripts/validate.sh <layer> <env> true` passes, where `<layer>` is
       one of bootstrap, governance, infrastructure, data-and-ai, compute. It runs tflint,
-      shellcheck, trivy and checkov only where each is installed and skips the rest, so CI
-      remains the authority — it runs all of them plus `terraform validate`.
+      shellcheck, trivy and checkov only where each is installed. CI repeats tflint, trivy
+      and checkov and adds `terraform validate`, but it does not run shellcheck — so shell
+      scripts are only linted if you have it locally.
 - [ ] No credentials, tenant names or environment-specific values are added — this repository is public
 
 ### Runbook
