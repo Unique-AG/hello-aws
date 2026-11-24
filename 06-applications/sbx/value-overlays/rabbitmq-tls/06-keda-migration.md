@@ -4,7 +4,7 @@
 the default-user secret — a management-API URL with the password inline. It has
 to be deleted in the **same step** as the broker swap, not after it, because the
 step that disables plaintext access also takes away the credential that URL
-carries. The README's step 4 says the same.
+carries. The README's step 6 says the same.
 
 ## What the trigger does today
 

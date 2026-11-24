@@ -1,5 +1,7 @@
-# The hardened broker. Replaces ../rabbitmq/rabbitmq-cluster.yaml at step 4 of
-# the README — applying it before the services hold certificates locks them out.
+# The hardened broker. Replaces ../rabbitmq/rabbitmq-cluster.yaml at step 6 of
+# the README — applying it before certificate login is proved locks every
+# caller out. Step 3 applies 05a first, which adds TLS without removing
+# anything, so that proof is possible.
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
