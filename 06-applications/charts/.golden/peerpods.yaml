@@ -11,6 +11,7 @@ metadata:
     app.kubernetes.io/part-of: peerpodctrl
   name: peerpodctrl-controller-manager
   namespace: sbx
+
 ---
 # Source: peerpods/templates/rbac.yaml
 # when owner reference is both object must be on the same namespace, hence,
@@ -22,6 +23,7 @@ metadata:
   namespace: sbx
   annotations:
     eks.amazonaws.com/role-arn: <PEER_PODS_ROLE_ARN>
+
 ---
 # Source: peerpods/templates/secrets.yaml
 apiVersion: v1
@@ -35,6 +37,7 @@ metadata:
     app.kubernetes.io/managed-by: Helm
 type: Opaque
 stringData:
+
 ---
 # Source: peerpods/templates/configmap.yaml
 apiVersion: v1
@@ -59,6 +62,7 @@ data:
   PODVM_LAUNCHTEMPLATE_NAME: "<PODVM_LAUNCHTEMPLATE_NAME>"
   TAGS: "PeerPod=true"
   USE_PODVM_LAUNCHTEMPLATE: "true"
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -84,6 +88,7 @@ rules:
   - subjectaccessreviews
   verbs:
   - create
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -101,6 +106,7 @@ rules:
   - "/metrics"
   verbs:
   - get
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -154,6 +160,7 @@ rules:
   - get
   - patch
   - update
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -170,6 +177,7 @@ rules:
 - apiGroups: [""]
   resources: ["serviceaccounts"]
   verbs: ["get", "list"]
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -180,6 +188,7 @@ rules:
 - apiGroups: ["confidentialcontainers.org"]
   resources: ["peerpods"]
   verbs: ["create", "patch", "update"]
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -190,6 +199,7 @@ rules:
 - apiGroups: [""]
   resources: ["nodes"]
   verbs: ["get"]
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -200,6 +210,7 @@ rules:
 - apiGroups: [""]
   resources: ["nodes/status"]
   verbs: ["patch"]
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -216,6 +227,7 @@ rules:
   resourceNames: ["byom-ip-pool-state"]
   resources: ["configmaps"]
   verbs: ["delete", "patch", "update", "get", "watch"]
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -236,6 +248,7 @@ subjects:
 - kind: ServiceAccount
   name: peerpodctrl-controller-manager
   namespace: sbx
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -256,6 +269,7 @@ subjects:
 - kind: ServiceAccount
   name: peerpodctrl-controller-manager
   namespace: sbx
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -270,6 +284,7 @@ roleRef:
   kind: ClusterRole
   name: peerpods-pod-viewer
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -284,6 +299,7 @@ roleRef:
   kind: ClusterRole
   name: peerpods-peerpod-editor
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -298,6 +314,7 @@ roleRef:
   kind: ClusterRole
   name: peerpods-node-viewer
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -312,6 +329,7 @@ roleRef:
   kind: ClusterRole
   name: peerpods-node-status-patcher
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -326,6 +344,7 @@ roleRef:
   kind: ClusterRole
   name: peerpods-cm-editor
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 # permissions to do leader election.
@@ -372,6 +391,7 @@ rules:
   verbs:
   - create
   - patch
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -383,6 +403,7 @@ rules:
 - apiGroups: [""]
   resources: ["secrets"]
   verbs: ["delete", "create", "patch", "update", "get", "watch", "list"]
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/permissions.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -404,6 +425,7 @@ subjects:
 - kind: ServiceAccount
   name: peerpodctrl-controller-manager
   namespace: sbx
+
 ---
 # Source: peerpods/templates/rbac.yaml
 apiVersion: rbac.authorization.k8s.io/v1
@@ -419,6 +441,7 @@ roleRef:
   kind: Role
   name: pp-secrets
   apiGroup: rbac.authorization.k8s.io
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/service.yaml
 apiVersion: v1
@@ -441,6 +464,7 @@ spec:
     targetPort: https
   selector:
     control-plane: controller-manager
+
 ---
 # Source: peerpods/templates/daemonset.yaml
 apiVersion: apps/v1
@@ -556,6 +580,7 @@ spec:
         hostPath:
           path: /run/kata-containers/shared/direct-volumes
           type: DirectoryOrCreate
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/deployment.yaml
 apiVersion: apps/v1
@@ -678,9 +703,11 @@ spec:
           defaultMode: 384
           optional: true
           secretName: ssh-key-secret
+
 ---
 # Source: peerpods/charts/resourceCtrl/templates/rbac.yaml
 # AUTO-GENERATED by controller-gen. DO NOT EDIT.
+
 ---
 # Source: peerpods/templates/secrets.yaml
 # This template creates K8s Secrets when secrets.mode is "create".

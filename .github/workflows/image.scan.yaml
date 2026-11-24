@@ -61,7 +61,7 @@ jobs:
 
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
         with:
-          version: v4.0.4
+          version: v4.3.2
 
       # The script needs yq; the runner image does not ship mikefarah's, and its
       # syntax differs from the Python one, so pin it rather than take what is there.
