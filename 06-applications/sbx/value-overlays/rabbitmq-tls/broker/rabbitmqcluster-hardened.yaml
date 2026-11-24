@@ -1,21 +1,13 @@
-# The end state. Replaces the body of ../../rabbitmq/rabbitmq-cluster.yaml at
-# step 6 of the README — applying it before certificate login is proved locks
-# every caller out. Step 4 commits the transitional broker first, which adds
-# TLS without removing anything, so that proof is possible.
-#
-# Not applied from this directory: an Application reading it must exclude
-# broker/**, or it collides with the Application that owns the live manifest.
+# The end state: TLS-only listeners and EXTERNAL auth. Applying it before
+# certificate login is proved locks every caller out — see README step 6.
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
   name: rabbitmqcluster-chat
   namespace: unique
 spec:
-  # Still the management image. The cluster operator writes enabled_plugins
-  # itself and always includes rabbitmq_management, so a plain image would be
-  # told to load a plugin it does not ship. Removing the management API is an
-  # open question, not something this file settles — see the README.
-  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
+  # Management image is required: the operator always enables the plugin.
+  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
   replicas: 1
   tls:
     secretName: rabbitmqcluster-chat-server-tls

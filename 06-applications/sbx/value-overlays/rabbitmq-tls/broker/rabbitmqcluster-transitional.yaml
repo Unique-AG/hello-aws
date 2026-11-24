@@ -1,24 +1,18 @@
-# The broker with TLS added and nothing taken away. This exists so certificate
-# sign-in can be proved while passwords still work: the live broker has no
-# spec.tls at all, so without this there is no amqps listener to test against
-# and the first real test of EXTERNAL would be the cutover itself.
-#
-# Committed over ../../rabbitmq/rabbitmq-cluster.yaml at step 4, replaced by
-# rabbitmqcluster-hardened.yaml at step 6. Going through Git matters: the
-# Application that owns that path self-heals, so a hand-applied change reverts.
+# TLS added, nothing removed, so certificate login can be proved while passwords
+# still work. Replaces ../../rabbitmq/rabbitmq-cluster.yaml at README step 4.
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
   name: rabbitmqcluster-chat
   namespace: unique
 spec:
-  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
+  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
   replicas: 1
   tls:
     secretName: rabbitmqcluster-chat-server-tls
     caSecretName: rabbitmq-ca-tls
-    # The difference from 05: plaintext stays open, so a failed certificate
-    # login costs nothing and every existing caller keeps working.
+    # Unlike rabbitmqcluster-hardened.yaml, plaintext stays open: a failed
+    # certificate login costs nothing and every caller keeps working.
     disableNonTLSListeners: false
   resources:
     requests:

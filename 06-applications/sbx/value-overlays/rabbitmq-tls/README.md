@@ -20,10 +20,15 @@ it waits for the product release.
 | `01-certificate-authority.yaml` | A self-signed root, a CA certificate, and the CA issuer the rest use |
 | `02-server-certificate.yaml` | The broker's server certificate, with the in-cluster service names as SANs |
 | `03-client-certificates.yaml` | One client certificate per service; the common name is the RabbitMQ user name |
-| `04-users-and-permissions.yaml` | An import secret, a passwordless `User` named after the certificate's common name, and a `Permission`, one set per service |
+| `04-users-and-permissions.yaml` | An import secret, a `User` and a `Permission` per service. An empty `passwordHash` makes the user passwordless, so its certificate is the only way in |
 | `broker/rabbitmqcluster-transitional.yaml` | The broker with TLS added and nothing removed, so certificate login can be proved while passwords still work |
 | `broker/rabbitmqcluster-hardened.yaml` | The end state: TLS-only listeners, `EXTERNAL` auth, per-queue metrics |
 | `06-keda-migration.md` | How KEDA moves to Prometheus metrics instead of the management API |
+
+Both broker files pin the image by digest with the `3.13-management` tag kept in
+front of it, so Renovate still tracks the version. The digest is the one the live
+broker already runs, so replacing the manifest changes configuration only. The
+live manifest keeps its bare tag until one of these replaces its body.
 
 ### Why `broker/` is separate
 
@@ -96,6 +101,8 @@ file is the switch.
 - The cluster operator's own default user and the Erlang cookie still use the
   secret backend. Both are internal to the operator; how they are handled on a
   Marketplace installation is an open question.
+- **Permissions are wide.** Each `Permission` grants full configure, write and
+  read on `/`. Narrowing them per service is unresolved.
 - The import secret is read once, when the user is created. The operator does
   not watch it, so editing one later does not rotate anything.
 - Three replicas across three zones and quorum queues belong with the RabbitMQ 4

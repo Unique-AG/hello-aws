@@ -41,7 +41,9 @@ trigger needs it stated, whereas the `rabbitmq` trigger did not.
 
 ## Prerequisite
 
-`05-rabbitmqcluster-tls.yaml` sets `prometheus.return_per_object_metrics = true`.
+`prometheus.return_per_object_metrics = true` is set by whichever broker file is
+live: `broker/rabbitmqcluster-transitional.yaml` from README step 4, and
+`broker/rabbitmqcluster-hardened.yaml` from step 6.
 Without it the exporter publishes only aggregates, the per-queue series in the
 query above does not exist, and the query returns empty — which KEDA reads as
 zero load and scales the worker to nothing. Confirm the series is present before

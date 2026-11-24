@@ -1,10 +1,5 @@
-# Each service gets a user named after its certificate's common name, and
-# no password at all: an empty passwordHash creates a passwordless user, so
-# the certificate is the only way in. Permissions stay wide until per-service
-# scopes are agreed.
-#
-# The operator reads the import secret once, at user creation, and does not
-# watch it afterwards — changing one later does not change the live user.
+# One passwordless user per service, named after its certificate's common name.
+# The operator reads each import Secret once, at user creation, and not again.
 apiVersion: v1
 kind: Secret
 metadata:
