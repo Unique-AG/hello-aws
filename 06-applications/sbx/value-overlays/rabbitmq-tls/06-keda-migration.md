@@ -49,6 +49,7 @@ triggers:
       query: sum(rabbitmq_queue_messages_ready{queue="<queue>"})
       threshold: "<the value: from the table above>"
       activationThreshold: "0"
+      ignoreNullValues: "false"
 ```
 
 `threshold` takes the `value:` of the object being moved — `"0.9"` for the two
@@ -61,6 +62,20 @@ worker scales about ten percent later than it does now.
 `prometheus` trigger needs it stated where the `rabbitmq` trigger did not. It
 applies to the two backend services. `ingestor` has `minReplicaCount: 1` and
 never scales to zero, so it does not need one.
+
+`ignoreNullValues: "false"` is not optional here. It defaults to `true`, and on
+that default KEDA 2.19 returns `0` for an empty result instead of an error
+(`prometheus_scaler.go`: `len(result.Data.Result) == 0` → `return 0, nil`).
+`sum()` over a series that has stopped being published returns exactly that
+empty result, so the default turns "the metric is gone" into "there is no
+work" — and the two backend services would scale to zero with messages still
+queued. With it `"false"` the scaler reports an error instead and KEDA stops
+acting on a number it does not have.
+
+The cost is that a queue which genuinely does not exist yet also errors, rather
+than reading as empty. That is the right way round: a loud scaler error is
+recoverable, a silent scale-to-zero on a full queue is not. Create the queue
+before pointing a trigger at it.
 
 ## Prerequisite
 

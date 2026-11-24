@@ -1,5 +1,4 @@
-# TLS added, nothing removed, so certificate login can be proved while passwords
-# still work. Replaces ../../rabbitmq/rabbitmq-cluster.yaml at README step 4.
+# TLS added, nothing removed: the step that proves certificate login works.
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
@@ -11,8 +10,7 @@ spec:
   tls:
     secretName: rabbitmqcluster-chat-server-tls
     caSecretName: rabbitmq-ca-tls
-    # Unlike rabbitmqcluster-hardened.yaml, plaintext stays open: a failed
-    # certificate login costs nothing and every caller keeps working.
+    # Plaintext stays open so existing callers keep working during cutover.
     disableNonTLSListeners: false
   resources:
     requests:
