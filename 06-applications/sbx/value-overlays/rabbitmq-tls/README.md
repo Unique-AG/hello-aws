@@ -73,10 +73,12 @@ In this order, so no step removes a credential a caller is still using:
    refused, and at this point that costs nothing because passwords still work.
 6. Commit `broker/rabbitmqcluster-hardened.yaml` over
    `../rabbitmq/rabbitmq-cluster.yaml`, and in the same change delete
-   `TriggerAuthentication/rabbitmqcluster-chat-unique-user` and move the
-   `ScaledObject`s onto Prometheus per `06-keda-migration.md`. They belong
-   together: this step disables the plaintext listener that the
-   `TriggerAuthentication` URL depends on.
+   `TriggerAuthentication/rabbitmqcluster-chat-unique-user` and move all three
+   `ScaledObject`s that reference it — `backend-service-ingestion-worker`,
+   `backend-service-ingestion-worker-chat` and `ingestor` — onto Prometheus per
+   `06-keda-migration.md`. They belong together: this step disables the
+   plaintext listener that the `TriggerAuthentication` URL depends on, and each
+   object carries its own target.
 7. **Replace the operator's administrator, then delete `app`.** The broker's
    default user is `app`, and the Messaging Topology Operator authenticates as
    it — deleting it first would stop the operator reconciling anything. Create a

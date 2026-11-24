@@ -6,7 +6,18 @@ to be deleted in the **same step** as the broker swap, not after it, because the
 step that disables plaintext access also takes away the credential that URL
 carries. The README's step 6 says the same.
 
-## What the trigger does today
+## What the triggers do today
+
+Three `ScaledObject`s use the `TriggerAuthentication`, not one. They do not share
+a target, so the move has to be made per object rather than once:
+
+| `ScaledObject` | Queue | `value` | Replicas |
+|---|---|---|---|
+| `backend-service-ingestion-worker` | `unique.node.ingestion.queue` | `"0.9"` | 0–12 |
+| `backend-service-ingestion-worker-chat` | `unique.node.ingestion.chat_queue` | `"0.9"` | 0–12 |
+| `ingestor` | `unique.node.ingestion.queue` | `"5"` | 1–6 |
+
+Each has the same shape:
 
 ```yaml
 triggers:
@@ -15,12 +26,18 @@ triggers:
       protocol: http
       mode: QueueLength
       queueName: unique.node.ingestion.queue
-      value: "0.9"            # target ≈ one message per replica
+      value: "0.9"
     authenticationRef:
       name: rabbitmqcluster-chat-unique-user
 ```
 
-with `minReplicaCount: 0` and `maxReplicaCount: 12`.
+Two of them watch the same queue with different targets. That is how it runs
+today; the migration preserves it rather than reconciling it.
+
+Sources: `sbx/apps/chat/ingestion-worker.backend-service.yaml`,
+`sbx/apps/chat/ingestion-worker-chat.backend-service.yaml`, and
+`defaults/ai-services/ingestor.yaml`, which is rendered through
+`sbx/apps/chat/ingestor.yaml`.
 
 ## The replacement
 
@@ -29,15 +46,21 @@ triggers:
   - type: prometheus
     metadata:
       serverAddress: http://kube-prometheus-stack-prometheus.unique.svc:9090
-      query: sum(rabbitmq_queue_messages_ready{queue="unique.node.ingestion.queue"})
-      threshold: "1"          # keeps the ≈ one-message-per-replica target
+      query: sum(rabbitmq_queue_messages_ready{queue="<queue>"})
+      threshold: "<the value: from the table above>"
       activationThreshold: "0"
 ```
 
-`threshold` carries over the `value: 0.9` target, not an arbitrary number —
-raising it would make the worker scale later than it does now.
-`activationThreshold` is what lets it leave zero replicas; a `prometheus`
-trigger needs it stated, whereas the `rabbitmq` trigger did not.
+`threshold` takes the `value:` of the object being moved — `"0.9"` for the two
+backend services, `"5"` for `ingestor`. The two are not interchangeable: KEDA
+divides the metric by the threshold, so `"1"` in place of `"0.9"` asks for
+`ceil(n/1)` replicas where the queue trigger asked for `ceil(n/0.9)`, and the
+worker scales about ten percent later than it does now.
+
+`activationThreshold` is what lets an object leave zero replicas, and a
+`prometheus` trigger needs it stated where the `rabbitmq` trigger did not. It
+applies to the two backend services. `ingestor` has `minReplicaCount: 1` and
+never scales to zero, so it does not need one.
 
 ## Prerequisite
 
