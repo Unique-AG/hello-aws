@@ -21,9 +21,27 @@ it waits for the product release.
 | `02-server-certificate.yaml` | The broker's server certificate, with the in-cluster service names as SANs |
 | `03-client-certificates.yaml` | One client certificate per service; the common name is the RabbitMQ user name |
 | `04-users-and-permissions.yaml` | An import secret, a passwordless `User` named after the certificate's common name, and a `Permission`, one set per service |
-| `05a-rabbitmqcluster-transitional.yaml` | The broker with a TLS listener added and nothing removed, so certificate login can be proved while passwords still work |
-| `05-rabbitmqcluster-tls.yaml` | The hardened broker: TLS-only listeners, `EXTERNAL` auth, per-queue metrics |
+| `broker/rabbitmqcluster-transitional.yaml` | The broker with TLS added and nothing removed, so certificate login can be proved while passwords still work |
+| `broker/rabbitmqcluster-hardened.yaml` | The end state: TLS-only listeners, `EXTERNAL` auth, per-queue metrics |
 | `06-keda-migration.md` | How KEDA moves to Prometheus metrics instead of the management API |
+
+### Why `broker/` is separate
+
+Both files under `broker/` declare the same `RabbitmqCluster`
+(`unique/rabbitmqcluster-chat`), and so does the live
+`../rabbitmq/rabbitmq-cluster.yaml`. An Application reading a directory that
+contained two of them would silently keep whichever sorted last and warn with
+`RepeatedResourceWarning` — which, before this split, meant the *transitional*
+broker would have won and left plaintext enabled.
+
+They are not applied from here. Each is a replacement for the body of
+`../rabbitmq/rabbitmq-cluster.yaml`, committed to Git at the step that calls for
+it. The Application that owns that path runs with `selfHeal: true`, so a change
+made by hand is reverted; going through Git is what makes it stick.
+
+An Application added for this directory must therefore set
+`directory.exclude: 'broker/**'`, or it will fight the one that already owns the
+broker.
 
 ## Turning it on
 
@@ -32,22 +50,24 @@ In this order, so no step removes a credential a caller is still using:
 1. Ship the AMQP package release that can present a client certificate, and set
    each service to use it.
 2. Apply `01`–`04`. The new users exist alongside `app`; nothing changes yet.
-3. Apply `05a-rabbitmqcluster-transitional.yaml`. This adds a TLS listener and
-   `EXTERNAL` **alongside** passwords, and leaves plaintext open. The live
-   broker has no `spec.tls` at all, so without this there is nothing to test
-   certificate login against and the cutover would be its own first test.
-4. **Prove certificate login, service by service.** Open a real `amqps`
+3. **Give the Messaging Topology Operator the broker CA**, before any TLS is
+   enabled on the cluster. Enabling `spec.tls` in the next step also opens the
+   HTTPS management port, and the operator prefers it — so from step 4 onward it
+   needs to trust `rabbitmq-ca-tls` or `User` and `Permission` reconciliation
+   fails certificate verification. The operator runs in `unique`, the namespace
+   `01` creates the CA Secret in.
+4. Commit `broker/rabbitmqcluster-transitional.yaml` over
+   `../rabbitmq/rabbitmq-cluster.yaml`. This adds a TLS listener and `EXTERNAL`
+   **alongside** passwords and leaves plaintext open. The live broker has no
+   `spec.tls` at all, so without this there is nothing to test certificate login
+   against and the cutover would be its own first test.
+5. **Prove certificate login, service by service.** Open a real `amqps`
    connection presenting the client certificate and confirm the broker reports
    the user named by its common name. `rabbitmqctl authenticate_user` does not
    prove this — it tests passwords. A common name that matches no user is
    refused, and at this point that costs nothing because passwords still work.
-5. **Give the Messaging Topology Operator the broker CA.** After step 6 the
-   management API serves HTTPS only, and the operator must trust
-   `rabbitmq-ca-tls` to reach it. It runs in `unique`, the same namespace the CA
-   Secret is created in. Without this, `User` and `Permission` reconciliation
-   stops — including for the users this directory creates.
-6. Replace `../rabbitmq/rabbitmq-cluster.yaml` with `05-rabbitmqcluster-tls.yaml`,
-   and in the same change delete
+6. Commit `broker/rabbitmqcluster-hardened.yaml` over
+   `../rabbitmq/rabbitmq-cluster.yaml`, and in the same change delete
    `TriggerAuthentication/rabbitmqcluster-chat-unique-user` and move the
    `ScaledObject`s onto Prometheus per `06-keda-migration.md`. They belong
    together: this step disables the plaintext listener that the
@@ -60,7 +80,8 @@ In this order, so no step removes a credential a caller is still using:
    Step 6 does not remove it; it only stops password logins over AMQP.
 
 To switch on, add an app file under `06-applications/sbx/apps/chat/` whose
-`spec.source.path` is this directory. That one file is the switch.
+`spec.source.path` is this directory and which excludes `broker/**`. That one
+file is the switch.
 
 ## Not settled
 

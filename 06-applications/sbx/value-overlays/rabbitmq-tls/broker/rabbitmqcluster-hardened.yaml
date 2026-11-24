@@ -1,23 +1,27 @@
-# The broker with TLS added and nothing taken away. This exists so certificate
-# sign-in can be proved while passwords still work: the live broker has no
-# spec.tls at all, so without this there is no amqps listener to test against
-# and the first real test of EXTERNAL would be the cutover itself.
+# The end state. Replaces the body of ../../rabbitmq/rabbitmq-cluster.yaml at
+# step 6 of the README — applying it before certificate login is proved locks
+# every caller out. Step 4 commits the transitional broker first, which adds
+# TLS without removing anything, so that proof is possible.
 #
-# Applied at step 3, replaced by 05-rabbitmqcluster-tls.yaml at step 6.
+# Not applied from this directory: an Application reading it must exclude
+# broker/**, or it collides with the Application that owns the live manifest.
 apiVersion: rabbitmq.com/v1beta1
 kind: RabbitmqCluster
 metadata:
   name: rabbitmqcluster-chat
   namespace: unique
 spec:
+  # Still the management image. The cluster operator writes enabled_plugins
+  # itself and always includes rabbitmq_management, so a plain image would be
+  # told to load a plugin it does not ship. Removing the management API is an
+  # open question, not something this file settles — see the README.
   image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management
   replicas: 1
   tls:
     secretName: rabbitmqcluster-chat-server-tls
+    # Setting the CA is what makes the broker ask for a client certificate.
     caSecretName: rabbitmq-ca-tls
-    # The difference from 05: plaintext stays open, so a failed certificate
-    # login costs nothing and every existing caller keeps working.
-    disableNonTLSListeners: false
+    disableNonTLSListeners: true
   resources:
     requests:
       cpu: '200m'
@@ -35,15 +39,12 @@ spec:
       cluster_partition_handling = pause_minority
       disk_free_limit.relative = 1.0
       collect_statistics_interval = 10000
-      # Both mechanisms, so certificates and passwords are accepted side by side.
-      auth_mechanisms.1 = PLAIN
-      auth_mechanisms.2 = AMQPLAIN
-      auth_mechanisms.3 = EXTERNAL
+      auth_mechanisms.1 = EXTERNAL
       ssl_cert_login_from = common_name
-      # verify_peer without fail_if_no_peer_cert: a certificate is checked when
-      # offered, and a client that offers none can still sign in with a password.
       ssl_options.verify = verify_peer
-      ssl_options.fail_if_no_peer_cert = false
+      ssl_options.fail_if_no_peer_cert = true
+      # Per-queue series. Without this the exporter publishes only aggregates
+      # and KEDA has nothing to scale a single queue on.
       prometheus.return_per_object_metrics = true
   persistence:
     storageClassName: gp3
