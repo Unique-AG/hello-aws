@@ -4,8 +4,9 @@
 
 ## Checks
 
-- [ ] Terraform changes: `./scripts/validate.sh <layer> <env> true` passes — format, tflint,
-      shellcheck, trivy and checkov. CI runs `terraform validate` on top of this.
+- [ ] Terraform changes: `./scripts/validate.sh <layer> <env> true` passes, where `<layer>` is
+      one of bootstrap, governance, infrastructure, data-and-ai, compute. That covers format,
+      tflint, shellcheck, trivy and checkov; CI runs `terraform validate` on top of it.
 - [ ] No credentials, tenant names or environment-specific values are added — this repository is public
 
 ### Runbook
