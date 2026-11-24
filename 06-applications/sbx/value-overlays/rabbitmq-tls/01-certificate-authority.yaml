@@ -1,0 +1,36 @@
+# A CA private to the broker. Client certificates are the credential here, so
+# this issuer must not sign anything else.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: rabbitmq-selfsigned
+  namespace: unique
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rabbitmq-ca
+  namespace: unique
+spec:
+  isCA: true
+  commonName: rabbitmq-ca
+  secretName: rabbitmq-ca-tls
+  duration: 43800h # 5 years
+  renewBefore: 8760h
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: rabbitmq-selfsigned
+    kind: Issuer
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: rabbitmq-ca
+  namespace: unique
+spec:
+  ca:
+    secretName: rabbitmq-ca-tls

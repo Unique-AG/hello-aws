@@ -1,0 +1,77 @@
+# The end state: TLS-only listeners and EXTERNAL auth. Applying it before
+# certificate login is proved locks every caller out — see README step 6.
+apiVersion: rabbitmq.com/v1beta1
+kind: RabbitmqCluster
+metadata:
+  name: rabbitmqcluster-chat
+  namespace: unique
+spec:
+  # Management image is required: the operator always enables the plugin.
+  image: <ECR_REGISTRY_THIRDPARTY_BARE>/public.ecr.aws/docker/library/rabbitmq:3.13-management@sha256:e582c0bc7766f3342496d8485efb5a1df782b5ce3886ad017e2eaae442311f69
+  replicas: 1
+  tls:
+    secretName: rabbitmqcluster-chat-server-tls
+    # Setting the CA is what makes the broker ask for a client certificate.
+    caSecretName: rabbitmq-ca-tls
+    disableNonTLSListeners: true
+  resources:
+    requests:
+      cpu: '200m'
+      memory: 1Gi
+    limits:
+      memory: 1Gi
+  secretBackend:
+    externalSecret:
+      name: rabbitmqcluster-chat-default-user
+  rabbitmq:
+    additionalPlugins:
+      - rabbitmq_auth_mechanism_ssl
+      - rabbitmq_prometheus
+    additionalConfig: |
+      cluster_partition_handling = pause_minority
+      disk_free_limit.relative = 1.0
+      collect_statistics_interval = 10000
+      auth_mechanisms.1 = EXTERNAL
+      ssl_cert_login_from = common_name
+      ssl_options.verify = verify_peer
+      ssl_options.fail_if_no_peer_cert = true
+      # Per-queue series. Without this the exporter publishes only aggregates
+      # and KEDA has nothing to scale a single queue on.
+      prometheus.return_per_object_metrics = true
+  persistence:
+    storageClassName: gp3
+    storage: "10Gi"
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                - rabbitmqcluster-chat
+          topologyKey: kubernetes.io/hostname
+  override:
+    statefulSet:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: rabbitmq
+              securityContext:
+                privileged: false
+                allowPrivilegeEscalation: false
+            initContainers:
+            - name: setup-container
+              securityContext:
+                privileged: false
+                allowPrivilegeEscalation: false
+            topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: "topology.kubernetes.io/zone"
+              whenUnsatisfiable: ScheduleAnyway
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/name: rabbitmqcluster-chat
