@@ -4,9 +4,8 @@
 
 ## Checks
 
-- [ ] `.scripts/local-ci.sh` passes
+- [ ] Terraform changes: `./scripts/validate.sh <layer> <env> true` passes
 - [ ] No credentials, tenant names or environment-specific values are added — this repository is public
-- [ ] Terraform under `01-`–`05-` is reviewed as a change CI applies once it reaches a deploy branch
 
 ### Runbook
 - [ ] No registered procedure (for example docs/release-concept.md) changes how it works
