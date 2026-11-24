@@ -471,20 +471,34 @@ fi
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo -e "${BLUE}📊 Summary:${NC}"
-echo -e "   ✅ Terraform initialized"
-echo -e "   ✅ Configuration validated"
+# A check that did not run is reported as skipped, not omitted: a silent
+# summary reads exactly like a complete one.
+if [[ "$SKIP_INIT" == "true" ]]; then
+  echo -e "   ⏭️  Terraform init and validate SKIPPED (lint-only mode)"
+else
+  echo -e "   ✅ Terraform initialized"
+  echo -e "   ✅ Configuration validated"
+fi
 echo -e "   ✅ Code formatting checked"
 if [[ "$TFLINT_AVAILABLE" == "true" ]]; then
   echo -e "   ✅ Advanced linting (tflint) completed"
+else
+  echo -e "   ⏭️  Advanced linting (tflint) SKIPPED (not installed)"
 fi
 if [[ "$SHELLCHECK_AVAILABLE" == "true" ]]; then
   echo -e "   ✅ Shell script linting (shellcheck) completed"
+else
+  echo -e "   ⏭️  Shell script linting (shellcheck) SKIPPED (not installed)"
 fi
 if [[ "$TRIVY_AVAILABLE" == "true" ]]; then
   echo -e "   ✅ Security scanning (trivy) completed"
+else
+  echo -e "   ⏭️  Security scanning (trivy) SKIPPED (not installed)"
 fi
 if [[ "$CHECKOV_AVAILABLE" == "true" ]]; then
   echo -e "   ✅ Compliance scanning (checkov) completed"
+else
+  echo -e "   ⏭️  Compliance scanning (checkov) SKIPPED (not installed)"
 fi
 echo ""
 
