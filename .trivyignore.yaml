@@ -4,11 +4,6 @@
 # `paths` are relative to the scanned directory, not the repository root,
 # because CI scans one layer at a time.
 misconfigurations:
-  - id: AVD-AWS-0053
-    paths:
-      - "alb-cloudfront.tf"
-    statement: Public-facing WebSocket ALB by design; see docs/security-baseline.md
-
   - id: AVD-AWS-0054
     paths:
       - "alb-cloudfront.tf"
