@@ -47,7 +47,7 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-15 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+16 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
@@ -57,8 +57,9 @@ Five managed addons, all deployed after the node group is ready:
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` + AgentCore `InvokeWebSearch` (and `InvokeGateway` when the gateway is enabled) |
 | LiteLLM | `unique` | `litellm` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` |
-| Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `*-ai-data` |
-| Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` |
+| Chat | `unique` | `backend-service-chat` | S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 | Prometheus | `unique` | `kube-prometheus-stack-prometheus` | Managed Prometheus `RemoteWrite`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
@@ -280,7 +281,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Access Control
 
 - **EKS Auth**: API-only mode, access entries (no `aws-auth` ConfigMap)
-- **Pod Identity**: 15 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
+- **Pod Identity**: 16 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
 - **ACR Credentials**: Write-only (`secret_string_wo`) + ephemeral variables — never in Terraform state or plan files
 
 ### Audit and Compliance
@@ -400,6 +401,7 @@ enable_agentcore_gateway      = false   # gateway + connector target; default fa
 - `pod_identity_assistants_core_role_arn`
 - `pod_identity_cert_manager_route53_role_arn`
 - `pod_identity_litellm_role_arn`
+- `pod_identity_chat_role_arn`
 - `pod_identity_ingestion_role_arn`
 - `pod_identity_ingestion_worker_role_arn`
 - `pod_identity_speech_role_arn`
