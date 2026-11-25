@@ -84,6 +84,20 @@ data "aws_iam_policy_document" "grafana_assume" {
       type        = "Service"
       identifiers = ["grafana.amazonaws.com"]
     }
+
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+
+    condition {
+      # The workspace id is generated and the workspace takes this role as an
+      # input, so AWS documents a wildcard here.
+      test     = "ArnLike"
+      variable = "aws:SourceArn"
+      values   = ["arn:aws:grafana:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:/workspaces/*"]
+    }
   }
 }
 
