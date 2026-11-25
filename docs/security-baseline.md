@@ -117,9 +117,10 @@ the `SOURCES` list in the script rather than by a self-test case.
 
 Finding a resource's body no longer needs a tokenizer. Four successive attempts to scan
 strings and comments by hand each failed on a case the next one found, so the body now
-ends at the first line that is exactly `}` — `terraform fmt` puts a top-level block's
-closing brace there, and the validate job enforces the formatting. The remaining
-assumption is that no heredoc in these files contains a line that is exactly `}`.
+ends at the first top-level closing brace — `terraform fmt` puts it at column 0 and the
+validate job enforces the formatting. A trailing comment on that brace survives `fmt`,
+so the pattern allows one. The remaining assumption is that no heredoc in these files
+begins a line with `}`.
 
 The S3 gateway endpoint is scoped by **resource** instead, and deliberately carries no
 principal condition. Two of its statements name buckets AWS owns — the ECR layer store

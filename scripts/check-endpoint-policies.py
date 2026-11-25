@@ -24,15 +24,12 @@ RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{'
 POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
 
 
-CLOSE = re.compile(r"^\}$", re.M)
+# A top-level closing brace, optionally with the trailing comment fmt keeps.
+CLOSE = re.compile(r"^\}[ \t]*(?:(?:#|//).*)?$", re.M)
 
 
 def _body(text: str, start: int) -> str:
-    """Resource body, ending at the first line that is exactly a closing brace.
-
-    `terraform fmt` puts a top-level block's closing brace alone at column 0,
-    and the validate job enforces it, so no tokenizer is needed here.
-    """
+    """Ends at the first top-level closing brace, which `terraform fmt` guarantees."""
     m = CLOSE.search(text, start)
     return text[start : m.end()] if m else text[start:]
 
@@ -104,6 +101,12 @@ def selftest() -> int:
             "a commented opening brace does not swallow the next resource",
             'resource "aws_vpc_endpoint" "a" {\n  # {\n}\n'
             'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
+            ["a"],
+        ),
+        (
+            "a closing brace with a trailing comment still ends the body",
+            'resource "aws_vpc_endpoint" "a" {\n  vpc_id = "x"\n} # endpoint a\n'
+            'resource "aws_vpc_endpoint" "b" {\n  policy = local.p\n}\n',
             ["a"],
         ),
         (
