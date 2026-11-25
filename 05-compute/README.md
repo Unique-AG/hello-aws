@@ -5,7 +5,7 @@
 The compute layer provides containerized compute infrastructure: Amazon EKS with Pod Identity-based workload IAM and Amazon ECR with pull-through caching (Docker Hub, ECR Public, Quay, GHCR, ACR). This layer supports three network distribution models (see [root README](../README.md#network-access-model)):
 
 - **Internal** (default): Private-only access via corporate network (VPN / Direct Connect / Transit Gateway)
-- **CloudFront**: Public internet access via CloudFront edge network — NLB, ALBs, and VPC Origin are managed in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`)
+- **CloudFront**: Public internet access via CloudFront edge network — NLB, ALB, and VPC Origin are managed in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`)
 - **Dual**: Both corporate network and public internet access (Transit Gateway configured in infrastructure layer)
 
 ACR credentials use Terraform's `secret_string_wo` write-only attribute and `ephemeral` variables so they never appear in state or plan files.
@@ -212,9 +212,9 @@ Pull-through cache reduces external registry dependencies and egress costs. For 
 - **Conditional**: ACR-related cache rules are skipped entirely if `acr_registry_url` is empty
 - **Must match exactly**: the ACR entries in `ecr_pull_through_cache_upstream_registries` (the full `<registry>.azurecr.io` hostname and its short alias) must equal `acr_registry_url` and the alias derived from it. Entries with no known upstream URL are dropped without error, so a mismatch shows up only as unpullable application images; the `check` block in `ecr.tf` raises a warning when this happens. `06-applications/scripts/configure-instance.sh` rewrites the registry list and the root `common.auto.tfvars` `acr_registry_url` together to keep them in step.
 
-### Ingress NLB, ALBs, and CloudFront VPC Origin (Infrastructure Layer)
+### Ingress NLB, ALB, and CloudFront VPC Origin (Infrastructure Layer)
 
-The ingress NLB, ALBs, and CloudFront VPC Origin are **managed in the infrastructure layer** (`03-infrastructure`), not in this layer. This separation keeps pure networking resources independent of EKS:
+The ingress NLB, ALB, and CloudFront VPC Origin are **managed in the infrastructure layer** (`03-infrastructure`), not in this layer. This separation keeps pure networking resources independent of EKS:
 
 - **Ingress NLB**: Terraform-managed internal NLB with IP-type target groups. The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration or `kong_nlb_dns_name` variable needed.
 - **CloudFront ALB**: Internal ALB for CloudFront VPC Origin, forwards to NLB
@@ -299,7 +299,7 @@ See **[docs/security-baseline.md](../docs/security-baseline.md)** for the comple
 
 ### Prerequisites
 
-1. Infrastructure layer deployed (provides VPC, KMS keys, subnets, VPC endpoints, management server, ingress NLB, ALBs, VPC Origin)
+1. Infrastructure layer deployed (provides VPC, KMS keys, subnets, VPC endpoints, management server, ingress NLB, ALB, VPC Origin)
 2. `common.auto.tfvars` configured at repository root
 3. Environment-specific configuration in `environments/{env}/00-config.auto.tfvars`
 
@@ -336,7 +336,7 @@ enable_agentcore_web_search   = true    # direct InvokeWebSearch grant; default 
 enable_agentcore_gateway      = false   # gateway + connector target; default false
 ```
 
-> **Note**: Ingress NLB, ALBs, and CloudFront VPC Origin are configured in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`).
+> **Note**: Ingress NLB, ALB, and CloudFront VPC Origin are configured in the infrastructure layer (`enable_ingress_nlb`, `enable_cloudfront_vpc_origin`).
 
 ### Deployment Steps
 

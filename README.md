@@ -88,7 +88,7 @@ During initial deployment, Terraform accesses AWS services (S3 state bucket, KMS
 2. Deploy **03-infrastructure**, which provisions VPC endpoints (including S3 Gateway Endpoint), a management server with SSM Session Manager, and GitHub Actions self-hosted runners — all within private subnets
 3. From this point forward, all operations are performed through SSM Session Manager or the CI/CD runners. The S3 state bucket can be locked down to VPC-only access, and all remaining layers are deployed entirely internally
 
-For ephemeral, short-lived evaluation deployments, each layer exposes configuration variables to optionally enable public access (e.g., public EKS API endpoint, public ALB). This is not recommended for production.
+For ephemeral, short-lived evaluation deployments, each layer exposes configuration variables to optionally enable public access (e.g., public EKS API endpoint). This is not recommended for production.
 
 ## File Organization
 

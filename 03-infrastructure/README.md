@@ -2,7 +2,7 @@
 
 ## Overview
 
-The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
+The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALB + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
 
 ## Design Rationale
 
@@ -76,7 +76,7 @@ An optional EC2 management server provides:
 - **NAT Gateway Alarms**: `ErrorPortAllocation` and `PacketsDropCount` per gateway, wired to SNS
 - **Production network floor**: variable validation refuses a production plan with `single_nat_gateway = true` or `availability_zone_count` below 3
 
-### Ingress NLB, ALBs, and CloudFront VPC Origin
+### Ingress NLB, ALB, and CloudFront VPC Origin
 
 The infrastructure layer manages the full ingress load balancing stack, keeping networking resources independent of EKS:
 
@@ -88,6 +88,30 @@ The infrastructure layer manages the full ingress load balancing stack, keeping 
 Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
 
 WebSocket uses the same path. CloudFront supports WebSocket over a VPC origin, so no public load balancer is involved.
+
+#### Migrating from the public WebSocket ALB
+
+Earlier revisions of this layer created a second, internet-facing ALB and the
+distribution reached it as a standard origin for `chat/graphql*`. An existing
+deployment on that model still has such an origin, and applying this layer
+removes the load balancer behind it. Do these in order, or WebSocket breaks:
+
+1. **In the connectivity account, first.** Unset `websocket_origin_domain` for
+   the tenant. That drops the bypass origin and its `chat/graphql*` behaviour,
+   and the path falls through to the default behaviour, which is identical
+   except that it targets the VPC origin. Apply it there before this layer.
+2. **Check the distribution.** It must list `internal-alb-origin` as its only
+   origin and carry no ordered cache behaviours, with status `Deployed`.
+3. **Verify WebSocket**, by opening a chat in the browser and confirming an
+   answer comes back. A `502` or `504` means the VPC origin cannot reach the
+   ALB; a `401` from the gateway means the path is intact and the request was
+   simply unauthenticated.
+4. **Then apply this layer.**
+
+Rollback narrows once step 4 runs. Until then, restoring
+`websocket_origin_domain` puts WebSocket back on the public origin in minutes.
+Afterwards the public path no longer exists in this repository, and restoring
+it means recreating the load balancer and repointing the origin.
 
 #### The VPC origin id is a cross-account contract
 
