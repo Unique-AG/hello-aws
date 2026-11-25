@@ -244,7 +244,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 - **Private Subnets**: Workloads in private subnets (no public IPs)
 - **Isolated Subnets**: Databases with no internet access
 - **VPC-Only Management Server**: No internet egress from jump server
-- **S3 Endpoint Policy**: Scoped to Terraform state, application S3 buckets, and ECR layer buckets only
+- **S3 Endpoint Policy**: Scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories
 
 ### Encryption
 
