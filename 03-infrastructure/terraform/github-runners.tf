@@ -69,6 +69,14 @@ resource "aws_iam_role" "github_runners" {
           Service = "codebuild.amazonaws.com"
         }
         Action = "sts:AssumeRole"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+            # Built from the project name, not the project resource, which
+            # takes this role as an input.
+            "aws:SourceArn" = "arn:aws:codebuild:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:project/${module.naming.id}-github-runners"
+          }
+        }
       }
     ]
   })
