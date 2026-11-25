@@ -74,7 +74,7 @@ An optional EC2 management server provides:
 
 - **SNS Topic**: Encrypted with general KMS key, supports email subscriptions via `alert_email_endpoints`
 - **NAT Gateway Alarms**: `ErrorPortAllocation` and `PacketsDropCount` per gateway, wired to SNS
-- **NAT HA Guard**: `check` block warns if `single_nat_gateway = true` in production
+- **Production network floor**: variable validation refuses a production plan with `single_nat_gateway = true` or `availability_zone_count` below 3
 
 ### Ingress NLB, ALBs, and CloudFront VPC Origin
 
@@ -134,7 +134,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 - **Default Security Group**: Locked down (deny all)
 - **VPC Flow Logs**: CloudWatch-backed, 60s aggregation, KMS-encrypted
 - **Internet Gateway**: Provides internet access for NAT Gateways
-- **NAT Gateways**: Configurable — one per AZ or single (with HA guard for prod)
+- **NAT Gateways**: Configurable — one per AZ, or single in sbx and dev only
 - **Subnets**: Right-sized per tier (public /28, private /22, isolated /26, runners /26)
 - **Route Tables**: Always created for all tiers; NAT route added conditionally
 
@@ -264,7 +264,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 ### Reliability
 
 - **Multi-AZ Deployment**: Subnets and NAT Gateways across availability zones
-- **NAT HA Guard**: Warning when production uses single NAT Gateway
+- **Production network floor**: a production plan is refused with a single NAT Gateway, or with fewer than three Availability Zones
 - **Always-On Route Tables**: Private route tables created unconditionally
 - **Monitoring Alarms**: NAT Gateway health alerts via SNS
 
@@ -303,7 +303,7 @@ enable_secondary_cidr = true  # 100.64.0.0/20 for EKS pods
 
 # NAT Gateway
 enable_nat_gateway = true
-single_nat_gateway = true  # Single NAT for non-prod (HA guard warns in prod)
+single_nat_gateway = true  # sbx and dev only; a production plan is refused
 
 # Management Server
 enable_management_server        = true

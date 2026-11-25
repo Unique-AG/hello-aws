@@ -80,12 +80,22 @@ variable "availability_zone_count" {
     condition     = var.availability_zone_count >= 1 && var.availability_zone_count <= 3
     error_message = "availability_zone_count must be between 1 and 3."
   }
+  validation {
+    # Only sbx and dev may sit below the floor; an unrecognised environment
+    # name is treated as production, so a new installation fails closed.
+    condition     = contains(["sbx", "dev"], var.environment) || var.availability_zone_count >= 3
+    error_message = "A production environment needs three Availability Zones: set availability_zone_count = 3, or name the environment sbx or dev."
+  }
 }
 
 variable "single_nat_gateway" {
-  description = "Use a single NAT Gateway instead of one per AZ. Not recommended for production (use check block for HA guard)."
+  description = "Use a single NAT Gateway instead of one per AZ. Refused in production by the validation below."
   type        = bool
   default     = false
+  validation {
+    condition     = contains(["sbx", "dev"], var.environment) || !var.single_nat_gateway
+    error_message = "A production environment needs one NAT Gateway per zone: set single_nat_gateway = false, or name the environment sbx or dev."
+  }
 }
 
 variable "enable_secondary_cidr" {
