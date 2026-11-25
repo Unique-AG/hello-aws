@@ -24,12 +24,39 @@ RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{'
 POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
 
 
+def _body(text: str, open_brace: int) -> str:
+    """Return the resource block starting at its opening brace, brace-matched.
+
+    Counting has to ignore braces inside quoted strings, or a value such as
+    jsonencode containing a literal brace would end the block early or late.
+    """
+    depth, i, n = 0, open_brace, len(text)
+    in_str = False
+    while i < n:
+        c = text[i]
+        if in_str:
+            if c == "\\":
+                i += 2
+                continue
+            if c == '"':
+                in_str = False
+        elif c == '"':
+            in_str = True
+        elif c == "{":
+            depth += 1
+        elif c == "}":
+            depth -= 1
+            if depth == 0:
+                return text[open_brace : i + 1]
+        i += 1
+    return text[open_brace:]
+
+
 def endpoints(text: str):
-    """Yield (name, body) for each aws_vpc_endpoint block in the file."""
-    starts = [(m.start(), m.group(1)) for m in RESOURCE.finditer(text)]
-    for i, (pos, name) in enumerate(starts):
-        end = starts[i + 1][0] if i + 1 < len(starts) else len(text)
-        yield name, text[pos:end]
+    """Yield (name, body) per aws_vpc_endpoint, each body its own block only."""
+    for m in RESOURCE.finditer(text):
+        brace = text.index("{", m.start())
+        yield m.group(1), _body(text, brace)
 
 
 def main() -> int:
@@ -66,5 +93,38 @@ def main() -> int:
     return 0
 
 
+def selftest() -> int:
+    """Cases the check has already been wrong about, so it cannot regress."""
+    EP = 'resource "aws_vpc_endpoint" "a" {\n  vpc_id = x\n%s}\n'
+    cases = [
+        ("policy present", EP % "  policy = local.p\n", []),
+        ("policy null", EP % "  policy = null\n", ["a"]),
+        ("policy empty", EP % '  policy = ""\n', ["a"]),
+        ("no policy", EP % "", ["a"]),
+        ("nested policy only", EP % "  lifecycle {\n    policy = x\n  }\n", ["a"]),
+        # The body must stop at its own brace: otherwise this IAM resource's
+        # policy is read as the endpoint's and the gap passes unseen.
+        (
+            "policy-less endpoint followed by an IAM policy",
+            EP % "" + 'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
+            ["a"],
+        ),
+        (
+            "jsonencode braces and a quoted brace do not end the block",
+            'resource "aws_vpc_endpoint" "a" {\n  tags = { N = "{" }\n'
+            "  policy = jsonencode({ S = [{ E = \"Allow\" }] })\n}\n",
+            [],
+        ),
+    ]
+    bad = 0
+    for label, text, want in cases:
+        got = [n for n, b in endpoints(text) if not POLICY.search(b)]
+        ok = got == want
+        bad += 0 if ok else 1
+        print(f"  {'ok  ' if ok else 'FAIL'} {label}: missing={got} want={want}")
+    print("selftest passed." if not bad else f"{bad} selftest case(s) failed.")
+    return 1 if bad else 0
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(selftest() if "--selftest" in sys.argv else main())

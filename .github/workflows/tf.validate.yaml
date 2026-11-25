@@ -107,5 +107,8 @@ jobs:
           persist-credentials: false
 
       # Standard library only, so there is nothing to install or pin.
+      - name: The check still catches what it is meant to
+        run: python3 scripts/check-endpoint-policies.py --selftest
+
       - name: Every VPC endpoint declares a policy
         run: python3 scripts/check-endpoint-policies.py

@@ -110,6 +110,9 @@ callers to principals in that layer's account, or in the organization when
 fails the build when an endpoint has no policy at all, or declares a null or empty one.
 The check reads the Terraform rather than a plan, so it needs no credentials and no state,
 and it fails if it parses no endpoints — a broken parser must not read as a clean tree.
+`--selftest` runs it against cases it has already been wrong about, including a
+policy-less endpoint followed by an IAM policy resource, so the parser cannot regress
+into reading a neighbouring resource's policy as the endpoint's own.
 The default it guards against is invisible: an unpoliced endpoint works, warns about
 nothing, and only shows up in a review of the rendered policy.
 
