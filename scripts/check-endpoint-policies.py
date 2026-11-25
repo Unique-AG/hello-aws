@@ -25,23 +25,21 @@ POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
 
 
 def _body(text: str, open_brace: int) -> str:
-    """Return the resource block starting at its opening brace, brace-matched.
-
-    Counting has to ignore braces inside quoted strings, or a value such as
-    jsonencode containing a literal brace would end the block early or late.
-    """
+    """Return the brace-matched block. Braces in strings and comments do not count."""
     depth, i, n = 0, open_brace, len(text)
-    in_str = False
     while i < n:
         c = text[i]
-        if in_str:
-            if c == "\\":
-                i += 2
-                continue
-            if c == '"':
-                in_str = False
-        elif c == '"':
-            in_str = True
+        two = text[i : i + 2]
+        if c == '"':  # quoted string
+            i += 1
+            while i < n and text[i] != '"':
+                i += 2 if text[i] == "\\" else 1
+        elif c == "#" or two == "//":  # line comment
+            nl = text.find("\n", i)
+            i = n if nl < 0 else nl
+        elif two == "/*":  # block comment
+            close = text.find("*/", i + 2)
+            i = n if close < 0 else close + 1
         elif c == "{":
             depth += 1
         elif c == "}":
@@ -107,6 +105,19 @@ def selftest() -> int:
         (
             "policy-less endpoint followed by an IAM policy",
             EP % "" + 'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
+            ["a"],
+        ),
+        # A brace inside a comment is not a delimiter: one truncates the body
+        # and rejects a valid endpoint, the other swallows the next resource.
+        (
+            "a commented closing brace does not truncate the body",
+            'resource "aws_vpc_endpoint" "a" {\n  # }\n  policy = local.p\n}\n',
+            [],
+        ),
+        (
+            "a commented opening brace does not swallow the next resource",
+            'resource "aws_vpc_endpoint" "a" {\n  # {\n}\n'
+            'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
             ["a"],
         ),
         (
