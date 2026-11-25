@@ -29,7 +29,6 @@ are inline `#checkov:skip=` comments on the resource. Both point back here for r
 
 | Rule | Severity | Resource | Rationale |
 |---|---|---|---|
-| AVD-AWS-0053 | HIGH | `aws_lb.websocket` | Public-facing by design — WebSocket ALB serves client connections that cannot traverse CloudFront |
 | AVD-AWS-0054 | CRITICAL | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, HTTP is sufficient for private VPC traffic |
 | AVD-AWS-0104 | CRITICAL | `aws_security_group.github_runners` | Runners require HTTPS (443) egress to `0.0.0.0/0` for GitHub API and package registries; scoped to port 443 only |
 
@@ -37,7 +36,7 @@ are inline `#checkov:skip=` comments on the resource. Both point back here for r
 
 | Rule | Resource | Rationale |
 |---|---|---|
-| CKV_AWS_91 | `aws_lb.ingress_nlb`, `aws_lb.websocket` | ALB access logging deferred — requires dedicated S3 log bucket with ELB write policy. CloudFront access logs provide partial coverage for the internal ALB. Public WebSocket ALB has no compensating control. **Remediation: provision log bucket before production.** |
+| CKV_AWS_91 | `aws_lb.cloudfront`, `aws_lb.ingress_nlb` | Access logging deferred on both: it needs a dedicated S3 log bucket with an ELB write policy. For the internal CloudFront ALB, CloudFront's own access logs cover the same requests and give partial coverage. The ingress NLB has no such compensating log. **Remediation: provision the log bucket before production.** |
 | CKV_AWS_2 | `aws_lb_listener.cloudfront_http` | Same listener as CKV_AWS_103 below — HTTP is the CloudFront VPC Origin's private hop to the ingress NLB, not a client-facing listener. **Compensating control:** CloudFront terminates TLS 1.2+ at the edge. |
 | CKV_AWS_290, CKV_AWS_355 | `aws_iam_role_policy.github_runners` | The ENI actions (`CreateNetworkInterface`, `DescribeNetworkInterfaces`, `DeleteNetworkInterface`, `Describe*`) are AWS's documented requirement for running CodeBuild inside a VPC and cannot be resource-scoped — the interfaces do not exist until the build starts. Log writes in the same policy **are** scoped, to this account's log groups. **Remediation:** add an `ec2:Subnet` / `ec2:AuthorizedService` condition on `CreateNetworkInterfacePermission` per AWS's VPC guidance. |
 | CKV_AWS_61 | `aws_iam_role.connectivity_account` | The check fires on the account-root `Principal` and does not read `Condition`, so it reports on every conditioned cross-account trust. Root-plus-conditions is AWS's documented idiom for this: the actual constraints are `aws:PrincipalOrgID` and an `ArnLike` on `aws:PrincipalArn` restricted to `connectivity_account_principals`, which defaults to the single terraform-execution role pattern and rejects a bare `role/*` or `user/*` by variable validation. **Note:** because that list is computed, checkov cannot evaluate the policy and would report this check as passing — the skip is kept deliberately so the suppression stays visible rather than resting on a false pass. |
@@ -46,10 +45,9 @@ are inline `#checkov:skip=` comments on the resource. Both point back here for r
 | CKV_AWS_290 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions do not support resource-level constraints (AWS API limitation) |
 | CKV_AWS_355 | `aws_iam_role_policy.connectivity_transit_gateway` | EC2 Describe and transit gateway actions require `Resource: *` (AWS API limitation) |
 | CKV_AWS_338 | `aws_cloudwatch_log_group.vpc_flow_logs` | Retention is variable-driven per environment (7d sbx, 30d default, 365d prod) |
-| CKV_AWS_378 | `aws_lb_target_group.ingress_nlb`, `aws_lb_target_group.websocket_ingress` | Target groups carry `protocol = "HTTP"` because the path is CloudFront/WebSocket-ALB → **target group HTTP** → ingress controller pod. End-to-end transport security is preserved: CloudFront edge terminates TLS 1.2+ for clients, and the in-VPC hop from ALB → ingress controller is over private subnets only. Bumping the TG protocol to HTTPS would require terminating TLS again at the ingress controller for the same path, doubling cert management without changing the threat model. |
-| CKV2_AWS_5 | `aws_security_group.alb_cloudfront`, `aws_security_group.alb_websocket`, `aws_security_group.ingress_nlb` | All three SGs are conditionally created (`count = var.enable_ingress_nlb ? 1 : 0`) and attached when active. Checkov's graph check evaluates each `count = 0` instantiation as orphaned because no resource references the (non-existent) SG, and surfaces `count = 1` cases when the dependent ALB/NLB declarations are also under the same `count`. Verified by inspection: `aws_lb.cloudfront[0]`, `aws_lb.websocket[0]`, and the ingress NLB target groups attach these SGs whenever `enable_ingress_nlb` is true. |
+| CKV_AWS_378 | `aws_lb_target_group.ingress_nlb` | Target groups carry `protocol = "HTTP"` because the path is CloudFront → ALB → **target group HTTP** → ingress controller pod. End-to-end transport security is preserved: CloudFront edge terminates TLS 1.2+ for clients, and the in-VPC hop from ALB → ingress controller is over private subnets only. Bumping the TG protocol to HTTPS would require terminating TLS again at the ingress controller for the same path, doubling cert management without changing the threat model. |
+| CKV2_AWS_5 | `aws_security_group.alb_cloudfront`, `aws_security_group.ingress_nlb` | Both SGs are conditionally created (`count = var.enable_ingress_nlb ? 1 : 0`) and attached when active. Checkov's graph check evaluates each `count = 0` instantiation as orphaned because no resource references the (non-existent) SG, and surfaces `count = 1` cases when the dependent ALB/NLB declarations are also under the same `count`. Verified by inspection: `aws_lb.cloudfront[0]` and the ingress NLB target groups attach these SGs whenever `enable_ingress_nlb` is true. |
 | CKV2_AWS_5 | `aws_security_group.github_runners` | Attached to the CodeBuild project through `vpc_config.security_group_ids` (github-runners.tf). Checkov's graph check does not follow a CodeBuild VPC attachment, only EC2 instances and ENIs, so it reads the group as orphaned. Verified by inspection. |
-| CKV2_AWS_28 | `aws_lb.websocket` | The WebSocket ALB is internet-facing but **proxied by CloudFront** (not directly client-reachable). All inbound traffic is routed through CloudFront, which sits in front of the AWS WAF Web ACL. The compensating control (WAF on the CloudFront distribution, not the ALB) provides equivalent protection. Direct ALB access from non-CloudFront clients would be possible if the SG were misconfigured, but the SG (`aws_security_group.alb_websocket`) only allows ingress from CloudFront prefix list. **Re-evaluate** if the ALB is ever exposed without CloudFront in front. |
 
 ### 04-data-and-ai
 
@@ -144,7 +142,7 @@ The following settings are overridden in sbx `00-config.auto.tfvars` to enable f
 
 | Setting | sbx Value | Production Default | Risk |
 |---|---|---|---|
-| `alb_deletion_protection` | `false` | `true` | ALBs can be accidentally deleted |
+| `alb_deletion_protection` | `false` | `true` | A load balancer can be deleted by accident |
 
 The EKS public-endpoint relaxations that used to be listed here are gone: sbx now sets
 `eks_endpoint_private_access = true` with no public override, and access is via SSM to the

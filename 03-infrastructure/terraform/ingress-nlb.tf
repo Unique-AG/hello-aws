@@ -46,19 +46,6 @@ resource "aws_security_group_rule" "ingress_nlb_http_from_cloudfront_alb" {
   security_group_id        = aws_security_group.ingress_nlb[0].id
 }
 
-# Allow inbound HTTP from WebSocket ALB
-resource "aws_security_group_rule" "ingress_nlb_http_from_websocket_alb" {
-  count = var.enable_ingress_nlb ? 1 : 0
-
-  type                     = "ingress"
-  description              = "Allow HTTP from WebSocket ALB"
-  from_port                = 80
-  to_port                  = 80
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb_websocket[0].id
-  security_group_id        = aws_security_group.ingress_nlb[0].id
-}
-
 # Allow inbound HTTPS from CloudFront ALB
 resource "aws_security_group_rule" "ingress_nlb_https_from_cloudfront_alb" {
   count = var.enable_ingress_nlb ? 1 : 0
@@ -69,19 +56,6 @@ resource "aws_security_group_rule" "ingress_nlb_https_from_cloudfront_alb" {
   to_port                  = 443
   protocol                 = "tcp"
   source_security_group_id = aws_security_group.alb_cloudfront[0].id
-  security_group_id        = aws_security_group.ingress_nlb[0].id
-}
-
-# Allow inbound HTTPS from WebSocket ALB
-resource "aws_security_group_rule" "ingress_nlb_https_from_websocket_alb" {
-  count = var.enable_ingress_nlb ? 1 : 0
-
-  type                     = "ingress"
-  description              = "Allow HTTPS from WebSocket ALB"
-  from_port                = 443
-  to_port                  = 443
-  protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb_websocket[0].id
   security_group_id        = aws_security_group.ingress_nlb[0].id
 }
 

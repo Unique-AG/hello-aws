@@ -2,7 +2,7 @@
 
 ## Overview
 
-The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALBs + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
+The infrastructure layer provides the foundational networking and compute infrastructure including VPC, subnets, NAT Gateways, VPC endpoints, KMS keys, Secrets Manager, monitoring alarms, an optional management server, and the ingress load balancing stack (NLB + ALB + CloudFront VPC Origin). This layer establishes the network foundation that all other layers depend on.
 
 ## Design Rationale
 
@@ -76,21 +76,45 @@ An optional EC2 management server provides:
 - **NAT Gateway Alarms**: `ErrorPortAllocation` and `PacketsDropCount` per gateway, wired to SNS
 - **Production network floor**: variable validation refuses a production plan with `single_nat_gateway = true` or `availability_zone_count` below 3
 
-### Ingress NLB, ALBs, and CloudFront VPC Origin
+### Ingress NLB, ALB, and CloudFront VPC Origin
 
 The infrastructure layer manages the full ingress load balancing stack, keeping networking resources independent of EKS:
 
 - **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
 - **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
-- **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
-- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination on both ALBs.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination.
 - **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
 
 Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
 
-For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingress NLB → Ingress controller`
+WebSocket uses the same path. CloudFront supports WebSocket over a VPC origin, so no public load balancer is involved.
 
-> **Future**: The ambition is to consolidate the two ALBs into a single ALB once CloudFront VPC Origins support WebSocket traffic.
+#### Migrating from the public WebSocket ALB
+
+Earlier revisions of this layer created a second, internet-facing ALB and the
+distribution reached it as a standard origin for `chat/graphql*`. An existing
+deployment on that model still has such an origin, and applying this layer
+removes the load balancer behind it. Do these in order, or WebSocket breaks:
+
+1. **In the connectivity account, first.** Unset `websocket_origin_domain` for
+   the tenant. That drops the bypass origin and its `chat/graphql*` behaviour,
+   and the path falls through to the default behaviour, which is identical
+   except that it targets the VPC origin. Apply it there before this layer.
+2. **Check the distribution.** It must list `internal-alb-origin` as its only
+   origin and carry no ordered cache behaviours, with status `Deployed`.
+3. **Verify WebSocket**, by opening a chat in the browser and confirming an
+   answer comes back. A `401` from the gateway is the good sign: the request
+   crossed the whole path and was only unauthenticated. A `502` or `504` says
+   the response did not arrive, not where it was lost — `502` also follows an
+   origin certificate whose subject does not match the hostname, and `504` a
+   backend that is merely slow. Check ALB target health and the ingress
+   controller before concluding the origin link is at fault.
+4. **Then apply this layer.**
+
+Rollback narrows once step 4 runs. Until then, restoring
+`websocket_origin_domain` puts WebSocket back on the public origin in minutes.
+Afterwards the public path no longer exists in this repository, and restoring
+it means recreating the load balancer and repointing the origin.
 
 #### The VPC origin id is a cross-account contract
 
@@ -177,18 +201,17 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### Ingress NLB
 
-- **Security Group**: Inbound HTTP/HTTPS from CloudFront ALB and WebSocket ALB (SG-scoped rules), outbound to EKS pods (primary + secondary CIDR when enabled)
+- **Security Group**: Inbound HTTP/HTTPS from the CloudFront ALB (SG-scoped rules), outbound to EKS pods (primary + secondary CIDR when enabled)
 - **Network Load Balancer**: Internal, cross-zone enabled, private subnets
 - **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
 - **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group
 
-### ALBs for CloudFront
+### ALB for CloudFront
 
 - **CloudFront ALB**: Internal, security group restricted to CloudFront managed prefix list (HTTPS ingress only)
-- **WebSocket ALB**: Public (in public subnets), security group restricted to CloudFront managed prefix list
-- **Target Groups**: Both ALBs forward to Ingress NLB IPs (resolved via DNS), HTTP port 80
+- **Target Group**: Forwards to Ingress NLB IPs (resolved via DNS), HTTP port 80
 - **HTTPS Listeners**: TLS 1.3 policy, ACM wildcard certificate
-- **HTTP Listener**: CloudFront ALB forwards to NLB; WebSocket ALB redirects HTTP → HTTPS
+- **HTTP Listener**: Forwards to the NLB
 - **ACM Certificate**: DNS-validated wildcard certificate for the environment domain
 
 ### CloudFront VPC Origin
@@ -409,9 +432,8 @@ After deployment:
 - `ingress_nlb_dns_name`, `ingress_nlb_arn`, `ingress_nlb_security_group_id`
 - `ingress_target_group_http_arn`, `ingress_target_group_https_arn`
 
-### ALBs
+### ALB
 - `cloudfront_alb_arn`, `cloudfront_alb_dns_name`, `cloudfront_alb_security_group_id`
-- `websocket_alb_dns_name`
 - `internal_alb_certificate_arn`, `internal_alb_certificate_validation_records`
 
 ### CloudFront VPC Origin

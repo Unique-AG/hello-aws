@@ -357,11 +357,6 @@ output "cloudfront_alb_security_group_id" {
   value       = try(aws_security_group.alb_cloudfront[0].id, null)
 }
 
-output "websocket_alb_dns_name" {
-  description = "DNS name of the public WebSocket ALB (for CloudFront standard origin)"
-  value       = try(aws_lb.websocket[0].dns_name, null)
-}
-
 output "internal_alb_certificate_validation_records" {
   description = "DNS validation records for the internal ALB certificate"
   value = var.enable_ingress_nlb && var.internal_alb_certificate_domain != null ? {

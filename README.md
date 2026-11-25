@@ -71,12 +71,12 @@ hello-aws supports three network distribution models, configured via **05-comput
 | Model | Description | Ingress Path | 05-compute Variables | Best for |
 |---|---|---|---|---|
 | **Internal** | Private-only access via corporate network | VPN / Direct Connect / Transit Gateway | Default (no additional variables) | Production with corporate network access |
-| **CloudFront** | Public internet access via CloudFront edge network | CloudFront → VPC Origin → Internal ALB → Kong NLB; CloudFront → Public ALB → Kong NLB (WebSocket) | `kong_nlb_dns_name`, `kong_nlb_security_group_id`, `internal_alb_certificate_domain`, `enable_cloudfront_vpc_origin` | Production with public internet access |
+| **CloudFront** | Public internet access via CloudFront edge network | CloudFront → VPC Origin → Internal ALB → Kong NLB | `kong_nlb_dns_name`, `kong_nlb_security_group_id`, `internal_alb_certificate_domain`, `enable_cloudfront_vpc_origin` | Production with public internet access |
 | **Dual** | Corporate network + public internet access simultaneously | Corporate users via Transit Gateway; external users via CloudFront | CloudFront variables + `transit_gateway_id` | Enterprise with both internal and external users |
 
 The **internal** model is the recommended default. All services are accessible only from within the corporate network — users connect via VPN, Direct Connect, or Transit Gateway. This is the most secure configuration and requires the least infrastructure in the compute layer.
 
-The **CloudFront** model enables public internet access via the CloudFront edge network. An internal ALB terminates TLS and forwards to the Kong NLB via a CloudFront VPC Origin. A separate public ALB handles WebSocket traffic (VPC Origins don't support WebSocket). Both ALBs restrict ingress to CloudFront's managed prefix list. The VPC Origin is shared with the connectivity account via AWS RAM for CloudFront distribution setup.
+The **CloudFront** model enables public internet access via the CloudFront edge network. An internal ALB terminates TLS and forwards to the Kong NLB via a CloudFront VPC Origin, WebSocket included. The ALB restricts ingress to CloudFront's managed prefix list. The VPC Origin is shared with the connectivity account via AWS RAM for CloudFront distribution setup.
 
 The **dual** model combines both paths — corporate users access services directly via Transit Gateway while external users connect through CloudFront. This is typical for enterprise deployments where employees use the internal network and customers or partners use the public endpoint.
 
@@ -88,7 +88,7 @@ During initial deployment, Terraform accesses AWS services (S3 state bucket, KMS
 2. Deploy **03-infrastructure**, which provisions VPC endpoints (including S3 Gateway Endpoint), a management server with SSM Session Manager, and GitHub Actions self-hosted runners — all within private subnets
 3. From this point forward, all operations are performed through SSM Session Manager or the CI/CD runners. The S3 state bucket can be locked down to VPC-only access, and all remaining layers are deployed entirely internally
 
-For ephemeral, short-lived evaluation deployments, each layer exposes configuration variables to optionally enable public access (e.g., public EKS API endpoint, public ALB). This is not recommended for production.
+For ephemeral, short-lived evaluation deployments, each layer exposes configuration variables to optionally enable public access (e.g., public EKS API endpoint). This is not recommended for production.
 
 ## File Organization
 
@@ -316,7 +316,7 @@ Each layer has comprehensive documentation covering design rationale, security p
 - **[05-compute](./05-compute/README.md)**: Containerized compute (EKS, ECR)
   - Private EKS cluster with Pod Identity (8 workload roles)
   - ECR repositories with enhanced scanning and pull-through cache (Docker Hub, ECR Public, Quay, GHCR, ACR)
-  - CloudFront VPC Origin with internal ALB, public WebSocket ALB
+  - CloudFront VPC Origin with internal ALB
   - Cross-account IAM and optional Transit Gateway attachment
 
 - **[06-applications](./06-applications/README.md)**: Application deployment (GitOps)
