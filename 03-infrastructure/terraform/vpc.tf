@@ -59,6 +59,16 @@ resource "aws_iam_role" "vpc_flow_logs" {
           Service = "vpc-flow-logs.amazonaws.com"
         }
         Action = "sts:AssumeRole"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            # The flow log takes this role as an input, so its id cannot be
+            # known here; AWS documents a wildcard for exactly this case.
+            "aws:SourceArn" = "arn:aws:ec2:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:vpc-flow-log/*"
+          }
+        }
       }
     ]
   })
