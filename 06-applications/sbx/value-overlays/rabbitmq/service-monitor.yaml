@@ -1,6 +1,5 @@
-# The broker already serves metrics on the prometheus port — the operator always
-# enables rabbitmq_prometheus — but nothing scraped them, so queue depths and
-# rates existed and were discarded. KEDA's move to Prometheus needs this series.
+# rabbitmq_prometheus serves :15692/metrics; the operator always enables it.
+# Why it is scraped: docs/observability-baseline.md
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:

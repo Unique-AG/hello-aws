@@ -22,8 +22,12 @@ envVars:
       secretKeyRef:
         name: rabbitmqcluster-chat-default-user
         key: port
+# No /metrics endpoint, so no scraping — but keep the default alerts,
+# which read kube-state-metrics and need no endpoint.
 prometheus:
-  enabled: false
+  enabled: true
+  scraping:
+    enabled: false
 nodeSelector:
   scalability: steady
   lifecycle: persistent
