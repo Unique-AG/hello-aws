@@ -1,16 +1,10 @@
 name: '[shell] Validate'
 
-# Nothing else in CI lints shell scripts. Without this a finding can sit in a
-# script for a month: SC2015 entered seed-secrets.sh in #100 and was not found
-# until #215, four weeks later.
+# Lints every tracked shell script. No other workflow lints any.
 
 on:
-  # No path filter. Discovery below finds scripts by shebang, so a new one
-  # without a .sh suffix must still start this workflow — a `paths:` list keyed
-  # on the suffix would skip the very case the discovery exists for. The job
-  # takes about ten seconds, which is cheaper than that hole, and matches the
-  # reasoning in tf.validate.yaml: over-trigger rather than stall on a check
-  # that never reported.
+  # No paths filter: discovery finds scripts by shebang, so one without a .sh
+  # suffix must still start this job.
   pull_request:
 
 permissions:
