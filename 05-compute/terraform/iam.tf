@@ -363,6 +363,60 @@ resource "aws_eks_pod_identity_association" "litellm" {
 }
 
 #######################################
+# Chat Role
+#######################################
+# S3 and KMS access for the chat service.
+
+resource "aws_iam_role" "chat" {
+  name               = "${module.naming.id}-chat"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-chat"
+  }
+}
+
+data "aws_iam_policy_document" "chat" {
+  statement {
+    effect    = "Allow"
+    actions   = ["s3:ListBucket"]
+    resources = local.service_data_buckets
+  }
+
+  statement {
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:DeleteObject",
+      "s3:GetObjectVersion",
+      "s3:DeleteObjectVersion",
+    ]
+    resources = local.service_data_bucket_objects
+  }
+
+  statement {
+    # Both buckets are SSE-KMS on the general key, so object access needs it.
+    effect    = "Allow"
+    actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+}
+
+resource "aws_iam_role_policy" "chat" {
+  name   = "s3-access"
+  role   = aws_iam_role.chat.id
+  policy = data.aws_iam_policy_document.chat.json
+}
+
+resource "aws_eks_pod_identity_association" "chat" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "unique"
+  service_account = "backend-service-chat"
+  role_arn        = aws_iam_role.chat.arn
+}
+
+#######################################
 # Ingestion Role
 #######################################
 # Used by ingestion service for S3 access
@@ -380,7 +434,7 @@ data "aws_iam_policy_document" "ingestion" {
   statement {
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::*-ai-data"]
+    resources = local.service_data_buckets
   }
 
   statement {
@@ -389,8 +443,16 @@ data "aws_iam_policy_document" "ingestion" {
       "s3:GetObject",
       "s3:PutObject",
       "s3:DeleteObject",
+      "s3:GetObjectVersion",
+      "s3:DeleteObjectVersion",
     ]
-    resources = ["arn:aws:s3:::*-ai-data/*"]
+    resources = local.service_data_bucket_objects
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"]
+    resources = [local.infrastructure.kms_key_arn]
   }
 }
 
@@ -437,7 +499,7 @@ data "aws_iam_policy_document" "ingestion_worker" {
   statement {
     effect    = "Allow"
     actions   = ["s3:ListBucket"]
-    resources = ["arn:aws:s3:::*-ai-data"]
+    resources = local.service_data_buckets
   }
 
   statement {
@@ -446,8 +508,16 @@ data "aws_iam_policy_document" "ingestion_worker" {
       "s3:GetObject",
       "s3:PutObject",
       "s3:DeleteObject",
+      "s3:GetObjectVersion",
+      "s3:DeleteObjectVersion",
     ]
-    resources = ["arn:aws:s3:::*-ai-data/*"]
+    resources = local.service_data_bucket_objects
+  }
+
+  statement {
+    effect    = "Allow"
+    actions   = ["kms:Decrypt", "kms:Encrypt", "kms:GenerateDataKey"]
+    resources = [local.infrastructure.kms_key_arn]
   }
 }
 
