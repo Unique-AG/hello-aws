@@ -29,7 +29,6 @@ are inline `#checkov:skip=` comments on the resource. Both point back here for r
 
 | Rule | Severity | Resource | Rationale |
 |---|---|---|---|
-| AVD-AWS-0054 | CRITICAL | `aws_lb_listener.cloudfront_http` | Internal ALB HTTP listener by design — TLS terminates at CloudFront VPC Origin, HTTP is sufficient for private VPC traffic |
 | AVD-AWS-0104 | CRITICAL | `aws_security_group.github_runners` | Runners require HTTPS (443) egress to `0.0.0.0/0` for GitHub API and package registries; scoped to port 443 only |
 
 #### Checkov

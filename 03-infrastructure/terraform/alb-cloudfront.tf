@@ -240,5 +240,3 @@ resource "aws_lb_listener" "cloudfront_https" {
 
   depends_on = [aws_lb.cloudfront, aws_lb_target_group.ingress_nlb, aws_acm_certificate.internal_alb]
 }
-
-# HTTP Listener (forwards to Ingress NLB)

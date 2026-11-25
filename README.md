@@ -76,7 +76,7 @@ hello-aws supports three network distribution models, configured via **05-comput
 
 The **internal** model is the recommended default. All services are accessible only from within the corporate network — users connect via VPN, Direct Connect, or Transit Gateway. This is the most secure configuration and requires the least infrastructure in the compute layer.
 
-The **CloudFront** model enables public internet access via the CloudFront edge network. An internal ALB terminates TLS and forwards to the Kong NLB via a CloudFront VPC Origin, WebSocket included. The ALB restricts ingress to CloudFront's managed prefix list. The VPC Origin is shared with the connectivity account via AWS RAM for CloudFront distribution setup.
+The **CloudFront** model enables public internet access via the CloudFront edge network. An internal ALB terminates TLS and forwards to the Kong NLB via a CloudFront VPC Origin, WebSocket included. The ALB admits CloudFront's service security group where `alb_ingress_from_cloudfront_service_sg` is set, which reaches only distributions using this VPC origin, and the managed prefix list otherwise. The VPC Origin is shared with the connectivity account via AWS RAM for CloudFront distribution setup.
 
 The **dual** model combines both paths — corporate users access services directly via Transit Gateway while external users connect through CloudFront. This is typical for enterprise deployments where employees use the internal network and customers or partners use the public endpoint.
 

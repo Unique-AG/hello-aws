@@ -81,7 +81,7 @@ An optional EC2 management server provides:
 The infrastructure layer manages the full ingress load balancing stack, keeping networking resources independent of EKS:
 
 - **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
-- **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
+- **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. The security group admits CloudFront's service security group when `alb_ingress_from_cloudfront_service_sg` is set, and the managed prefix list otherwise.
 - **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination.
 - **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
 
@@ -208,7 +208,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### ALB for CloudFront
 
-- **CloudFront ALB**: Internal, HTTPS ingress only. The security group admits CloudFront's service security group when `alb_ingress_from_cloudfront_service_sg` is set, which admits only distributions reaching this VPC origin; otherwise it admits the CloudFront managed prefix list, which is every CloudFront edge address. CloudFront creates that group with the VPC origin, so a first apply uses the prefix list.
+- **CloudFront ALB**: Internal, HTTPS ingress only. The security group admits CloudFront's service security group when `alb_ingress_from_cloudfront_service_sg` is set, which admits only distributions reaching this VPC origin; otherwise it admits the CloudFront managed prefix list, which is every CloudFront edge address. CloudFront creates that group with the VPC origin, so a first apply uses the prefix list. The sandbox sets the flag true because its origin exists; rebuilding that environment from nothing needs one apply with it false.
 - **Target Group**: Forwards to Ingress NLB IPs (resolved via DNS), HTTP port 80
 - **Health check**: `GET /` with matcher `200-404`. The ingress gateway answers `404`
   to an unrouted path, so 404 is the healthy response here and narrowing the matcher
