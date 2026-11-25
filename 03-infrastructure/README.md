@@ -103,9 +103,12 @@ removes the load balancer behind it. Do these in order, or WebSocket breaks:
 2. **Check the distribution.** It must list `internal-alb-origin` as its only
    origin and carry no ordered cache behaviours, with status `Deployed`.
 3. **Verify WebSocket**, by opening a chat in the browser and confirming an
-   answer comes back. A `502` or `504` means the VPC origin cannot reach the
-   ALB; a `401` from the gateway means the path is intact and the request was
-   simply unauthenticated.
+   answer comes back. A `401` from the gateway is the good sign: the request
+   crossed the whole path and was only unauthenticated. A `502` or `504` says
+   the response did not arrive, not where it was lost — `502` also follows an
+   origin certificate whose subject does not match the hostname, and `504` a
+   backend that is merely slow. Check ALB target health and the ingress
+   controller before concluding the origin link is at fault.
 4. **Then apply this layer.**
 
 Rollback narrows once step 4 runs. Until then, restoring
