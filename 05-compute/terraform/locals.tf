@@ -39,6 +39,17 @@ locals {
     s3_bucket_observability_id    = try(data.terraform_remote_state.data_and_ai.outputs.s3_bucket_observability_id, null)
   }
 
+  # Buckets the chat and ingestion services read and write. The bucket names end
+  # in a random suffix, so a pattern without a trailing wildcard matches nothing.
+  service_data_buckets = [
+    "arn:aws:s3:::s3-*-application-data-*",
+    "arn:aws:s3:::s3-*-ai-data-*",
+  ]
+  service_data_bucket_objects = [
+    "arn:aws:s3:::s3-*-application-data-*/*",
+    "arn:aws:s3:::s3-*-ai-data-*/*",
+  ]
+
   # Secondary CIDR for EKS pod networking (must match infrastructure layer)
   secondary_cidr = "100.64.0.0/20"
 

@@ -141,6 +141,11 @@ output "pod_identity_litellm_role_arn" {
   value       = aws_iam_role.litellm.arn
 }
 
+output "pod_identity_chat_role_arn" {
+  description = "IAM role ARN for chat service"
+  value       = aws_iam_role.chat.arn
+}
+
 output "pod_identity_ingestion_role_arn" {
   description = "IAM role ARN for ingestion service"
   value       = aws_iam_role.ingestion.arn
