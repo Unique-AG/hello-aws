@@ -362,7 +362,7 @@ resource "aws_vpc_endpoint" "sts" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.sts_endpoint_policy
 
   tags = {
     Name = "vpce-${module.naming.id}-sts"

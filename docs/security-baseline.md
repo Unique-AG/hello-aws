@@ -115,6 +115,25 @@ empty value, a body running into the next resource, braces inside comments, and 
 quoted comment marker inside an interpolation. Coverage of both layers is guarded by
 the `SOURCES` list in the script rather than by a self-test case.
 
+### STS is the one exception, deliberately
+
+The STS endpoint uses `local.sts_endpoint_policy`, which adds a second statement for
+`sts:AssumeRoleWithSAML` and `sts:AssumeRoleWithWebIdentity`.
+
+A federated call reaches the endpoint before any role is assumed, so there is no
+principal in the request context and `aws:PrincipalOrgID` is simply absent. A
+`StringEquals` on an absent key is false, the Allow does not match, and the call is
+denied — which would break every IRSA credential fetch in the VPC, including the
+`uq-dogfood-sbx-use1-peer-pods` role that Conduct sandboxes use. Private DNS is
+enabled on that endpoint, so all in-VPC STS traffic goes through it; there is no path
+around the policy.
+
+The second statement therefore scopes those two actions by the role they target
+(`aws:ResourceOrgID`, or `aws:ResourceAccount` when no organization id is set) rather
+than by the caller. This is the form AWS documents in
+[Control access to AWS STS with VPC endpoint policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sts_vpc_endpoint_policies.html).
+The role's own trust policy remains the control over which identities may assume it.
+
 Finding a resource's body no longer needs a tokenizer. Four successive attempts to scan
 strings and comments by hand each failed on a case the next one found, so the body now
 ends at the first top-level closing brace — `terraform fmt` puts it at column 0 and the
