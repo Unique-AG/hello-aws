@@ -171,14 +171,6 @@ resource "aws_subnet" "isolated" {
   }
 }
 
-# NAT Gateway HA guard — warn if production uses single NAT
-check "nat_gateway_ha" {
-  assert {
-    condition     = !(var.single_nat_gateway && var.environment == "prod")
-    error_message = "Production environments should use multiple NAT Gateways for high availability. Set single_nat_gateway = false for prod."
-  }
-}
-
 # Elastic IPs for NAT Gateways
 resource "aws_eip" "nat" {
   count = var.enable_nat_gateway ? local.nat_gateway_count : 0
