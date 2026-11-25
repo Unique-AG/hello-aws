@@ -28,6 +28,11 @@ spec:
               - ReadWriteOnce
             size: 10Gi
             storageClassName: gp3
+          # Qdrant serves /metrics on the http port; the chart's own
+          # ServiceMonitor is enough, no raw manifest needed.
+          metrics:
+            serviceMonitor:
+              enabled: true
           startupProbe:
             enabled: true
             failureThreshold: 30
