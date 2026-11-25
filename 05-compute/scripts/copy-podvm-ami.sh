@@ -216,7 +216,6 @@ fi
 IFS=$'\t' read -r EXISTING EXISTING_STATE <<<"$EXISTING_TSV"
 
 AMI_ID=""
-STARTED_COPY=false
 
 case "$EXISTING_STATE" in
   available)
@@ -256,7 +255,6 @@ if [[ -z "$AMI_ID" ]]; then
     --description "$DESCRIPTION" \
     --encrypted --kms-key-id "$KMS_KEY_ARN" \
     --query 'ImageId' --output text) || error "copy-image failed"
-  STARTED_COPY=true
   log "Copy started: ${BOLD}${AMI_ID}${NC}"
 fi
 
