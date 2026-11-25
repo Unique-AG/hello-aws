@@ -13,7 +13,10 @@ ROOT = Path(__file__).resolve().parent.parent
 
 # Layers that may declare endpoints. Add to this list, do not widen the glob:
 # an accidental match in an unrelated layer would report a phantom endpoint.
-SOURCES = ["03-infrastructure/terraform/vpc-endpoints.tf"]
+SOURCES = [
+    "03-infrastructure/terraform/vpc-endpoints.tf",
+    "04-data-and-ai/terraform/vpc-endpoints.tf",
+]
 
 RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{', re.M)
 # Exactly two spaces, so this is the resource's own attribute and not one

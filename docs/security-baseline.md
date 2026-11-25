@@ -104,8 +104,9 @@ public-endpoint regression.
 
 ## VPC endpoint policies
 
-Every interface endpoint limits callers to principals in this account, or in the
-organization when `vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py`
+Every interface endpoint, in both `03-infrastructure` and `04-data-and-ai`, limits
+callers to principals in that layer's account, or in the organization when
+`vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py`
 fails the build when an endpoint has no policy at all, or declares a null or empty one.
 The check reads the Terraform rather than a plan, so it needs no credentials and no state,
 and it fails if it parses no endpoints — a broken parser must not read as a clean tree.

@@ -474,3 +474,9 @@ variable "enable_elasticache_endpoint" {
   type        = bool
   default     = true
 }
+
+variable "vpc_endpoint_policy_org_id" {
+  description = "AWS Organization id to limit interface endpoint access to. Null limits to this account instead."
+  type        = string
+  default     = null
+}

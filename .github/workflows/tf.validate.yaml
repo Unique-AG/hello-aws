@@ -16,6 +16,7 @@ on:
       - '.trivyignore.yaml'
       - 'trivy.yaml'
       - 'scripts/check-endpoint-policies.py'
+      - '04-data-and-ai/terraform/vpc-endpoints.tf'
       - '.github/workflows/**'
       - '.github/actions/**'
 
