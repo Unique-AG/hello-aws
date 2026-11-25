@@ -106,7 +106,11 @@ public-endpoint regression.
 
 Every interface endpoint limits callers to principals in this account, or in the
 organization when `vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py`
-fails the build when an endpoint has no policy at all.
+fails the build when an endpoint has no policy at all, or declares a null or empty one.
+The check reads the Terraform rather than a plan, so it needs no credentials and no state,
+and it fails if it parses no endpoints — a broken parser must not read as a clean tree.
+The default it guards against is invisible: an unpoliced endpoint works, warns about
+nothing, and only shows up in a review of the rendered policy.
 
 The S3 gateway endpoint is scoped by **resource** instead, and deliberately carries no
 principal condition. Two of its statements name buckets AWS owns — the ECR layer store

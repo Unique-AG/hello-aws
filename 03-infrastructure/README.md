@@ -166,7 +166,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 ### VPC Endpoints
 
 - **Interface Endpoints**: see the list under [VPC Endpoints](#vpc-endpoints) above — kept in one place so the two cannot drift apart
-- **Gateway Endpoints**: S3 (with policy scoped to Terraform state, application S3 buckets, and ECR layers)
+- **Gateway Endpoints**: S3 (policy scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories)
 - **Security Group**: Restricted ingress/egress to VPC CIDR
 
 ### KMS Keys
@@ -305,7 +305,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 - **Right-Sized VPC**: `/19` (8,192 IPs) instead of `/16` (65,536 IPs)
 - **Right-Sized Subnets**: /28 public, /22 private, /26 isolated/runners
-- **Gateway Endpoints**: Free S3 access
+- **Gateway Endpoints**: Free S3 access, scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories
 - **Single NAT Option**: Available for non-production environments
 - **Configurable Retention**: Shorter log retention for sandbox
 

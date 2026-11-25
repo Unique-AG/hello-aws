@@ -1,16 +1,6 @@
-#!/usr/bin/env python3
-"""Require every VPC endpoint to declare a policy.
+"""Fail when any aws_vpc_endpoint declares no policy, or a null or empty one.
 
-An endpoint without one allows every principal that can reach it to call the
-whole service. That default is invisible: the endpoint works, nothing warns,
-and the gap only shows up in a review of the rendered policy. This fails the
-build instead, so a new endpoint cannot land unpoliced.
-
-The check is textual on purpose — it reads the Terraform rather than a plan, so
-it needs no credentials and no state.
-
-Run from the repository root:  python3 scripts/check-endpoint-policies.py
-Exit 0 = every endpoint declares a policy, exit 1 = at least one does not.
+Run from the repository root; see docs/security-baseline.md for why.
 """
 
 from __future__ import annotations
@@ -26,7 +16,9 @@ ROOT = Path(__file__).resolve().parent.parent
 SOURCES = ["03-infrastructure/terraform/vpc-endpoints.tf"]
 
 RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{', re.M)
-POLICY = re.compile(r"^\s{2}policy\s*=", re.M)
+# Exactly two spaces, so this is the resource's own attribute and not one
+# nested deeper. A null or empty value is no policy at all.
+POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
 
 
 def endpoints(text: str):
