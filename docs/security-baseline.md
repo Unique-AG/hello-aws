@@ -102,6 +102,21 @@ public-endpoint regression.
 |---|---|---|
 | `global.security.allowInsecureImages: true` | `rabbitmq-operator` | Bitnami legacy images (`bitnamilegacy/rabbitmq-cluster-operator`, `bitnamilegacy/rmq-messaging-topology-operator`) are not signed. Cosign signature verification fails for these images. **Remediation: migrate to signed Bitnami images or a private registry with enforced signing before production.** |
 
+## VPC endpoint policies
+
+Every interface endpoint limits callers to principals in this account, or in the
+organization when `vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py`
+fails the build when an endpoint has no policy at all.
+
+The S3 gateway endpoint is scoped by **resource** instead, and deliberately carries no
+principal condition. Two of its statements name buckets AWS owns — the ECR layer store
+and the Amazon Linux package repositories — and those requests do not necessarily carry
+a principal from this account or organization. Adding a principal condition there would
+risk denying image pulls and operating-system package installs on a private node, which
+is how node bootstrapping breaks. Naming the exact buckets is the tighter control in any
+case: it restricts what can be reached, not merely who may ask.
+
+
 ## Sandbox Environment Relaxations
 
 The following settings are overridden in sbx `00-config.auto.tfvars` to enable fast iteration, teardown, and development access. These relaxations **must not** be applied to production workload accounts.

@@ -15,6 +15,7 @@ on:
       - 'common.auto.tfvars.template'
       - '.trivyignore.yaml'
       - 'trivy.yaml'
+      - 'scripts/check-endpoint-policies.py'
       - '.github/workflows/**'
       - '.github/actions/**'
 
@@ -95,3 +96,13 @@ jobs:
         run: |
           echo "::error::trivy found HIGH/CRITICAL misconfigurations — see the trivy step above"
           exit 1
+
+  endpoint-policies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+
+      # Standard library only, so there is nothing to install or pin.
+      - name: Every VPC endpoint declares a policy
+        run: python3 scripts/check-endpoint-policies.py

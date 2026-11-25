@@ -55,9 +55,10 @@ The VPC default security group is locked down with **no ingress or egress rules*
 
 VPC endpoints provide **private connectivity** to AWS services without internet access:
 
-- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket, application-data and ai-data S3 buckets, and ECR layer bucket)
+- **Gateway Endpoints**: S3 (free, with a policy scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories)
 - **Interface Endpoints** (18): SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, Bedrock AgentCore, Bedrock AgentCore Gateway, STS, KMS, EC2, EKS, EKS Auth
 - **Private Access**: All AWS service access stays within the VPC
+- **Endpoint policies**: every interface endpoint limits callers to principals in this account, or in the organization when `vpc_endpoint_policy_org_id` is set. Without a policy an endpoint admits anything that can reach it, so `scripts/check-endpoint-policies.py` fails the build if one is missing.
 
 The S3 gateway endpoint is associated with all route tables (public, private, and isolated) regardless of NAT Gateway status.
 
