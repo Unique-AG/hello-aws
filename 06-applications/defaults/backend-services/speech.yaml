@@ -9,8 +9,9 @@ routes:
       enabled: true
     probe:
       enabled: true
+# Serves /metrics; enabled also turns on the chart's default alerts.
 prometheus:
-  enabled: false
+  enabled: true
 serviceAccount:
   enabled: true
   workloadIdentity:
