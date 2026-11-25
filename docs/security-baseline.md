@@ -113,6 +113,10 @@ and it fails if it parses no endpoints — a broken parser must not read as a cl
 `--selftest` runs it against cases it has already been wrong about, including a
 policy-less endpoint followed by an IAM policy resource, so the parser cannot regress
 into reading a neighbouring resource's policy as the endpoint's own.
+The check matches HCL with a regular expression rather than parsing it. Four cases have
+already defeated that: a null value, a second layer, a body running into the next
+resource, and braces inside comments. Each is pinned by `--selftest`; a fifth is the
+signal to parse properly instead of extending the pattern again.
 The default it guards against is invisible: an unpoliced endpoint works, warns about
 nothing, and only shows up in a review of the rendered policy.
 
