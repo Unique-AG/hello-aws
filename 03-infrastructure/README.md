@@ -208,10 +208,12 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### ALB for CloudFront
 
-- **CloudFront ALB**: Internal, security group restricted to CloudFront managed prefix list (HTTPS ingress only)
+- **CloudFront ALB**: Internal, HTTPS ingress only. The security group admits CloudFront's service security group when `alb_ingress_from_cloudfront_service_sg` is set, which admits only distributions reaching this VPC origin; otherwise it admits the CloudFront managed prefix list, which is every CloudFront edge address. CloudFront creates that group with the VPC origin, so a first apply uses the prefix list.
 - **Target Group**: Forwards to Ingress NLB IPs (resolved via DNS), HTTP port 80
-- **HTTPS Listeners**: TLS 1.3 policy, ACM wildcard certificate
-- **HTTP Listener**: Forwards to the NLB
+- **Health check**: `GET /` with matcher `200-404`. The ingress gateway answers `404`
+  to an unrouted path, so 404 is the healthy response here and narrowing the matcher
+  would fail every target. A stricter check needs a route that returns 200 first.
+- **HTTPS Listener**: TLS 1.3 policy, ACM wildcard certificate. There is no port 80 listener: the VPC origin is `https-only`, so CloudFront never reaches the ALB on HTTP.
 - **ACM Certificate**: DNS-validated wildcard certificate for the environment domain
 
 ### CloudFront VPC Origin

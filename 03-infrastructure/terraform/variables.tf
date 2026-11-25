@@ -300,6 +300,12 @@ variable "connectivity_account_id" {
   default     = null
 }
 
+variable "alb_ingress_from_cloudfront_service_sg" {
+  description = "Admit the VPC-origin ALB only from CloudFront's service security group instead of the managed prefix list. CloudFront creates that group with the VPC origin, so leave this false on a first apply."
+  type        = bool
+  default     = false
+}
+
 variable "enable_connectivity_account_role" {
   description = "Whether to create a cross-account IAM role for the connectivity account to discover resources (Transit Gateway, EKS, ALBs)"
   type        = bool

@@ -37,8 +37,35 @@ resource "aws_security_group" "alb_cloudfront" {
 }
 
 # Security Group Rules (separate resources to avoid limits)
+# CloudFront creates this group when the VPC origin is created, so it cannot be
+# looked up before then — hence the flag rather than an unconditional lookup.
+data "aws_security_group" "cloudfront_vpc_origins" {
+  count = var.enable_ingress_nlb && var.alb_ingress_from_cloudfront_service_sg ? 1 : 0
+
+  vpc_id = aws_vpc.main.id
+
+  filter {
+    name   = "group-name"
+    values = ["CloudFront-VPCOrigins-Service-SG"]
+  }
+}
+
+# Narrower than the prefix list: that admits every CloudFront edge address,
+# this admits only distributions reaching this VPC origin.
+resource "aws_security_group_rule" "alb_cloudfront_https_ingress_service_sg" {
+  count = var.enable_ingress_nlb && var.alb_ingress_from_cloudfront_service_sg ? 1 : 0
+
+  type                     = "ingress"
+  description              = "Allow HTTPS from the CloudFront VPC origin service security group"
+  from_port                = 443
+  to_port                  = 443
+  protocol                 = "tcp"
+  source_security_group_id = data.aws_security_group.cloudfront_vpc_origins[0].id
+  security_group_id        = aws_security_group.alb_cloudfront[0].id
+}
+
 resource "aws_security_group_rule" "alb_cloudfront_https_ingress" {
-  count = var.enable_ingress_nlb ? 1 : 0
+  count = var.enable_ingress_nlb && !var.alb_ingress_from_cloudfront_service_sg ? 1 : 0
 
   type              = "ingress"
   description       = "Allow HTTPS from CloudFront VPC Origin"
@@ -215,20 +242,3 @@ resource "aws_lb_listener" "cloudfront_https" {
 }
 
 # HTTP Listener (forwards to Ingress NLB)
-# CloudFront handles TLS termination, so HTTP is sufficient for VPC Origin
-resource "aws_lb_listener" "cloudfront_http" {
-  #checkov:skip=CKV_AWS_2: see docs/security-baseline.md
-  #checkov:skip=CKV_AWS_103: see docs/security-baseline.md
-  count = var.enable_ingress_nlb ? 1 : 0
-
-  load_balancer_arn = aws_lb.cloudfront[0].arn
-  port              = "80"
-  protocol          = "HTTP"
-
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.ingress_nlb[0].arn
-  }
-
-  depends_on = [aws_lb.cloudfront, aws_lb_target_group.ingress_nlb]
-}
