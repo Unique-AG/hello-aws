@@ -365,8 +365,7 @@ resource "aws_eks_pod_identity_association" "litellm" {
 #######################################
 # Chat Role
 #######################################
-# Used by the chat service for S3 access. Chat reaches S3 with the shared static
-# user today; this role is what lets that user be withdrawn.
+# S3 and KMS access for the chat service.
 
 resource "aws_iam_role" "chat" {
   name               = "${module.naming.id}-chat"
