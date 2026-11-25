@@ -82,15 +82,12 @@ The infrastructure layer manages the full ingress load balancing stack, keeping 
 
 - **Ingress NLB**: Internal Network Load Balancer with IP-type target groups (TCP ports 80 and 443). The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration needed.
 - **CloudFront ALB**: Internal Application Load Balancer for CloudFront VPC Origin. Receives HTTPS traffic from CloudFront and forwards to the Ingress NLB. Security group restricted to CloudFront managed prefix list.
-- **WebSocket ALB**: Public ALB for WebSocket traffic. CloudFront VPC Origins do not support WebSocket, so this public ALB serves as a standard CloudFront custom origin for WebSocket paths. Also restricted to CloudFront managed prefix list via security group.
-- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination on both ALBs.
+- **ACM Certificate**: Wildcard certificate for the internal ALB (e.g., `*.sbx.example.com`), used for TLS termination.
 - **CloudFront VPC Origin**: Created from the internal ALB, shared with the connectivity account via AWS RAM for CloudFront distribution configuration.
 
 Architecture: `CloudFront → ALB (with SGs, TLS terminated) → Ingress NLB (TCP) → Ingress controller pods (via TargetGroupBinding)`
 
-For WebSocket: `CloudFront → Standard Origin → Public WebSocket ALB → Ingress NLB → Ingress controller`
-
-> **Future**: The ambition is to consolidate the two ALBs into a single ALB once CloudFront VPC Origins support WebSocket traffic.
+WebSocket uses the same path. CloudFront supports WebSocket over a VPC origin, so no public load balancer is involved.
 
 #### The VPC origin id is a cross-account contract
 
@@ -177,18 +174,17 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 ### Ingress NLB
 
-- **Security Group**: Inbound HTTP/HTTPS from CloudFront ALB and WebSocket ALB (SG-scoped rules), outbound to EKS pods (primary + secondary CIDR when enabled)
+- **Security Group**: Inbound HTTP/HTTPS from the CloudFront ALB (SG-scoped rules), outbound to EKS pods (primary + secondary CIDR when enabled)
 - **Network Load Balancer**: Internal, cross-zone enabled, private subnets
 - **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
 - **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group
 
-### ALBs for CloudFront
+### ALB for CloudFront
 
 - **CloudFront ALB**: Internal, security group restricted to CloudFront managed prefix list (HTTPS ingress only)
-- **WebSocket ALB**: Public (in public subnets), security group restricted to CloudFront managed prefix list
-- **Target Groups**: Both ALBs forward to Ingress NLB IPs (resolved via DNS), HTTP port 80
+- **Target Group**: Forwards to Ingress NLB IPs (resolved via DNS), HTTP port 80
 - **HTTPS Listeners**: TLS 1.3 policy, ACM wildcard certificate
-- **HTTP Listener**: CloudFront ALB forwards to NLB; WebSocket ALB redirects HTTP → HTTPS
+- **HTTP Listener**: Forwards to the NLB
 - **ACM Certificate**: DNS-validated wildcard certificate for the environment domain
 
 ### CloudFront VPC Origin
@@ -409,9 +405,8 @@ After deployment:
 - `ingress_nlb_dns_name`, `ingress_nlb_arn`, `ingress_nlb_security_group_id`
 - `ingress_target_group_http_arn`, `ingress_target_group_https_arn`
 
-### ALBs
+### ALB
 - `cloudfront_alb_arn`, `cloudfront_alb_dns_name`, `cloudfront_alb_security_group_id`
-- `websocket_alb_dns_name`
 - `internal_alb_certificate_arn`, `internal_alb_certificate_validation_records`
 
 ### CloudFront VPC Origin

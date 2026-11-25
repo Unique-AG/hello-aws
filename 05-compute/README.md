@@ -218,7 +218,6 @@ The ingress NLB, ALBs, and CloudFront VPC Origin are **managed in the infrastruc
 
 - **Ingress NLB**: Terraform-managed internal NLB with IP-type target groups. The AWS Load Balancer Controller (deployed in the applications layer) registers ingress controller pod IPs via `TargetGroupBinding` CRDs — no manual target registration or `kong_nlb_dns_name` variable needed.
 - **CloudFront ALB**: Internal ALB for CloudFront VPC Origin, forwards to NLB
-- **WebSocket ALB**: Public ALB for WebSocket traffic (CloudFront VPC Origins don't support WebSocket)
 - **VPC Origin**: Shared with connectivity account via AWS RAM
 
 Architecture: `CloudFront -> ALB -> Ingress NLB -> Ingress Controller pods (via TargetGroupBinding)`
