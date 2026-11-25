@@ -1,0 +1,22 @@
+# The broker already serves metrics on the prometheus port — the operator always
+# enables rabbitmq_prometheus — but nothing scraped them, so queue depths and
+# rates existed and were discarded. KEDA's move to Prometheus needs this series.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rabbitmqcluster-chat
+  namespace: unique
+  labels:
+    app.kubernetes.io/name: rabbitmqcluster-chat
+    app.kubernetes.io/part-of: rabbitmq
+spec:
+  # Prometheus selects every ServiceMonitor here: serviceMonitorSelector is {}.
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rabbitmqcluster-chat
+      app.kubernetes.io/component: rabbitmq
+  endpoints:
+    - port: prometheus
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s
