@@ -287,8 +287,11 @@ cleanup_staged() {
     warn "Remove it once the task settles, or the bucket lifecycle expires it in 7 days"
     return
   fi
-  aws s3 rm "s3://${BUCKET}/${S3_KEY}" --region "$TARGET_REGION" --only-show-errors 2>/dev/null \
-    && info "Removed the staged image" || warn "Could not remove s3://${BUCKET}/${S3_KEY}"
+  if aws s3 rm "s3://${BUCKET}/${S3_KEY}" --region "$TARGET_REGION" --only-show-errors 2>/dev/null; then
+    info "Removed the staged image"
+  else
+    warn "Could not remove s3://${BUCKET}/${S3_KEY}"
+  fi
 }
 trap cleanup_staged EXIT
 
