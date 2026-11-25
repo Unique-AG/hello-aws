@@ -57,9 +57,9 @@ Five managed addons, all deployed after the node group is ready:
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` + AgentCore `InvokeWebSearch` (and `InvokeGateway` when the gateway is enabled) |
 | LiteLLM | `unique` | `litellm` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` |
-| Chat | `unique` | `backend-service-chat` | S3 CRUD on `*-application-data` and `*-ai-data` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
-| Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `*-application-data` and `*-ai-data` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
-| Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-application-data` and `*-ai-data` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Chat | `unique` | `backend-service-chat` | S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Ingestion | `unique` | `backend-service-ingestion` | S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
+| Ingestion Worker | `unique` | `backend-service-ingestion-worker` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `s3-*-application-data-*` and `s3-*-ai-data-*` including object versions + KMS `Encrypt`, `Decrypt`, `GenerateDataKey` |
 | Speech | `unique` | `backend-service-speech` | Transcribe `StartStreamTranscription`, `StartTranscriptionJob`, etc. |
 | AWS LB Controller | `unique` | `aws-load-balancer-controller` | EC2, ELBv2, IAM, Cognito, ACM, WAFv2, Shield (manages TargetGroupBindings) |
 | Prometheus | `unique` | `kube-prometheus-stack-prometheus` | Managed Prometheus `RemoteWrite`, `GetLabels`, `GetSeries`, `GetMetricMetadata` |
