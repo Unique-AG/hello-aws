@@ -24,37 +24,23 @@ RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{'
 POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
 
 
-def _body(text: str, open_brace: int) -> str:
-    """Return the brace-matched block. Braces in strings and comments do not count."""
-    depth, i, n = 0, open_brace, len(text)
-    while i < n:
-        c = text[i]
-        two = text[i : i + 2]
-        if c == '"':  # quoted string
-            i += 1
-            while i < n and text[i] != '"':
-                i += 2 if text[i] == "\\" else 1
-        elif c == "#" or two == "//":  # line comment
-            nl = text.find("\n", i)
-            i = n if nl < 0 else nl
-        elif two == "/*":  # block comment
-            close = text.find("*/", i + 2)
-            i = n if close < 0 else close + 1
-        elif c == "{":
-            depth += 1
-        elif c == "}":
-            depth -= 1
-            if depth == 0:
-                return text[open_brace : i + 1]
-        i += 1
-    return text[open_brace:]
+CLOSE = re.compile(r"^\}$", re.M)
+
+
+def _body(text: str, start: int) -> str:
+    """Resource body, ending at the first line that is exactly a closing brace.
+
+    `terraform fmt` puts a top-level block's closing brace alone at column 0,
+    and the validate job enforces it, so no tokenizer is needed here.
+    """
+    m = CLOSE.search(text, start)
+    return text[start : m.end()] if m else text[start:]
 
 
 def endpoints(text: str):
     """Yield (name, body) per aws_vpc_endpoint, each body its own block only."""
     for m in RESOURCE.finditer(text):
-        brace = text.index("{", m.start())
-        yield m.group(1), _body(text, brace)
+        yield m.group(1), _body(text, m.start())
 
 
 def main() -> int:
@@ -117,6 +103,12 @@ def selftest() -> int:
         (
             "a commented opening brace does not swallow the next resource",
             'resource "aws_vpc_endpoint" "a" {\n  # {\n}\n'
+            'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
+            ["a"],
+        ),
+        (
+            "a quoted comment marker inside an interpolation is not a comment",
+            'resource "aws_vpc_endpoint" "a" {\n  tags = { N = "vpce-${"/*"}" }\n}\n'
             'resource "aws_iam_role_policy" "r" {\n  policy = data.x.json\n}\n',
             ["a"],
         ),
