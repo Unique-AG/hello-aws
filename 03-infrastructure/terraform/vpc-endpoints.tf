@@ -1,6 +1,4 @@
-# Security Group for VPC Interface Endpoints
-# Every workload in the VPC carries this besides its own group, so a rule in any
-# layer can name "a workload" instead of the VPC address range (CA 8.2).
+# Identity group for in-VPC workload clients; carries no rules (CA 8.2)
 resource "aws_security_group" "workload" {
   #checkov:skip=CKV2_AWS_5:Attached to the node launch template in 05-compute, which this scan cannot see.
   name        = "sg-${module.naming.id}-workload"
@@ -12,6 +10,7 @@ resource "aws_security_group" "workload" {
   }
 }
 
+# Security Group for VPC Interface Endpoints
 resource "aws_security_group" "vpc_endpoints" {
   name        = "${module.naming.id}-vpc-endpoints-sg"
   description = "Security group for VPC interface endpoints"
