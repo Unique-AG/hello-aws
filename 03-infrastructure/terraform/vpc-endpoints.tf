@@ -1,7 +1,7 @@
 # Identity group for in-VPC workload clients; carries no rules (CA 8.2)
 resource "aws_security_group" "workload" {
   #checkov:skip=CKV2_AWS_5:Attached to the node launch template in 05-compute, which this scan cannot see.
-  name        = "sg-${module.naming.id}-workload"
+  name        = "${module.naming.id}-workload-sg"
   description = "Identity for in-VPC workload clients; carries no rules of its own"
   vpc_id      = aws_vpc.main.id
 
