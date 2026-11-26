@@ -182,7 +182,9 @@ resource "aws_vpc_security_group_ingress_rule" "fargate_sandbox_runtime" {
   from_port         = 8888
   to_port           = 8888
   ip_protocol       = "tcp"
-  cidr_ipv4         = local.infrastructure.vpc_cidr_block
+  # CA 8.2: an in-VPC rule names a security group. The router is an ordinary
+  # Deployment on the node pool, so the node group's SG is the whole source.
+  referenced_security_group_id = aws_security_group.eks_nodes.id
 }
 
 # Under strict pod-SG mode the pod carries only this SG, so the control plane
