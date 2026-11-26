@@ -172,7 +172,6 @@ output "vpc_endpoints_security_group_id" {
   value       = aws_security_group.vpc_endpoints.id
 }
 
-# Route 53 Outputs
 # KMS Key Outputs
 output "kms_key_general_arn" {
   description = "ARN of the general encryption KMS key (for EKS, EBS, S3, RDS, ElastiCache, ECR)"

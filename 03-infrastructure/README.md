@@ -363,7 +363,6 @@ enable_bedrock_endpoint         = true
 # AgentCore data plane + gateway endpoints (default true)
 enable_agentcore_endpoint       = true
 
-# Route 53 Private Hosted Zone (uncomment and set before deploying)
 # These values come from your landing zone or connectivity account
 
 # Ingress NLB + ALB + CloudFront VPC Origin

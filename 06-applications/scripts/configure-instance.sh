@@ -92,8 +92,6 @@ aws:
     peerPodsRoleArn: "<PEER_PODS_ROLE_ARN>"
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"
-  route53:
-    privateZoneId: "<ROUTE53_PRIVATE_ZONE_ID>"
   connectivity:
     accountId: "<CONNECTIVITY_ACCOUNT_ID>"
   nlb:
@@ -169,7 +167,6 @@ FROM_PODVM_LAUNCHTEMPLATE_NAME=$(yq '.aws.sandbox.podvmLaunchTemplateName // "<P
 FROM_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$FROM")
 FROM_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$FROM")
 FROM_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$FROM")
-FROM_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$FROM")
 FROM_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$FROM")
 FROM_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$FROM")
 FROM_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$FROM")
@@ -231,7 +228,6 @@ TO_PODVM_LAUNCHTEMPLATE_NAME=$(yq '.aws.sandbox.podvmLaunchTemplateName // "<POD
 TO_PODVM_AMI_ID=$(yq '.aws.sandbox.podvmAmiId // "<PODVM_AMI_ID>"' "$CONFIG")
 TO_PEER_PODS_ROLE_ARN=$(yq '.aws.sandbox.peerPodsRoleArn // "<PEER_PODS_ROLE_ARN>"' "$CONFIG")
 TO_EFS_DOCLING_MODELS_ID=$(yq '.aws.efs.doclingModelsId // "<EFS_DOCLING_MODELS_ID>"' "$CONFIG")
-TO_ROUTE53_PRIVATE_ZONE_ID=$(yq '.aws.route53.privateZoneId' "$CONFIG")
 TO_CONNECTIVITY_ACCOUNT_ID=$(yq '.aws.connectivity.accountId' "$CONFIG")
 TO_TG_HTTP_ARN=$(yq '.aws.nlb.targetGroupHttpArn' "$CONFIG")
 TO_TG_HTTPS_ARN=$(yq '.aws.nlb.targetGroupHttpsArn' "$CONFIG")
@@ -487,14 +483,12 @@ echo "Configuring Terraform layer configs ..."
 if [[ -f "$STATE" ]]; then
   # State exists: tfvars were previously configured with real values
   TFVARS_FROM_DOMAIN_BASE="$FROM_DOMAIN_BASE"
-  TFVARS_FROM_ROUTE53_ZONE_ID="$FROM_ROUTE53_PRIVATE_ZONE_ID"
   TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="$FROM_CONNECTIVITY_ACCOUNT_ID"
   TFVARS_FROM_ACR_URL="${FROM_ECR_PRIMARY_PREFIX}.azurecr.io"
   TFVARS_FROM_ACR_ALIAS="$FROM_ECR_PRIMARY_PREFIX"
 else
   # Fresh clone: tfvars contain these example/dummy values
   TFVARS_FROM_DOMAIN_BASE="sbx.example.com"
-  TFVARS_FROM_ROUTE53_ZONE_ID="Z0000000000000000000"
   TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID="000000000000"
   TFVARS_FROM_ACR_URL="example.azurecr.io"
   TFVARS_FROM_ACR_ALIAS="example"
@@ -504,9 +498,6 @@ fi
 # then ACR URL (example.azurecr.io contains "example"), then ACR alias last.
 echo "  Base domain (tfvars) ..."
 replace_all_tfvars "$TFVARS_FROM_DOMAIN_BASE" "$TO_DOMAIN_BASE"
-
-echo "  Route 53 private zone ID ..."
-replace_all_tfvars "$TFVARS_FROM_ROUTE53_ZONE_ID" "$TO_ROUTE53_PRIVATE_ZONE_ID"
 
 echo "  Connectivity account ID ..."
 replace_all_tfvars "$TFVARS_FROM_CONNECTIVITY_ACCOUNT_ID" "$TO_CONNECTIVITY_ACCOUNT_ID"

@@ -273,7 +273,6 @@ variable "enable_github_runners" {
   default     = false
 }
 
-# Route 53 Private Hosted Zone Configuration
 # Transit Gateway Configuration
 variable "transit_gateway_id" {
   description = "Transit Gateway ID to attach the VPC to (from connectivity layer). If not provided, Transit Gateway attachment will be skipped."
