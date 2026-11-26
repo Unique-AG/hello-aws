@@ -11,6 +11,9 @@ env:
   # does not serve here, and chat crash-loops resolving its default model.
   DEFAULT_LANGUAGE_MODEL: "litellm:anthropic-claude-opus-5-5"
   STORAGE_PROVIDER: s3
+  # The image carries opentelemetry-exporter-otlp-proto-http and the FastAPI
+  # instrumentation; unset, the exporter defaults to localhost:4318.
+  OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: http://tempo.unique.svc.cluster.local:4318/v1/traces
 
 image:
   # The chart renders registry/repository and stamps a digest for the ACR path,
