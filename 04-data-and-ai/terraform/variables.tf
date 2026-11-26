@@ -402,9 +402,9 @@ variable "aurora_performance_insights_enabled" {
 
 # ElastiCache Redis
 variable "elasticache_engine_version" {
-  description = "ElastiCache Redis engine version"
+  description = "ElastiCache Valkey engine version. 7.2 is the version AWS documents a rollback to Redis OSS 7.1 from."
   type        = string
-  default     = "7.1"
+  default     = "7.2"
 }
 
 variable "elasticache_node_type" {
@@ -420,9 +420,9 @@ variable "elasticache_num_cache_nodes" {
 }
 
 variable "elasticache_parameter_family" {
-  description = "ElastiCache parameter family"
+  description = "ElastiCache parameter family; must match the engine version's family"
   type        = string
-  default     = "redis7"
+  default     = "valkey7"
 }
 
 variable "elasticache_automatic_failover_enabled" {
