@@ -101,9 +101,43 @@ Unresolved rather than decided, and recorded so they are not mistaken for either
   unlikely to outlive a 30s scrape interval. A push to a Pushgateway, or an
   exporter that runs continuously, would be needed to capture it.
 
+## Tracing
+
+`OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` must be set explicitly: unset, the exporter
+defaults to `localhost:4318` and every span is dropped. It is set for all twelve
+backend services in `backend-services/_all.yaml`, and for assistants-core in its
+own overlay.
+
+Whether a service should get it is decided by looking in the image, not by what the
+service does. assistants-core carries 13 OpenTelemetry distributions, including
+`opentelemetry-exporter-otlp-proto-http` and the FastAPI and requests
+instrumentation, so the endpoint is what it was missing. **ingestor carries zero**,
+so setting the variable there would be cosmetic — it is on the exception list below
+until the image is instrumented.
+
+| Workload | OpenTelemetry distributions in the image | Outcome |
+|---|---|---|
+| assistants-core | 13, incl. the OTLP HTTP exporter | endpoint set |
+| ingestor | 0 | exception — not instrumented |
+
 ## Log format
 
-Alloy applies JSON parsing to pods labelled `logging.unique.app/format: pino-json`
-and passes everything else through as plain lines. The label comes from the
-Unique chart, so services on third-party charts do not have it — which is correct
-for them, since their logs are not pino JSON.
+Alloy parses exactly one format. Its `stage.match` selector is
+`{logging_unique_app_format="pino-json"}`, and the stage extracts pino's own fields
+(`msg`, `level`, `operationName`, `req`). There is no second format stage, so a
+service whose logs are structured but not pino has nowhere to go: labelling it
+`pino-json` would make Alloy extract keys that do not exist, which is worse than
+leaving it unlabelled.
+
+Carrying the label today: every backend service, ingestor, client-insights-exporter,
+data-redaction-task, expired-content-deletion and user-sync. It comes from the
+Unique chart.
+
+| Workload | Measured log shape | Why it has no label |
+|---|---|---|
+| assistants-core | 25/25 sampled lines parse as JSON, **0** pino-shaped | Structured, but not pino. Needs a second Alloy stage for its schema, not this label. |
+| web-app-admin / -chat / -knowledge-upload / -theme | 0/5 sampled lines parse as JSON | Plain text; nothing to parse. |
+| Qdrant, RabbitMQ, LiteLLM | — | Third-party charts; their logs are not pino JSON. |
+
+assistants-core is the one worth revisiting: its logs are already machine-readable
+and are being shipped to Loki as opaque lines.
