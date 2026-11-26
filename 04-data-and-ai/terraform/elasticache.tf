@@ -84,7 +84,7 @@ resource "aws_elasticache_replication_group" "redis" {
 
 # ElastiCache Parameter Group
 resource "aws_elasticache_parameter_group" "valkey" {
-  name   = "param-group-${module.naming.id}-valkey"
+  name   = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
   family = var.elasticache_parameter_family
 
   # The replication group must be pointed at the new group before the old one
@@ -94,7 +94,7 @@ resource "aws_elasticache_parameter_group" "valkey" {
   }
 
   tags = {
-    Name    = "param-group-${module.naming.id}-valkey"
+    Name    = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
     Purpose = "valkey-parameter-group"
   }
 }
