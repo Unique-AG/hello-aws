@@ -1,18 +1,5 @@
-# Recovery Region pairing — CA 16.3 (AWS-RES-09).
-#
-# Each installation Region recovers into the Region named here, and the control
-# plane reads its recovery Region from this same table. The recovery runbook
-# describes the procedure; this file is the data it acts on, so the pairing is
-# versioned with the blueprint rather than living only in prose.
-#
-# A pair written in both directions is reciprocal: either Region can recover the
-# other. A pair written once is one-way — the named Region receives, and is not
-# itself recovered from the Region that names it.
-#
-# null means no default pair. Switzerland, the United Kingdom and Singapore are
-# single-Region by default because moving data across their borders is a customer
-# decision, not ours. A customer who opts in sets the Region here; otherwise
-# recovery stays in-Region and the runbook says so.
+# Recovery Region pairing (CA 16.3). Semantics: 03-infrastructure/README.md
+# null = no default pair; the Region recovers in-Region unless a customer opts in.
 
 pairs:
   # Reciprocal
@@ -27,7 +14,7 @@ pairs:
   us-east-2: us-west-2
   us-west-1: us-east-1
 
-  # Opt-in only — see the note above
+  # Opt-in only
   eu-central-2: null   # Switzerland
   eu-west-2: null      # United Kingdom
   ap-southeast-1: null # Singapore
