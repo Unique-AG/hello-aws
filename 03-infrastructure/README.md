@@ -206,6 +206,20 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 - **Target Groups**: HTTP (port 80) and HTTPS (port 443), IP target type, TCP protocol
 - **Listeners**: Port 80 → HTTP target group, port 443 → HTTPS target group
 
+### Recovery Region pairing
+
+`recovery-pairing.yaml` at the repository root holds the Region each installation
+recovers into (CA 16.3). The layer reads it into `local.recovery_pairs` and exposes
+`local.recovery_region` as an output, so the pairing is versioned with the blueprint
+rather than living only in the runbook.
+
+A pair written in both directions is reciprocal; written once it is one-way.
+Switzerland, the United Kingdom and Singapore are `null` — single-Region unless a
+customer opts in, because moving data across those borders is their decision.
+
+A Region absent from the table **fails the plan**, via a precondition on the output
+rather than a `check` block, which would only warn.
+
 ### ALB for CloudFront
 
 - **CloudFront ALB**: Internal, HTTPS ingress only. The security group admits CloudFront's service security group when `alb_ingress_from_cloudfront_service_sg` is set, which admits only distributions reaching this VPC origin; otherwise it admits the CloudFront managed prefix list, which is every CloudFront edge address. CloudFront creates that group with the VPC origin, so a first apply uses the prefix list. The sandbox sets the flag true because its origin exists; rebuilding that environment from nothing needs one apply with it false.

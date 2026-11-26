@@ -1,4 +1,9 @@
 locals {
+  # CA 16.3 pairing, versioned with the blueprint so recovery is not only prose.
+  # A region absent from the table is refused below rather than silently unpaired.
+  recovery_pairs  = yamldecode(file("${path.module}/../../recovery-pairing.yaml")).pairs
+  recovery_region = try(local.recovery_pairs[var.aws_region], null)
+
   # Secondary CIDR for EKS pod networking (RFC 6598 range)
   secondary_cidr = "100.64.0.0/20"
 
