@@ -215,7 +215,7 @@ def selftest() -> int:
         # A comment naming the stronger local must not stand in for using it.
         (
             "a comment mentioning the perimeter policy is not the policy",
-            'resource "aws_vpc_endpoint" "a" {\n  # TODO: interface_endpoint_policy_with_resources\n  policy = local.interface_endpoint_policy\n}\n',
+            'resource "aws_vpc_endpoint" "a" {\n  # NOTE: interface_endpoint_policy_with_resources\n  policy = local.interface_endpoint_policy\n}\n',
             ["a"],
         ),
     ]
