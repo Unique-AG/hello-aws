@@ -30,7 +30,9 @@ quotas:
     quota_code: L-0EA8095F
     name: Inbound or outbound rules per security group
     layers: [03-infrastructure, 04-data-and-ai, 05-compute]
-    values: { small: 60, medium: 90, large: 120 }
+    # AWS caps rules-per-group x groups-per-interface at 1,000; quotas.tf refuses
+    # a combination above it, so these two rows move together.
+    values: { small: 60, medium: 90, large: 100 }
 
   - key: ec2_elastic_ips
     service_code: ec2
