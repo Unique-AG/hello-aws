@@ -161,7 +161,7 @@ resource "aws_vpc_endpoint" "kms" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-kms"
@@ -179,7 +179,7 @@ resource "aws_vpc_endpoint" "secrets_manager" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-secrets-manager"
@@ -233,7 +233,7 @@ resource "aws_vpc_endpoint" "cloudwatch_logs" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-cloudwatch-logs"
@@ -251,7 +251,7 @@ resource "aws_vpc_endpoint" "cloudwatch_metrics" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-cloudwatch-metrics"
@@ -269,7 +269,7 @@ resource "aws_vpc_endpoint" "prometheus" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-prometheus"
@@ -380,7 +380,7 @@ resource "aws_vpc_endpoint" "eks" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-eks"
@@ -398,7 +398,7 @@ resource "aws_vpc_endpoint" "eks_auth" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-eks-auth"
@@ -416,7 +416,7 @@ resource "aws_vpc_endpoint" "ec2" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-ec2"

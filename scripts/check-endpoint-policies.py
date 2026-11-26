@@ -1,4 +1,13 @@
-"""Fail when any aws_vpc_endpoint declares no policy, or a null or empty one.
+"""Fail when a VPC endpoint has no policy, or a weaker one than it should.
+
+Two rules:
+  * every aws_vpc_endpoint declares a policy, and not a null or empty one;
+  * every interface endpoint limits the resources reachable through it, unless
+    it is named below with the reason it cannot.
+
+The second rule exists because a principal-only policy says who may call but not
+what they may reach, so the endpoint still opens the whole service to anyone
+inside the perimeter.
 
 Run from the repository root; see docs/security-baseline.md for why.
 """
@@ -19,6 +28,25 @@ SOURCES = [
 ]
 
 RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{', re.M)
+
+# A policy that constrains the resource, not only the caller.
+PERIMETER = re.compile(r"interface_endpoint_policy_with_resources|sts_endpoint_policy")
+GATEWAY = re.compile(r'vpc_endpoint_type\s*=\s*"Gateway"')
+
+# Endpoints that cannot carry a resource condition, with the reason. A resource
+# condition denies an ARN outside the organization, and these legitimately reach
+# AWS-owned ones. Remove an entry and the check demands the perimeter again.
+PRINCIPAL_ONLY = {
+    "ecr_api": "pulls EKS add-on images from AWS-owned registry accounts and the public.ecr.aws upstream",
+    "ecr_dkr": "as ecr_api: layer pulls resolve to AWS-owned registries",
+    "bedrock": "foundation-model ARNs carry no account, so no organization owns them",
+    "bedrock_runtime": "as bedrock",
+    "bedrock_agentcore": "as bedrock",
+    "bedrock_agentcore_gateway": "as bedrock",
+    "ssm": "AWS-owned documents, including AWS-StartPortForwardingSessionToRemoteHost",
+    "ssm_messages": "session data plane for AWS-owned documents",
+    "ec2_messages": "session data plane for AWS-owned documents",
+}
 # Exactly two spaces, so this is the resource's own attribute and not one
 # nested deeper. A null or empty value is no policy at all.
 POLICY = re.compile(r"^\s{2}policy\s*=\s*(?!null\b)(?!\"\"\s*$)\S", re.M)
@@ -42,6 +70,8 @@ def endpoints(text: str):
 
 def main() -> int:
     missing: list[str] = []
+    unscoped: list[str] = []
+    seen_interface: set[str] = set()
     checked = 0
 
     for rel in SOURCES:
@@ -58,6 +88,12 @@ def main() -> int:
             checked += 1
             if not POLICY.search(body):
                 missing.append(f"{rel}: aws_vpc_endpoint.{name}")
+                continue
+            if GATEWAY.search(body):
+                continue  # a gateway endpoint carries its own tailored policy
+            seen_interface.add(name)
+            if not PERIMETER.search(body) and name not in PRINCIPAL_ONLY:
+                unscoped.append(f"{rel}: aws_vpc_endpoint.{name}")
 
     if missing:
         print("VPC endpoints without a policy:\n")
@@ -70,7 +106,29 @@ def main() -> int:
         )
         return 1
 
-    print(f"All {checked} VPC endpoints declare a policy.")
+    if unscoped:
+        print("Interface endpoints whose policy checks the caller but not the resource:\n")
+        for u in unscoped:
+            print(f"  - {u}")
+        print(
+            "\nUse local.interface_endpoint_policy_with_resources, or add the endpoint to "
+            "PRINCIPAL_ONLY in this script with the AWS-owned resource it must reach."
+        )
+        return 1
+
+    stale = sorted(set(PRINCIPAL_ONLY) - seen_interface)
+    if stale:
+        print("PRINCIPAL_ONLY names endpoints that no longer exist:\n")
+        for n in stale:
+            print(f"  - {n}")
+        print("\nRemove them, or the next endpoint of that name inherits an exemption nobody granted.")
+        return 1
+
+    print(
+        f"All {checked} VPC endpoints declare a policy; "
+        f"{len(seen_interface) - len(PRINCIPAL_ONLY)} of {len(seen_interface)} interface "
+        f"endpoints also limit the resources reachable through them."
+    )
     return 0
 
 
@@ -128,6 +186,48 @@ def selftest() -> int:
         ok = got == want
         bad += 0 if ok else 1
         print(f"  {'ok  ' if ok else 'FAIL'} {label}: missing={got} want={want}")
+
+    # The resource-perimeter rule. `want` is the endpoints that should be
+    # reported as checking the caller but not the resource.
+    perimeter_cases = [
+        (
+            "principal-only interface endpoint is reported",
+            'resource "aws_vpc_endpoint" "a" {\n  policy = local.interface_endpoint_policy\n}\n',
+            ["a"],
+        ),
+        (
+            "resource-scoped interface endpoint passes",
+            'resource "aws_vpc_endpoint" "a" {\n  policy = local.interface_endpoint_policy_with_resources\n}\n',
+            [],
+        ),
+        (
+            "the sts policy counts as resource-scoped",
+            'resource "aws_vpc_endpoint" "a" {\n  policy = local.sts_endpoint_policy\n}\n',
+            [],
+        ),
+        (
+            "a gateway endpoint is not subject to the rule",
+            'resource "aws_vpc_endpoint" "a" {\n  vpc_endpoint_type = "Gateway"\n  policy = jsonencode({})\n}\n',
+            [],
+        ),
+        # interface_endpoint_policy is a prefix of the _with_resources name, so a
+        # substring test would read the stronger policy as the weaker one.
+        (
+            "the longer local name is not mistaken for the shorter",
+            'resource "aws_vpc_endpoint" "a" {\n  policy = local.interface_endpoint_policy_with_resources # was local.interface_endpoint_policy\n}\n',
+            [],
+        ),
+    ]
+    for label, text, want in perimeter_cases:
+        got = [
+            n
+            for n, b in endpoints(text)
+            if POLICY.search(b) and not GATEWAY.search(b) and not PERIMETER.search(b)
+        ]
+        ok = got == want
+        bad += 0 if ok else 1
+        print(f"  {'ok  ' if ok else 'FAIL'} {label}: unscoped={got} want={want}")
+
     print("selftest passed." if not bad else f"{bad} selftest case(s) failed.")
     return 1 if bad else 0
 

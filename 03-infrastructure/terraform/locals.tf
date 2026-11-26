@@ -3,8 +3,7 @@ locals {
   # A region absent from the table is refused below rather than silently unpaired.
   recovery_pairs  = yamldecode(file("${path.module}/../../recovery-pairing.yaml")).pairs
   recovery_region = try(local.recovery_pairs[var.aws_region], null)
-  # An interface endpoint allows every principal that can reach it unless given
-  # a policy. This limits each to the organization, or to this account alone.
+  # Who may call. Endpoints whose resources are AWS-owned use this alone.
   interface_endpoint_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -18,6 +17,28 @@ locals {
           "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
           } : {
           "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+        }
+      }
+    }]
+  })
+
+  # Who may call AND what may be reached. Only for endpoints whose resources are
+  # all ours: a resource condition denies account-less AWS-owned ARNs outright.
+  interface_endpoint_policy_with_resources = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowOwnPrincipalsToOwnResources"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "*"
+      Resource  = "*"
+      Condition = {
+        StringEquals = var.vpc_endpoint_policy_org_id != null ? {
+          "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
+          "aws:ResourceOrgID"  = var.vpc_endpoint_policy_org_id
+          } : {
+          "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+          "aws:ResourceAccount"  = data.aws_caller_identity.current.account_id
         }
       }
     }]

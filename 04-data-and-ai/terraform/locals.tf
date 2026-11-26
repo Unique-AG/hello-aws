@@ -25,12 +25,12 @@ locals {
 }
 
 locals {
-  # Same shape as 03-infrastructure: an endpoint with no policy admits anything
-  # that can reach it, so each is limited to this account or the organization.
-  interface_endpoint_policy = jsonencode({
+  # Same shape as 03-infrastructure. Both endpoints here reach only this
+  # account's own stores, so each limits the resource as well as the caller.
+  interface_endpoint_policy_with_resources = jsonencode({
     Version = "2012-10-17"
     Statement = [{
-      Sid       = "AllowOwnPrincipalsOnly"
+      Sid       = "AllowOwnPrincipalsToOwnResources"
       Effect    = "Allow"
       Principal = "*"
       Action    = "*"
@@ -38,8 +38,10 @@ locals {
       Condition = {
         StringEquals = var.vpc_endpoint_policy_org_id != null ? {
           "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
+          "aws:ResourceOrgID"  = var.vpc_endpoint_policy_org_id
           } : {
           "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+          "aws:ResourceAccount"  = data.aws_caller_identity.current.account_id
         }
       }
     }]
