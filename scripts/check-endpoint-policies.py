@@ -28,9 +28,8 @@ PERIMETER = re.compile(
 )
 GATEWAY = re.compile(r'vpc_endpoint_type\s*=\s*"Gateway"')
 
-# Endpoints that cannot carry a resource condition, with the reason. A resource
-# condition denies an ARN outside the organization, and these legitimately reach
-# AWS-owned ones. Remove an entry and the check demands the perimeter again.
+# Endpoints whose resources are AWS-owned, so a resource condition would deny
+# them. Reasons: docs/security-baseline.md. Remove an entry when its endpoint goes.
 PRINCIPAL_ONLY = {
     "ecr_api": "pulls EKS add-on images from AWS-owned registry accounts and the public.ecr.aws upstream",
     "ecr_dkr": "as ecr_api: layer pulls resolve to AWS-owned registries",
