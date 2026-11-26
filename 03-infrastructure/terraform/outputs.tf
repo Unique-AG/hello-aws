@@ -406,3 +406,8 @@ output "recovery_region" {
     error_message = "Region ${var.aws_region} is not in recovery-pairing.yaml: add it with its pair, or null if it is single-Region."
   }
 }
+
+output "workload_security_group_id" {
+  description = "Identity group every in-VPC workload client carries, so later layers' rules can name it"
+  value       = aws_security_group.workload.id
+}

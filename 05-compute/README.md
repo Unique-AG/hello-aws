@@ -234,8 +234,8 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 
 - **Cluster**: Private endpoint, KMS-encrypted secrets, API-only auth mode, 5 control plane log types
 - **Access Entries**: Management server (cluster admin) + SandboxAdministrator (sbx-only, cluster admin)
-- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server; NLB if present) + Nodes SG (standalone rules: self, VPC CIDR, cluster; attached via launch template)
-- **Launch Template**: Per node group — attaches nodes SG, encrypted gp3 EBS (KMS), IMDSv2 enforced (hop limit 2)
+- **Security Groups**: Cluster SG (443 from VPC endpoints, nodes, management server; NLB if present) + Nodes SG (standalone rules: self, VPC CIDR, cluster) and the workload identity SG from 03 (`workload_security_group_id`), both attached via launch template
+- **Launch Template**: Per node group — attaches the nodes SG and 03's workload identity SG, encrypted gp3 EBS (KMS), IMDSv2 enforced (hop limit 2)
 - **CloudWatch Log Group**: `/aws/eks/eks-{naming-id}/cluster`, KMS-encrypted, configurable retention
 
 ### EKS Node Groups
@@ -273,7 +273,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Network Isolation
 
 - **EKS**: Private endpoint only, no public API access
-- **Nodes**: Private subnets, standalone SG rules (self, VPC CIDR, cluster), attached via launch template
+- **Nodes**: Private subnets, standalone SG rules (self, VPC CIDR, cluster); the nodes SG and 03's workload identity SG are attached via launch template
 - **VPC Endpoint**: Private access to EKS API without internet
 
 ### Access Control
