@@ -2,6 +2,7 @@
 # Every workload in the VPC carries this besides its own group, so a rule in any
 # layer can name "a workload" instead of the VPC address range (CA 8.2).
 resource "aws_security_group" "workload" {
+  #checkov:skip=CKV2_AWS_5:Attached to the node launch template in 05-compute, which this scan cannot see.
   name        = "sg-${module.naming.id}-workload"
   description = "Identity for in-VPC workload clients; carries no rules of its own"
   vpc_id      = aws_vpc.main.id
