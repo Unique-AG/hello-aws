@@ -67,9 +67,15 @@ variable "vpc_cidr" {
 }
 
 variable "enable_nat_gateway" {
-  description = "Enable NAT Gateway for private subnets"
+  description = "Enable NAT Gateway for private subnets. Refused in production by the validation below."
   type        = bool
   default     = true
+  validation {
+    # single_nat_gateway guards one-vs-per-zone; without this, false guards
+    # nothing at all and a production plan passes with zero NAT gateways.
+    condition     = contains(["sbx", "dev"], var.environment) || var.enable_nat_gateway
+    error_message = "A production environment needs a NAT Gateway in each zone: set enable_nat_gateway = true, or name the environment sbx or dev."
+  }
 }
 
 variable "availability_zone_count" {
