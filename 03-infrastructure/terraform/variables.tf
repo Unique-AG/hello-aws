@@ -235,12 +235,6 @@ variable "enable_management_server" {
   default     = true
 }
 
-variable "management_server_public_access" {
-  description = "Enable public IP for management server (if false, use Session Manager only)"
-  type        = bool
-  default     = false
-}
-
 variable "management_server_instance_type" {
   description = "EC2 instance type for management server"
   type        = string

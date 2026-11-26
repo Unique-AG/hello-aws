@@ -335,7 +335,6 @@ single_nat_gateway = true  # sbx and dev only; a production plan is refused
 enable_management_server        = true
 management_server_ami           = ""      # Use golden AMI ID here
 management_server_instance_type = "t3.medium"
-management_server_public_access = false   # Session Manager only
 
 # GitHub Runners
 enable_github_runners = true

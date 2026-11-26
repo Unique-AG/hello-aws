@@ -131,7 +131,7 @@ resource "aws_instance" "management_server" {
 
   ami           = var.management_server_ami != "" ? var.management_server_ami : data.aws_ami.amazon_linux_2023.id
   instance_type = var.management_server_instance_type
-  subnet_id     = var.management_server_public_access ? aws_subnet.public[0].id : aws_subnet.private[0].id
+  subnet_id     = aws_subnet.private[0].id
 
   vpc_security_group_ids = [aws_security_group.management_server.id]
   iam_instance_profile   = aws_iam_instance_profile.ssm_instance.name
@@ -173,23 +173,12 @@ resource "aws_instance" "management_server" {
     }
   }
 
-  # Associate public IP only if public access is enabled
-  associate_public_ip_address = var.management_server_public_access
+  # CA 8.2: no interface in the VPC carries a public IPv4 but a NAT gateway's.
+  # Reached through Session Manager, which needs no inbound path at all.
+  associate_public_ip_address = false
 
   tags = merge(module.naming.tags, {
     Name = "${module.naming.id}-management-server"
   })
-}
-
-# Elastic IP for Management Server (if public access enabled)
-resource "aws_eip" "management_server" {
-  count = var.enable_management_server && var.management_server_public_access ? 1 : 0
-
-  domain   = "vpc"
-  instance = aws_instance.management_server[0].id
-
-  tags = {
-    Name = "${module.naming.id}-management-server-eip"
-  }
 }
 
