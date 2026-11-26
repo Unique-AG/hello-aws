@@ -87,6 +87,12 @@ resource "aws_elasticache_parameter_group" "valkey" {
   name   = "param-group-${module.naming.id}-valkey"
   family = var.elasticache_parameter_family
 
+  # The replication group must be pointed at the new group before the old one
+  # can go; without this the destroy can be ordered first and the apply fails.
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name    = "param-group-${module.naming.id}-valkey"
     Purpose = "valkey-parameter-group"
