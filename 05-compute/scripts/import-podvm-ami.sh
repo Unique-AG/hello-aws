@@ -250,6 +250,7 @@ S3_KEY="$(basename "$RAW")"
 
 # A failed list is not an absent image: collapsing them starts a second
 # snapshot import while the first may already exist.
+# shellcheck disable=SC2016 # the backticks below are JMESPath literals, not shell
 if ! EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
   --filters "Name=name,Values=${AMI_NAME}" \
   --query 'Images[0].[ImageId,State,Tags[?Key==`ImageSha256`].Value|[0]]' --output text 2>&1); then
