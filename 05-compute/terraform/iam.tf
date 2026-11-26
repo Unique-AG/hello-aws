@@ -133,6 +133,14 @@ data "aws_iam_policy_document" "cluster_secrets" {
       "secretsmanager:DescribeSecret",
     ]
     resources = ["arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*"]
+
+    # CA 7.6 limits this role to the installation's own secrets. The names share
+    # no prefix, so the tag Terraform puts on every one of them is the scope.
+    condition {
+      test     = "StringEquals"
+      variable = "secretsmanager:ResourceTag/product:Environment"
+      values   = [var.environment]
+    }
   }
 
   statement {
