@@ -250,12 +250,19 @@ S3_KEY="$(basename "$RAW")"
 
 # A failed list is not an absent image: collapsing them starts a second
 # snapshot import while the first may already exist.
+# shellcheck disable=SC2016 # the backticks below are JMESPath literals, not shell
 if ! EXISTING=$(aws ec2 describe-images --region "$TARGET_REGION" --owners self \
-  --filters "Name=name,Values=${AMI_NAME}" --query 'Images[0].[ImageId,State]' --output text 2>&1); then
+  --filters "Name=name,Values=${AMI_NAME}" \
+  --query 'Images[0].[ImageId,State,Tags[?Key==`ImageSha256`].Value|[0]]' --output text 2>&1); then
   error "Cannot list images in ${TARGET_REGION}: ${EXISTING}"
 fi
-IFS=$'\t' read -r EXISTING_ID EXISTING_STATE <<<"$EXISTING"
+IFS=$'\t' read -r EXISTING_ID EXISTING_STATE EXISTING_SHA <<<"$EXISTING"
 if [[ "$EXISTING_STATE" == "available" ]]; then
+  # The name is the raw file's basename, so it repeats across builds. Only the
+  # digest says this is the image that was scanned, rather than a namesake.
+  if [[ "$EXISTING_SHA" != "$SHA" ]]; then
+    error "An image named ${AMI_NAME} exists (${EXISTING_ID}) built from ${EXISTING_SHA:-an untagged image}, not from this one (${SHA}). Deregister it, or pass --name."
+  fi
   log "Already imported: ${BOLD}${EXISTING_ID}${NC}"
   # A prior run may have registered it and then failed these very checks.
   verify_ami_properties "$EXISTING_ID"
