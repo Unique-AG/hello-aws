@@ -135,7 +135,8 @@ resource "aws_eks_access_policy_association" "sandbox_admin" {
 resource "aws_cloudwatch_log_group" "eks_cluster" {
   name              = "/aws/eks/eks-${module.naming.id}/cluster"
   retention_in_days = max(var.eks_cluster_log_retention_days, 365)
-  kms_key_id        = local.infrastructure.kms_key_arn
+  # CA 10.2 gives CloudWatch Logs its own row; the general key is a different one.
+  kms_key_id = local.infrastructure.kms_key_cloudwatch_logs_arn
 
   tags = {
     Name = "${module.naming.id}-eks-cluster-logs"
