@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
 # scan-podvm-raw.sh — scan a pod VM raw image before it becomes an AMI (CA 9.3).
-#
-# `trivy vm` cannot read this image: the root is squashfs under dm-verity, and
-# trivy reports "OS is not detected", scans nothing and exits 0. So the root is
-# attached, mounted read-only and scanned as a filesystem, which is the method
-# 05-compute/README.md records as working.
-#
-# It fails closed. A missing scanner, an unreadable image or a scan that
-# enumerated nothing are all failures, not passes: this image becomes the root
-# filesystem of every sandbox, and "nothing found" must never mean "not looked".
+# Why not `trivy vm`, and the mount method: 05-compute/README.md.
+# Fails closed: a missing scanner, an unreadable tree or an empty result are failures.
 #
 # Usage: scan-podvm-raw.sh --image <raw> [--accept <file>]
-#
-#   --accept  Findings accepted despite the rules, one "<ID> <YYYY-MM-DD> <record>"
-#             per line. An entry past its date does not apply.
+#   --accept  "<ID> <YYYY-MM-DD> <record>" per line; an entry past its date does not apply.
 
 set -euo pipefail
 
@@ -70,8 +61,11 @@ log "Mounted ${root} read-only"
 
 report=$(mktemp)
 rc=0
-trivy rootfs --scanners vuln,secret --severity HIGH,CRITICAL \
+# As root: trivy skips what it cannot read and still exits 0, so a partial
+# tree would score as a clean one.
+sudo -n trivy rootfs --scanners vuln,secret --severity HIGH,CRITICAL \
   --exit-code 1 --format json --output "$report" "$MNT" || rc=$?
+sudo -n chown "$(id -u)" "$report" 2>/dev/null || true
 
 # 1 is "findings", handled below from the report. Anything else is trivy
 # failing, which must not read as a clean image.
@@ -79,10 +73,8 @@ if (( rc > 1 )); then
   error "trivy exited ${rc} scanning ${IMAGE}; the image is UNSCANNED"
 fi
 
-# trivy exits 0 on a tree it could not analyse, so an empty result set is
-# "not looked at", not "clean". The image carries no dpkg database, so OS
-# packages cannot be enumerated at all — a zero package count is expected and
-# is not evidence of anything.
+# No dpkg database: zero OS packages is expected, not a clean result. An empty
+# result set means "not looked at".
 targets=$(jq -r '[.Results[]?] | length' "$report")
 if [[ "$targets" -eq 0 ]]; then
   error "${IMAGE} is UNSCANNED: trivy produced no results for the mounted root."
@@ -96,14 +88,23 @@ if [[ -n "$ACCEPT" && -f "$ACCEPT" ]]; then
   today=$(date -u +%F)
   while read -r id expiry record; do
     [[ -z "${id:-}" || "$id" == \#* ]] && continue
-    if [[ -z "${record:-}" ]]; then
-      error "acceptance for ${id} names no exception record; CA 9.3 requires one"
+    [[ -n "${record:-}" ]] || error "acceptance for ${id} names no exception record; CA 9.3 requires one"
+    # A malformed date string-compares as if it were valid, which would
+    # silently extend or void an acceptance.
+    # Checked in bash rather than with `date -d`, which BSD date does not
+    # support: the script runs on a developer's machine as well as on CI.
+    if [[ ! "$expiry" =~ ^([0-9]{4})-([0-9]{2})-([0-9]{2})$ ]] \
+       || (( 10#${BASH_REMATCH[2]} < 1 || 10#${BASH_REMATCH[2]} > 12 )) \
+       || (( 10#${BASH_REMATCH[3]} < 1 || 10#${BASH_REMATCH[3]} > 31 )); then
+      error "acceptance for ${id} has an invalid expiry: ${expiry} (want YYYY-MM-DD)"
     fi
     if [[ "$expiry" < "$today" ]]; then
       warn "acceptance for ${id} expired on ${expiry}; it no longer applies"
       continue
     fi
-    findings=$(printf '%s\n' "$findings" | grep -v "^${id} " || true)
+    # Literal first-field match: an ID is not a pattern, and a filter that
+    # fails must not pass for want of an error.
+    findings=$(printf '%s\n' "$findings" | awk -v id="$id" '$1 != id')
     info "accepted ${id} until ${expiry} (${record})"
   done < "$ACCEPT"
 fi
