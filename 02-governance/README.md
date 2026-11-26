@@ -121,3 +121,23 @@ Budgets are configured per environment. Production environments typically have h
 - [AWS Config Rules](https://docs.aws.amazon.com/config/latest/developerguide/evaluate-config_develop-rules.html)
 - [AWS Well-Architected Framework - Cost Optimization](https://docs.aws.amazon.com/wellarchitected/latest/cost-optimization-pillar/welcome.html)
 - [AWS Well-Architected Framework - Operational Excellence](https://docs.aws.amazon.com/wellarchitected/latest/operational-excellence-pillar/welcome.html)
+
+## Service quotas
+
+`quota-list.yaml` beside this layer names every adjustable quota the layers
+depend on, with a value per installation size (CA 16.4). `terraform/quotas.tf`
+requests those values through Service Quotas in the installation Region and in
+the Region it recovers into, which it reads from `recovery-pairing.yaml` so the
+two cannot disagree.
+
+Three things the list carries beyond the values:
+
+- **`layers`** on each quota — which layer depends on it. A layer that starts
+  using a new quota adds it here in the same change.
+- **`not_adjustable`** — quotas Service Quotas refuses to change. These are not
+  requested; the section depending on one records how it is designed around.
+- **`excluded`** — Bedrock model throughput, which the quarterly capacity review
+  requests instead (CA 11.1).
+
+`installation_size` selects the row. It defaults to `small`; set it per
+installation.

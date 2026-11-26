@@ -77,3 +77,13 @@ variable "budget_contact_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "installation_size" {
+  description = "Installation size, selecting the row of values in quota-list.yaml"
+  type        = string
+  default     = "small"
+  validation {
+    condition     = contains(["small", "medium", "large"], var.installation_size)
+    error_message = "installation_size must be small, medium or large."
+  }
+}
