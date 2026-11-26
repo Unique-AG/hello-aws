@@ -36,8 +36,6 @@ aws:
     peerPodsRoleArn: <PEER_PODS_ROLE_ARN>  # terraform output -raw peer_pods_role_arn (compute layer)
   efs:
     doclingModelsId: "<EFS_DOCLING_MODELS_ID>"     # terraform output -raw efs_docling_models_id (infrastructure layer)
-  route53:
-    privateZoneId: <ROUTE53_PRIVATE_ZONE_ID>       # terraform output -raw route53_private_zone_id (infrastructure layer)
   connectivity:
     accountId: "<CONNECTIVITY_ACCOUNT_ID>"         # Connectivity/networking account ID for RAM sharing
   nlb:
