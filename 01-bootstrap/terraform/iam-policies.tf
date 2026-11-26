@@ -79,6 +79,15 @@ data "aws_iam_policy_document" "github_actions_deploy" {
     actions = [
       "ec2:*", "eks:*", "ecr:*", "elasticloadbalancing:*",
       "rds:*", "elasticache:*", "kms:*", "elasticfilesystem:*",
+      # 02-governance reads each quota's applied value and requests the list's
+      # value; the default lookup is a separate action from the applied one.
+      "servicequotas:GetServiceQuota",
+      "servicequotas:GetAWSDefaultServiceQuota",
+      "servicequotas:ListServiceQuotas",
+      "servicequotas:RequestServiceQuotaIncrease",
+      "servicequotas:GetRequestedServiceQuotaChange",
+      "servicequotas:ListRequestedServiceQuotaChangeHistoryByQuota",
+      "servicequotas:ListTagsForResource",
       "s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket",
       "s3:GetBucketLocation", "s3:GetBucketPolicy", "s3:PutBucketPolicy",
       "s3:GetBucketAcl", "s3:PutBucketAcl", "s3:GetBucketVersioning",
