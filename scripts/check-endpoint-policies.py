@@ -1,15 +1,6 @@
-"""Fail when a VPC endpoint has no policy, or a weaker one than it should.
+"""Fail when a VPC endpoint has no policy, or one that constrains only the caller.
 
-Two rules:
-  * every aws_vpc_endpoint declares a policy, and not a null or empty one;
-  * every interface endpoint limits the resources reachable through it, unless
-    it is named below with the reason it cannot.
-
-The second rule exists because a principal-only policy says who may call but not
-what they may reach, so the endpoint still opens the whole service to anyone
-inside the perimeter.
-
-Run from the repository root; see docs/security-baseline.md for why.
+Rules and exemptions: docs/security-baseline.md. Run from the repository root.
 """
 
 from __future__ import annotations

@@ -115,7 +115,7 @@ empty value, a body running into the next resource, braces inside comments, and 
 quoted comment marker inside an interpolation. Coverage of both layers is guarded by
 the `SOURCES` list in the script rather than by a self-test case.
 
-### Resource perimeter, and the nine endpoints that cannot have one
+### Resource perimeter, and the ten endpoints that cannot have one
 
 A principal-only policy says who may call the endpoint, not what they may reach
 through it, so the whole service stays open to anyone inside the perimeter.
@@ -124,7 +124,7 @@ through it, so the whole service stays open to anyone inside the perimeter.
 interface endpoints use it, and `scripts/check-endpoint-policies.py` fails the
 build when a new one does not.
 
-Nine cannot, because a resource condition denies an ARN no organization owns, and
+Ten cannot, because a resource condition denies an ARN no organization owns, and
 these legitimately reach AWS-owned ones. Each is named in the script with its
 reason, and a name left there after its endpoint goes also fails the build:
 
