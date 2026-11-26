@@ -43,5 +43,4 @@ cloudwatch_log_retention_days = 365
 
 # Not components: a public bastion and a shared single NAT are relaxations, so
 # the scan checks the hardened path.
-management_server_public_access = false
-single_nat_gateway              = false
+single_nat_gateway = false
