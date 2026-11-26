@@ -102,6 +102,54 @@ public-endpoint regression.
 |---|---|---|
 | `global.security.allowInsecureImages: true` | `rabbitmq-operator` | Bitnami legacy images (`bitnamilegacy/rabbitmq-cluster-operator`, `bitnamilegacy/rmq-messaging-topology-operator`) are not signed. Cosign signature verification fails for these images. **Remediation: migrate to signed Bitnami images or a private registry with enforced signing before production.** |
 
+## VPC endpoint policies
+
+Every interface endpoint, in both `03-infrastructure` and `04-data-and-ai`, limits
+callers to principals in that layer's account, or in the organization when
+`vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py`
+fails the build when an endpoint has no policy at all, or declares a null or empty one.
+The check reads the Terraform rather than a plan, so it needs no credentials and no state,
+and it fails if it parses no endpoints — a broken parser must not read as a clean tree.
+`--selftest` runs it against cases the check has already been wrong about: a null or
+empty value, a body running into the next resource, braces inside comments, and a
+quoted comment marker inside an interpolation. Coverage of both layers is guarded by
+the `SOURCES` list in the script rather than by a self-test case.
+
+### STS is the one exception, deliberately
+
+The STS endpoint uses `local.sts_endpoint_policy`, which adds a second statement for
+`sts:AssumeRoleWithSAML` and `sts:AssumeRoleWithWebIdentity`.
+
+A federated call reaches the endpoint before any role is assumed, so there is no
+principal in the request context and `aws:PrincipalOrgID` is simply absent. A
+`StringEquals` on an absent key is false, the Allow does not match, and the call is
+denied — which would break every IRSA credential fetch in the VPC, including the
+`uq-dogfood-sbx-use1-peer-pods` role that Conduct sandboxes use. Private DNS is
+enabled on that endpoint, so all in-VPC STS traffic goes through it; there is no path
+around the policy.
+
+The second statement therefore scopes those two actions by the role they target
+(`aws:ResourceOrgID`, or `aws:ResourceAccount` when no organization id is set) rather
+than by the caller. This is the form AWS documents in
+[Control access to AWS STS with VPC endpoint policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sts_vpc_endpoint_policies.html).
+The role's own trust policy remains the control over which identities may assume it.
+
+Finding a resource's body no longer needs a tokenizer. Four successive attempts to scan
+strings and comments by hand each failed on a case the next one found, so the body now
+ends at the first top-level closing brace — `terraform fmt` puts it at column 0 and the
+validate job enforces the formatting. A trailing comment on that brace survives `fmt`,
+so the pattern allows one. The remaining assumption is that no heredoc in these files
+begins a line with `}`.
+
+The S3 gateway endpoint is scoped by **resource** instead, and deliberately carries no
+principal condition. Two of its statements name buckets AWS owns — the ECR layer store
+and the Amazon Linux package repositories — and those requests do not necessarily carry
+a principal from this account or organization. Adding a principal condition there would
+risk denying image pulls and operating-system package installs on a private node, which
+is how node bootstrapping breaks. Naming the exact buckets is the tighter control in any
+case: it restricts what can be reached, not merely who may ask.
+
+
 ## Sandbox Environment Relaxations
 
 The following settings are overridden in sbx `00-config.auto.tfvars` to enable fast iteration, teardown, and development access. These relaxations **must not** be applied to production workload accounts.

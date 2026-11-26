@@ -23,3 +23,25 @@ locals {
     kms_key_grafana_arn         = try(data.terraform_remote_state.infrastructure.outputs.kms_key_grafana_arn, null)
   }
 }
+
+locals {
+  # Same shape as 03-infrastructure: an endpoint with no policy admits anything
+  # that can reach it, so each is limited to this account or the organization.
+  interface_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowOwnPrincipalsOnly"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "*"
+      Resource  = "*"
+      Condition = {
+        StringEquals = var.vpc_endpoint_policy_org_id != null ? {
+          "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
+          } : {
+          "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+        }
+      }
+    }]
+  })
+}

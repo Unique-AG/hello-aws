@@ -55,9 +55,10 @@ The VPC default security group is locked down with **no ingress or egress rules*
 
 VPC endpoints provide **private connectivity** to AWS services without internet access:
 
-- **Gateway Endpoints**: S3 (free, with restrictive policy scoped to Terraform state bucket, application-data and ai-data S3 buckets, and ECR layer bucket)
+- **Gateway Endpoints**: S3 (free, with a policy scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories)
 - **Interface Endpoints** (18): SSM, SSM Messages, EC2 Messages, Secrets Manager, ECR API, ECR DKR, CloudWatch Logs, CloudWatch Metrics, Prometheus, Bedrock, Bedrock Runtime, Bedrock AgentCore, Bedrock AgentCore Gateway, STS, KMS, EC2, EKS, EKS Auth
 - **Private Access**: All AWS service access stays within the VPC
+- **Endpoint policies**: every interface endpoint limits callers to principals in this account, or in the organization when `vpc_endpoint_policy_org_id` is set. Without a policy an endpoint admits anything that can reach it, so `scripts/check-endpoint-policies.py` fails the build if one is missing.
 
 The S3 gateway endpoint is associated with all route tables (public, private, and isolated) regardless of NAT Gateway status.
 
@@ -165,7 +166,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 ### VPC Endpoints
 
 - **Interface Endpoints**: see the list under [VPC Endpoints](#vpc-endpoints) above — kept in one place so the two cannot drift apart
-- **Gateway Endpoints**: S3 (with policy scoped to Terraform state, application S3 buckets, and ECR layers)
+- **Gateway Endpoints**: S3 (policy scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories)
 - **Security Group**: Restricted ingress/egress to VPC CIDR
 
 ### KMS Keys
@@ -243,7 +244,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 - **Private Subnets**: Workloads in private subnets (no public IPs)
 - **Isolated Subnets**: Databases with no internet access
 - **VPC-Only Management Server**: No internet egress from jump server
-- **S3 Endpoint Policy**: Scoped to Terraform state, application S3 buckets, and ECR layer buckets only
+- **S3 Endpoint Policy**: Scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories
 
 ### Encryption
 
@@ -304,7 +305,7 @@ When a `transit_gateway_id` is provided (shared via AWS RAM from a connectivity 
 
 - **Right-Sized VPC**: `/19` (8,192 IPs) instead of `/16` (65,536 IPs)
 - **Right-Sized Subnets**: /28 public, /22 private, /26 isolated/runners
-- **Gateway Endpoints**: Free S3 access
+- **Gateway Endpoints**: Free S3 access, scoped by resource to the Terraform state bucket, the application-data, ai-data and observability buckets, the ECR layer bucket, and the Amazon Linux package repositories
 - **Single NAT Option**: Available for non-production environments
 - **Configurable Retention**: Shorter log retention for sandbox
 
