@@ -30,8 +30,6 @@ enable_management_server  = true
 enable_connectivity_account_role = true
 connectivity_account_id          = "111122223333"
 transit_gateway_id               = "tgw-0123456789abcdef0"
-route53_private_zone_id          = "Z0123456789ABCDEFGHIJ"
-route53_private_zone_domain      = "example.internal"
 internal_alb_certificate_domain  = "example.internal"
 alert_email_endpoints            = ["alerts@example.com"]
 

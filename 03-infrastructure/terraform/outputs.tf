@@ -173,16 +173,6 @@ output "vpc_endpoints_security_group_id" {
 }
 
 # Route 53 Outputs
-output "route53_private_zone_id" {
-  description = "Zone ID of the Route 53 Private Hosted Zone (for use in other layers)"
-  value       = var.route53_private_zone_id
-}
-
-output "route53_private_zone_domain" {
-  description = "Domain name of the Route 53 Private Hosted Zone (for use in other layers)"
-  value       = var.route53_private_zone_domain
-}
-
 # KMS Key Outputs
 output "kms_key_general_arn" {
   description = "ARN of the general encryption KMS key (for EKS, EBS, S3, RDS, ElastiCache, ECR)"

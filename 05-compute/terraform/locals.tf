@@ -26,8 +26,6 @@ locals {
     kms_key_id                               = data.terraform_remote_state.infrastructure.outputs.kms_key_general_id
     kms_key_secrets_manager_arn              = data.terraform_remote_state.infrastructure.outputs.kms_key_secrets_manager_arn
     cloudwatch_log_group_infrastructure_name = data.terraform_remote_state.infrastructure.outputs.cloudwatch_log_group_infrastructure_name
-    route53_private_zone_id                  = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_id, null)
-    route53_private_zone_domain              = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_domain, null)
     ingress_nlb_security_group_id            = try(data.terraform_remote_state.infrastructure.outputs.ingress_nlb_security_group_id, null)
   }
 

@@ -274,18 +274,6 @@ variable "enable_github_runners" {
 }
 
 # Route 53 Private Hosted Zone Configuration
-variable "route53_private_zone_domain" {
-  description = "Domain name of the Route 53 Private Hosted Zone shared from landing zone (e.g., sbx.aws.unique.dev)"
-  type        = string
-  default     = null
-}
-
-variable "route53_private_zone_id" {
-  description = "Zone ID of the Route 53 Private Hosted Zone shared from landing zone (e.g., Z061686132DMF010M5XAW). Required for VPC association."
-  type        = string
-  default     = null
-}
-
 # Transit Gateway Configuration
 variable "transit_gateway_id" {
   description = "Transit Gateway ID to attach the VPC to (from connectivity layer). If not provided, Transit Gateway attachment will be skipped."

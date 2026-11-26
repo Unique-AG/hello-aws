@@ -365,8 +365,6 @@ enable_agentcore_endpoint       = true
 
 # Route 53 Private Hosted Zone (uncomment and set before deploying)
 # These values come from your landing zone or connectivity account
-# route53_private_zone_domain = "sbx.example.com"
-# route53_private_zone_id     = "ZXXXXXXXXXXXXXXXXX"
 
 # Ingress NLB + ALB + CloudFront VPC Origin
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
@@ -376,7 +374,6 @@ internal_alb_certificate_domain = "*.sbx.example.com"
 connectivity_account_id         = "198666613175"
 ```
 
-> **Note**: The Route 53 private zone values (`route53_private_zone_domain` and `route53_private_zone_id`) are commented out by default. If your deployment uses a Route 53 Private Hosted Zone (e.g., from a connectivity account in a hub-and-spoke topology), uncomment and set these values in `environments/{env}/00-config.auto.tfvars` before deploying. Without them, the VPC association with the private hosted zone is skipped.
 
 ### Deployment Steps
 
@@ -456,7 +453,6 @@ After deployment:
 - `cloudfront_vpc_origin_id`, `cloudfront_vpc_origin_arn`
 
 ### DNS
-- `route53_private_zone_id`, `route53_private_zone_domain`
 
 ## References
 
