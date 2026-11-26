@@ -47,12 +47,13 @@ Five managed addons, all deployed after the node group is ready:
 
 ### Pod Identity Roles
 
-16 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
+17 IAM roles use the `pods.eks.amazonaws.com` service principal with `sts:AssumeRole` + `sts:TagSession` (EKS Pod Identity pattern, not legacy IRSA):
 
 | Role | Namespace | Service Account | AWS Permissions |
 |---|---|---|---|
 | EBS CSI Driver | `kube-system` | `ebs-csi-controller-sa` | `AmazonEBSCSIDriverPolicy` (managed) + KMS encrypt/decrypt for EBS encryption |
 | EFS CSI Driver | `kube-system` | `efs-csi-controller-sa` | `AmazonEFSCSIDriverPolicy` (managed) |
+| VPC CNI | `kube-system` | `aws-node` | `AmazonEKS_CNI_Policy` (managed), moved off the node role so a pod cannot borrow it |
 | Cluster Secrets | `unique` | `external-secrets` | Secrets Manager `GetSecretValue`/`DescribeSecret` + KMS `Decrypt` |
 | Cert-Manager Route 53 | `unique` | `cert-manager` | Route 53 `ChangeResourceRecordSets`, `GetChange`, `ListHostedZones` |
 | Assistants Core | `unique` | `assistants-core` | Bedrock `InvokeModel`/`InvokeModelWithResponseStream` + S3 CRUD on `*-ai-data` + Secrets Manager `GetSecretValue` + AgentCore `InvokeWebSearch` (and `InvokeGateway` when the gateway is enabled) |
@@ -279,7 +280,7 @@ This compute layer provides only the **AWS Load Balancer Controller IAM role** (
 ### Access Control
 
 - **EKS Auth**: API-only mode, access entries (no `aws-auth` ConfigMap)
-- **Pod Identity**: 16 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
+- **Pod Identity**: 17 roles with least-privilege policies, `pods.eks.amazonaws.com` service principal
 - **ACR Credentials**: Write-only (`secret_string_wo`) + ephemeral variables — never in Terraform state or plan files
 
 ### Audit and Compliance
