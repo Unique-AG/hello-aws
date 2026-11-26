@@ -9,11 +9,6 @@ on:
         description: 'cloud-api-adaptor ref to build (blank = the pinned one the chart expects)'
         required: false
         default: ''
-      skip_scan:
-        description: 'Skip the image scan (trivy cannot read this image''s squashfs root)'
-        type: boolean
-        required: false
-        default: true
 
 permissions:
   id-token: write
@@ -43,6 +38,18 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq qemu-utils uidmap
+
+      # The scan below is mandatory and fails when trivy is absent, so it is
+      # installed here, pinned, and proved present before the build starts.
+      - name: Install trivy
+        env:
+          TRIVY_VERSION: '0.58.1'
+        run: |
+          set -euo pipefail
+          curl -fsSL "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin trivy
+          trivy --version
+          jq --version
 
       - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
@@ -99,6 +106,15 @@ jobs:
           ./05-compute/scripts/build-podvm-image.sh "${ARGS[@]}"
           ls -la "$OUT_DIR"/*.raw "$OUT_DIR"/*.provenance
 
+      # Mandatory: `trivy vm` cannot read this squashfs root, so the root is
+      # mounted and scanned as a filesystem. See 05-compute/README.md.
+      - name: Scan the image before registering it
+        env:
+          OUT_DIR: ${{ runner.temp }}/podvm-build
+        run: |
+          set -euo pipefail
+          ./05-compute/scripts/scan-podvm-raw.sh --image "$(ls "$OUT_DIR"/*.raw)"
+
       # Upstream publishes no attestation for the pod VM artifact, so the image
       # this workflow produced gets one of its own.
       - name: Attest the image
@@ -106,16 +122,14 @@ jobs:
         with:
           subject-path: ${{ runner.temp }}/podvm-build/*.raw
 
+      # --skip-scan is the AMI-level `trivy vm` pass, which cannot read this
+      # image; it was scanned as a filesystem above.
       - name: Import as an AMI
         env:
           OUT_DIR: ${{ runner.temp }}/podvm-build
-          SKIP_SCAN: ${{ inputs.skip_scan }}
         run: |
           set -euo pipefail
-          RAW=$(ls "$OUT_DIR"/*.raw)
-          ARGS=(--image "$RAW")
-          [ "$SKIP_SCAN" = "true" ] && ARGS+=(--skip-scan)
-          ./05-compute/scripts/import-podvm-ami.sh "${ARGS[@]}"
+          ./05-compute/scripts/import-podvm-ami.sh --image "$(ls "$OUT_DIR"/*.raw)" --skip-scan
 
       - name: Keep the provenance record
         if: always()
