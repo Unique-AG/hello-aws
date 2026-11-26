@@ -306,6 +306,12 @@ variable "alb_ingress_from_cloudfront_service_sg" {
   default     = false
 }
 
+variable "vpc_endpoint_policy_org_id" {
+  description = "AWS Organization id to limit interface endpoint access to. Null limits to this account instead."
+  type        = string
+  default     = null
+}
+
 variable "enable_connectivity_account_role" {
   description = "Whether to create a cross-account IAM role for the connectivity account to discover resources (Transit Gateway, EKS, ALBs)"
   type        = bool
