@@ -9,11 +9,6 @@ on:
         description: 'cloud-api-adaptor ref to build (blank = the pinned one the chart expects)'
         required: false
         default: ''
-      skip_scan:
-        description: 'Skip the image scan (trivy cannot read this image''s squashfs root)'
-        type: boolean
-        required: false
-        default: true
 
 permissions:
   id-token: write
@@ -99,6 +94,17 @@ jobs:
           ./05-compute/scripts/build-podvm-image.sh "${ARGS[@]}"
           ls -la "$OUT_DIR"/*.raw "$OUT_DIR"/*.provenance
 
+      # CA 9.3 wants the image scanned before registration. `trivy vm` cannot
+      # read this image (squashfs under dm-verity), so the root is mounted and
+      # scanned directly, which 05-compute/README.md records as the method that
+      # works. No input can skip this.
+      - name: Scan the image before registering it
+        env:
+          OUT_DIR: ${{ runner.temp }}/podvm-build
+        run: |
+          set -euo pipefail
+          ./05-compute/scripts/scan-podvm-raw.sh --image "$(ls "$OUT_DIR"/*.raw)"
+
       # Upstream publishes no attestation for the pod VM artifact, so the image
       # this workflow produced gets one of its own.
       - name: Attest the image
@@ -106,16 +112,14 @@ jobs:
         with:
           subject-path: ${{ runner.temp }}/podvm-build/*.raw
 
+      # --skip-scan refers to the AMI-level `trivy vm` pass, which cannot read a
+      # squashfs root. The image was scanned as a filesystem in the step above.
       - name: Import as an AMI
         env:
           OUT_DIR: ${{ runner.temp }}/podvm-build
-          SKIP_SCAN: ${{ inputs.skip_scan }}
         run: |
           set -euo pipefail
-          RAW=$(ls "$OUT_DIR"/*.raw)
-          ARGS=(--image "$RAW")
-          [ "$SKIP_SCAN" = "true" ] && ARGS+=(--skip-scan)
-          ./05-compute/scripts/import-podvm-ami.sh "${ARGS[@]}"
+          ./05-compute/scripts/import-podvm-ami.sh --image "$(ls "$OUT_DIR"/*.raw)" --skip-scan
 
       - name: Keep the provenance record
         if: always()
