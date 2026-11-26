@@ -416,7 +416,7 @@ resource "aws_vpc_endpoint" "ec2" {
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy_with_resources
+  policy              = local.interface_endpoint_policy
 
   tags = {
     Name = "vpce-${module.naming.id}-ec2"

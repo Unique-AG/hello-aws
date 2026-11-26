@@ -120,7 +120,7 @@ the `SOURCES` list in the script rather than by a self-test case.
 A principal-only policy says who may call the endpoint, not what they may reach
 through it, so the whole service stays open to anyone inside the perimeter.
 `local.interface_endpoint_policy_with_resources` adds `aws:ResourceOrgID` (or
-`aws:ResourceAccount`) beside the principal condition. Eleven of the twenty
+`aws:ResourceAccount`) beside the principal condition. Ten of the twenty
 interface endpoints use it, and `scripts/check-endpoint-policies.py` fails the
 build when a new one does not.
 
@@ -132,6 +132,7 @@ reason, and a name left there after its endpoint goes also fails the build:
 |---|---|
 | `ecr_api`, `ecr_dkr` | EKS add-on images come from AWS-owned registry accounts, and the pull-through cache's upstream is `public.ecr.aws` |
 | `bedrock`, `bedrock_runtime`, `bedrock_agentcore`, `bedrock_agentcore_gateway` | A foundation-model ARN is `arn:aws:bedrock:<region>::foundation-model/<id>` — the account field is empty, so no organization owns it |
+| `ec2` | `RunInstances` names the AMI it launches. The management server and the nodes boot Amazon-owned images (`data.aws_ami.amazon_linux_2023`, `owners = ["amazon"]`), and several EC2 actions do not support the ownership keys at all |
 | `ssm`, `ssm_messages`, `ec2_messages` | Session Manager runs AWS-owned documents; `AWS-StartPortForwardingSessionToRemoteHost` is how this estate reaches the cluster at all |
 
 The S3 gateway endpoint is outside the rule: it carries a tailored policy naming

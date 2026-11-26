@@ -29,8 +29,12 @@ SOURCES = [
 
 RESOURCE = re.compile(r'^resource\s+"aws_vpc_endpoint"\s+"([A-Za-z0-9_]+)"\s*\{', re.M)
 
-# A policy that constrains the resource, not only the caller.
-PERIMETER = re.compile(r"interface_endpoint_policy_with_resources|sts_endpoint_policy")
+# A policy that constrains the resource, not only the caller. Anchored on the
+# assignment: a mention in a comment must not read as the policy in force.
+PERIMETER = re.compile(
+    r"^\s{2}policy\s*=\s*local\.(?:interface_endpoint_policy_with_resources|sts_endpoint_policy)\b",
+    re.M,
+)
 GATEWAY = re.compile(r'vpc_endpoint_type\s*=\s*"Gateway"')
 
 # Endpoints that cannot carry a resource condition, with the reason. A resource
@@ -43,6 +47,7 @@ PRINCIPAL_ONLY = {
     "bedrock_runtime": "as bedrock",
     "bedrock_agentcore": "as bedrock",
     "bedrock_agentcore_gateway": "as bedrock",
+    "ec2": "RunInstances names the AMI it launches, and the node and management-server images are Amazon-owned",
     "ssm": "AWS-owned documents, including AWS-StartPortForwardingSessionToRemoteHost",
     "ssm_messages": "session data plane for AWS-owned documents",
     "ec2_messages": "session data plane for AWS-owned documents",
@@ -216,6 +221,12 @@ def selftest() -> int:
             "the longer local name is not mistaken for the shorter",
             'resource "aws_vpc_endpoint" "a" {\n  policy = local.interface_endpoint_policy_with_resources # was local.interface_endpoint_policy\n}\n',
             [],
+        ),
+        # A comment naming the stronger local must not stand in for using it.
+        (
+            "a comment mentioning the perimeter policy is not the policy",
+            'resource "aws_vpc_endpoint" "a" {\n  # TODO: interface_endpoint_policy_with_resources\n  policy = local.interface_endpoint_policy\n}\n',
+            ["a"],
         ),
     ]
     for label, text, want in perimeter_cases:
