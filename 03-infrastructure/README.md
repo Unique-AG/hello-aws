@@ -451,8 +451,6 @@ After deployment:
 ### CloudFront VPC Origin
 - `cloudfront_vpc_origin_id`, `cloudfront_vpc_origin_arn`
 
-### DNS
-
 ## References
 
 - [AWS VPC Best Practices](https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html)
