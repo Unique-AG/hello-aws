@@ -507,6 +507,9 @@ resource "aws_launch_template" "eks_nodes" {
 
   vpc_security_group_ids = [
     aws_security_group.eks_nodes.id,
+    # Carried so a rule in 03 or 04 can name this node as a workload client;
+    # neither layer can see a group created here (CA 8.2).
+    local.infrastructure.workload_security_group_id,
   ]
 
   block_device_mappings {

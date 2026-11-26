@@ -29,6 +29,7 @@ locals {
     route53_private_zone_id                  = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_id, null)
     route53_private_zone_domain              = try(data.terraform_remote_state.infrastructure.outputs.route53_private_zone_domain, null)
     ingress_nlb_security_group_id            = try(data.terraform_remote_state.infrastructure.outputs.ingress_nlb_security_group_id, null)
+    workload_security_group_id               = data.terraform_remote_state.infrastructure.outputs.workload_security_group_id
   }
 
   # Data-and-AI layer outputs (from remote state)
