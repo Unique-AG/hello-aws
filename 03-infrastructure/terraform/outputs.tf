@@ -393,3 +393,17 @@ output "efs_docling_models_id" {
   value       = aws_efs_file_system.docling_models.id
 }
 
+
+# CA 16.3 (AWS-RES-09). Null where the Region is single-Region by default and
+# the customer has not opted in; the recovery runbook reads that as in-Region.
+output "recovery_region" {
+  description = "The Region this installation recovers into, from recovery-pairing.yaml"
+  value       = local.recovery_region
+
+  precondition {
+    # A precondition fails the plan. A check block would only warn, which is
+    # how an unpaired Region would reach production unnoticed.
+    condition     = contains(keys(local.recovery_pairs), var.aws_region)
+    error_message = "Region ${var.aws_region} is not in recovery-pairing.yaml: add it with its pair, or null if it is single-Region."
+  }
+}

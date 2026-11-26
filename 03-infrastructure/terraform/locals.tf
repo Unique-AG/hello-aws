@@ -1,4 +1,8 @@
 locals {
+  # CA 16.3 pairing, versioned with the blueprint so recovery is not only prose.
+  # A region absent from the table is refused below rather than silently unpaired.
+  recovery_pairs  = yamldecode(file("${path.module}/../../recovery-pairing.yaml")).pairs
+  recovery_region = try(local.recovery_pairs[var.aws_region], null)
   # An interface endpoint allows every principal that can reach it unless given
   # a policy. This limits each to the organization, or to this account alone.
   interface_endpoint_policy = jsonencode({
