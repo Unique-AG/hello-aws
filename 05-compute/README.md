@@ -169,6 +169,8 @@ Debug builds are kept separate end to end: the output file, the AMI name and the
 
 `scripts/scan-podvm-raw.sh` now does exactly this, and the workflow runs it before registration with no way to skip it.
 
+It fails closed: a missing scanner, trivy exiting above 1, a tree it could not read, and an empty result set are all failures, because this image becomes the root filesystem of every sandbox. An accepted finding needs an expiry date and an exception record, in a file passed with `--accept`, one `<ID> <YYYY-MM-DD> <record>` per line; an entry past its date stops applying.
+
 Scan it this way instead, which does work: attach the image (a volume from its snapshot, or `losetup -P` on the raw), mount the squashfs root read-only and run `trivy rootfs` against the mount. That identifies the Ubuntu release and the Go binaries. Two limits to know: the image carries **no dpkg database**, so OS packages cannot be enumerated by any scanner and an `os-pkgs` count of zero means unknown rather than clean; and `kata-agent` is a Rust binary, outside trivy's Go analyzer.
 
 **Importing upstream's non-debug artifact instead.** The project publishes the plain pod VM as an OCI artifact — `quay.io/confidential-containers/podvm-generic-ubuntu-amd64`, with the debug variant under a separate `-debug-` name. `import-podvm-ami.sh` accepts the qcow2 directly and converts it, naming the raw after the qcow2's digest so a leftover conversion of a different image cannot be reused. It avoids the serial console but not the provenance question: the build workflow runs `actions/attest` with `push-to-registry`, yet neither the registry's referrers nor GitHub's attestation API holds an attestation for the released digest.
