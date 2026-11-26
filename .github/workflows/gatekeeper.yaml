@@ -16,7 +16,7 @@ concurrency:
 jobs:
   gatekeeper:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       checks: read
       statuses: read
@@ -26,4 +26,7 @@ jobs:
         with:
           self: gatekeeper
           token: ${{ secrets.GITHUB_TOKEN }}
-          timeout: 900
+          # 20 minutes: the slowest observed check on this repository took 18.
+          # The job allows 25, leaving the action room to report its own timeout
+          # rather than being killed with no verdict.
+          timeout: 1200
