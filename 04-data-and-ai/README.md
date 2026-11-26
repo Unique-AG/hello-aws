@@ -195,7 +195,7 @@ Applications retrieve secrets via ExternalSecrets -> Secrets Manager -> KMS (Sec
 - **Aurora**: `com.amazonaws.{region}.rds` Interface Endpoint (Aurora uses RDS API)
 - **ElastiCache**: `com.amazonaws.{region}.elasticache` Interface Endpoint
 - Both use the shared VPC endpoints security group from infrastructure layer
-- Both carry an endpoint policy limiting callers to this account, or to the organization when `vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py` fails the build if either loses it.
+- Both use `local.interface_endpoint_policy_with_resources`, which limits the caller **and** the resource reached, to this account or to the organization when `vpc_endpoint_policy_org_id` is set. `scripts/check-endpoint-policies.py` fails the build if either loses its policy, if an interface endpoint's policy is not resource-scoped, or if a name in the script's `PRINCIPAL_ONLY` exemptions no longer matches an endpoint.
 
 ### IAM (All policies use `aws_iam_policy_document`)
 

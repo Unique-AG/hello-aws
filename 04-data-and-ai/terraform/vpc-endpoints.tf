@@ -9,7 +9,7 @@ resource "aws_vpc_endpoint" "aurora" {
   subnet_ids          = local.infrastructure.private_subnet_ids
   security_group_ids  = [data.terraform_remote_state.infrastructure.outputs.vpc_endpoints_security_group_id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-aurora"
@@ -27,7 +27,7 @@ resource "aws_vpc_endpoint" "elasticache" {
   subnet_ids          = local.infrastructure.private_subnet_ids
   security_group_ids  = [data.terraform_remote_state.infrastructure.outputs.vpc_endpoints_security_group_id]
   private_dns_enabled = true
-  policy              = local.interface_endpoint_policy
+  policy              = local.interface_endpoint_policy_with_resources
 
   tags = {
     Name = "vpce-${module.naming.id}-elasticache"
