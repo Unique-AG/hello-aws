@@ -74,6 +74,23 @@ output "quota_list_keys" {
     ])
     error_message = "rules per security group x security groups per interface must not exceed 1000 for any size in quota-list.yaml."
   }
+
+  precondition {
+    # The catalogue above is not what is requested: each target is the larger of
+    # the list value and the value already applied, so a Region sitting higher
+    # can carry the product past 1,000 while the catalogue still passes.
+    condition = (aws_servicequotas_service_quota.home["vpc_rules_per_sg"].value
+    * aws_servicequotas_service_quota.home["vpc_sgs_per_eni"].value) <= 1000
+    error_message = "The values requested in this Region multiply above 1000: AWS refuses that combination."
+  }
+
+  precondition {
+    condition = local.quota_recovery_region == null ? true : (
+      aws_servicequotas_service_quota.recovery["vpc_rules_per_sg"].value
+      * aws_servicequotas_service_quota.recovery["vpc_sgs_per_eni"].value
+    ) <= 1000
+    error_message = "The values requested in the recovery Region multiply above 1000: AWS refuses that combination."
+  }
 }
 
 output "quota_recovery_region" {
