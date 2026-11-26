@@ -43,12 +43,6 @@ enable_github_runners = true
 # Secondary CIDR for EKS pod networking
 enable_secondary_cidr = true
 
-# Route 53 Private Hosted Zone Configuration
-# Associates this VPC with the Route 53 Private Hosted Zone from landing zone
-# This enables DNS resolution across all VPCs associated with the zone
-route53_private_zone_domain = "sbx.example.com"
-route53_private_zone_id     = "Z0000000000000000000"
-
 # Ingress NLB + ALB + CloudFront VPC Origin
 # enable_ingress_nlb defaults to true — NLB is created with infrastructure
 alb_deletion_protection                = false
