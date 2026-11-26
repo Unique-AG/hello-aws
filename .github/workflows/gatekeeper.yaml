@@ -1,0 +1,29 @@
+name: '[gate] Gatekeeper'
+
+# One required check that passes only when every other check on the merge
+# result has passed. CA 12.4 (AWS-SRC-10).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: gatekeeper-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gatekeeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      checks: read
+      statuses: read
+      pull-requests: read
+    steps:
+      - uses: upsidr/merge-gatekeeper@09af7a82c1666d0e64d2bd8c01797a0bcfd3bb5d # v1.2.1
+        with:
+          self: gatekeeper
+          token: ${{ secrets.GITHUB_TOKEN }}
+          timeout: 900
