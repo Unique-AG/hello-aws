@@ -377,11 +377,6 @@ resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
   role       = aws_iam_role.eks_node_group.name
 }
 
-resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_node_group.name
-}
-
 resource "aws_iam_role_policy_attachment" "eks_container_registry_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
   role       = aws_iam_role.eks_node_group.name
@@ -525,9 +520,11 @@ resource "aws_launch_template" "eks_nodes" {
   }
 
   metadata_options {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"
-    http_put_response_hop_limit = 2
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+    # 1 keeps IMDS reachable from the host and not from a pod's network
+    # namespace, so a workload cannot borrow the node role (CA 7.4).
+    http_put_response_hop_limit = 1
   }
 
   # Multipart because EKS appends its own node configuration to this.
@@ -604,7 +601,7 @@ resource "aws_eks_node_group" "pool" {
   depends_on = [
     aws_eks_cluster.main,
     aws_iam_role_policy_attachment.eks_worker_node_policy,
-    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_eks_pod_identity_association.vpc_cni,
     aws_iam_role_policy_attachment.eks_container_registry_policy
   ]
 

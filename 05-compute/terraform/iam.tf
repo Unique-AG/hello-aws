@@ -1184,3 +1184,31 @@ resource "aws_eks_pod_identity_association" "peer_pods_ctrl" {
   service_account = "peerpodctrl-controller-manager"
   role_arn        = aws_iam_role.peer_pods.arn
 }
+
+#######################################
+# VPC CNI Role
+#######################################
+# CA 7.4: the CNI's permissions belong to the CNI, not to every pod that can
+# reach the node's credentials. Paired with an IMDS hop limit of 1, which stops
+# a pod reaching the node role at all.
+
+resource "aws_iam_role" "vpc_cni" {
+  name               = "${module.naming.id}-vpc-cni"
+  assume_role_policy = data.aws_iam_policy_document.pod_identity_assume.json
+
+  tags = {
+    Name = "${module.naming.id}-vpc-cni"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "vpc_cni" {
+  role       = aws_iam_role.vpc_cni.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
+}
+
+resource "aws_eks_pod_identity_association" "vpc_cni" {
+  cluster_name    = aws_eks_cluster.main.name
+  namespace       = "kube-system"
+  service_account = "aws-node"
+  role_arn        = aws_iam_role.vpc_cni.arn
+}
