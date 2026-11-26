@@ -1,0 +1,148 @@
+# Adjustable service quotas the layers depend on (CA 16.4, AWS-RES-11).
+# Values are 1.5x the peak each installation size allows; adjust per installation.
+
+sizes: [small, medium, large]
+
+quotas:
+  - key: vpc_interface_endpoints
+    service_code: vpc
+    quota_code: L-29B6F2EB
+    name: Interface VPC endpoints per VPC
+    layers: [03-infrastructure, 04-data-and-ai]
+    values: { small: 60, medium: 75, large: 100 }
+
+  - key: vpc_nat_gateways_per_az
+    service_code: vpc
+    quota_code: L-FE5A380F
+    name: NAT gateways per Availability Zone
+    layers: [03-infrastructure]
+    values: { small: 5, medium: 5, large: 8 }
+
+  - key: vpc_sgs_per_eni
+    service_code: vpc
+    quota_code: L-2AFB9258
+    name: Security groups per network interface
+    layers: [03-infrastructure, 05-compute]
+    values: { small: 5, medium: 8, large: 10 }
+
+  - key: vpc_rules_per_sg
+    service_code: vpc
+    quota_code: L-0EA8095F
+    name: Inbound or outbound rules per security group
+    layers: [03-infrastructure, 04-data-and-ai, 05-compute]
+    values: { small: 60, medium: 90, large: 120 }
+
+  - key: ec2_elastic_ips
+    service_code: ec2
+    quota_code: L-0263D0A3
+    name: EC2-VPC Elastic IPs
+    layers: [03-infrastructure]
+    values: { small: 5, medium: 8, large: 12 }
+
+  - key: ec2_ondemand_standard_vcpus
+    service_code: ec2
+    quota_code: L-1216C47A
+    name: Running On-Demand Standard instances (vCPUs)
+    layers: [05-compute]
+    values: { small: 256, medium: 512, large: 1024 }
+
+  - key: eks_clusters
+    service_code: eks
+    quota_code: L-1194D53C
+    name: Clusters
+    layers: [05-compute]
+    values: { small: 100, medium: 100, large: 100 }
+
+  - key: eks_node_groups_per_cluster
+    service_code: eks
+    quota_code: L-6D54EA21
+    name: Managed node groups per cluster
+    layers: [05-compute]
+    values: { small: 30, medium: 30, large: 45 }
+
+  - key: eks_fargate_profiles_per_cluster
+    service_code: eks
+    quota_code: L-33415657
+    name: Fargate profiles per cluster
+    layers: [05-compute]
+    values: { small: 10, medium: 15, large: 20 }
+
+  - key: elb_application_load_balancers
+    service_code: elasticloadbalancing
+    quota_code: L-53DA6B97
+    name: Application Load Balancers per Region
+    layers: [03-infrastructure]
+    values: { small: 50, medium: 50, large: 75 }
+
+  - key: elb_network_load_balancers
+    service_code: elasticloadbalancing
+    quota_code: L-69A177A2
+    name: Network Load Balancers per Region
+    layers: [03-infrastructure]
+    values: { small: 50, medium: 50, large: 75 }
+
+  - key: elb_targets_per_target_group
+    service_code: elasticloadbalancing
+    quota_code: L-A0D0B863
+    name: Targets per Target Group per Region
+    layers: [03-infrastructure]
+    values: { small: 1000, medium: 1500, large: 3000 }
+
+  - key: rds_db_clusters
+    service_code: rds
+    quota_code: L-952B80B8
+    name: DB clusters
+    layers: [04-data-and-ai]
+    values: { small: 40, medium: 40, large: 60 }
+
+  - key: rds_db_instances
+    service_code: rds
+    quota_code: L-7B6409FD
+    name: DB instances
+    layers: [04-data-and-ai]
+    values: { small: 40, medium: 40, large: 60 }
+
+  - key: elasticache_nodes
+    service_code: elasticache
+    quota_code: L-DFE45DF3
+    name: Nodes per Region
+    layers: [04-data-and-ai]
+    values: { small: 300, medium: 300, large: 450 }
+
+  - key: kms_customer_master_keys
+    service_code: kms
+    quota_code: L-C2F1777E
+    name: Customer Master Keys (CMKs)
+    layers: [02-governance, 03-infrastructure, 04-data-and-ai, 05-compute]
+    values: { small: 100000, medium: 100000, large: 100000 }
+
+  - key: kms_grants_per_cmk
+    service_code: kms
+    quota_code: L-D594A657
+    name: Grants per CMK
+    layers: [04-data-and-ai, 05-compute]
+    values: { small: 50000, medium: 50000, large: 50000 }
+
+  - key: acmpca_issue_certificate_rate
+    service_code: acm-pca
+    quota_code: L-CAFB4993
+    name: Rate of IssueCertificate requests
+    layers: [03-infrastructure]
+    values: { small: 25, medium: 50, large: 100 }
+
+# Not adjustable. Service Quotas refuses a request, so the plan check skips these
+# and the section that depends on one designs around it (CA 16.4).
+not_adjustable:
+  - key: secretsmanager_secrets
+    service_code: secretsmanager
+    quota_code: L-2F66C23C
+    name: Secrets
+    layers: [04-data-and-ai]
+    designed_around: >-
+      04-data-and-ai holds ~40 secrets against a fixed limit of 500,000, so the
+      ceiling is not reachable by this architecture.
+
+# Out of scope by the statement: the capacity review requests Bedrock model
+# quotas (CA 11.1, AWS-AI-03), not this layer.
+excluded:
+  - bedrock model throughput
