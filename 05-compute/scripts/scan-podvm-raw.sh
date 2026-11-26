@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
-# scan-podvm-raw.sh — scan a pod VM raw image before it becomes an AMI (CA 9.3).
-# Why not `trivy vm`, and the mount method: 05-compute/README.md.
-# Fails closed: a missing scanner, an unreadable tree or an empty result are failures.
-#
+# Scan a pod VM raw image before it becomes an AMI. Why not `trivy vm`, the
+# mount method and the --accept format: 05-compute/README.md.
 # Usage: scan-podvm-raw.sh --image <raw> [--accept <file>]
-#   --accept  "<ID> <YYYY-MM-DD> <record>" per line; an entry past its date does not apply.
 
 set -euo pipefail
 
