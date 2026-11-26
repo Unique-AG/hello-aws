@@ -28,7 +28,7 @@ assume a sandbox pod's resource usage is in Prometheus; it is not.
 
 | Workload | Endpoint | Monitor |
 |---|---|---|
-| Qdrant | `:6333/metrics` | chart's own ServiceMonitor (`metrics.serviceMonitor.enabled`) |
+| Qdrant | `:6333/metrics` | chart's own ServiceMonitor (`metrics.serviceMonitor.enabled`); scrapes `qdrant-headless` |
 | RabbitMQ | `:15692/metrics` | `value-overlays/rabbitmq/service-monitor.yaml` |
 | backend-service-speech | `:8080/metrics` | chart ServiceMonitor, via `prometheus.enabled` |
 | chat, ingestion, configuration, scope-management, app-repository | chart default | chart ServiceMonitor |
@@ -36,8 +36,12 @@ assume a sandbox pod's resource usage is in Prometheus; it is not.
 
 The endpoint column is a measurement taken from inside the cluster. The monitor
 column is configuration: a row added by this change has a reachable endpoint but
-no `up` series until ArgoCD syncs it, so verify with `up{job=~"qdrant|rabbitmq.*"}`
-after the sync rather than reading the table as proof of a live target.
+no `up` series until ArgoCD syncs it, so verify after the sync rather than reading the
+table as proof of a live target. Query
+`up{job=~"qdrant.*|rabbitmq.*|backend-service-speech"}`: the `job` label is the **Service**
+name, not the ServiceMonitor name, so Qdrant appears as `qdrant-headless` — the chart's
+selector targets the headless service. Searching for `job="qdrant"` finds nothing and looks
+like a broken monitor.
 
 RabbitMQ needs its own manifest because the cluster is operator-managed and has
 no chart values to set. Its metrics matter beyond dashboards: the KEDA migration
