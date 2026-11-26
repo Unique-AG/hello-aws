@@ -13,8 +13,12 @@ env:
   REDIS_JOB_TTL_SECONDS: 3600
   REDIS_QUEUE_BLOCK_TIMEOUT: 1
 
+# Serves no /metrics (measured 404), but the chart's default alerts read
+# kube-state-metrics and need none — so disable scraping, not prometheus.
 prometheus:
-  enabled: false
+  enabled: true
+  scraping:
+    enabled: false
 probes:
   enabled: true
   liveness:
