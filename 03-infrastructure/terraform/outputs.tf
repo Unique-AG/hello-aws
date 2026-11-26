@@ -266,11 +266,6 @@ output "management_server_private_ip" {
   value       = var.enable_management_server ? aws_instance.management_server[0].private_ip : null
 }
 
-output "management_server_public_ip" {
-  description = "Public IP address of the management server (if public access enabled)"
-  value       = var.enable_management_server && var.management_server_public_access ? aws_eip.management_server[0].public_ip : null
-}
-
 output "management_server_security_group_id" {
   description = "Security group ID for the management server"
   value       = aws_security_group.management_server.id

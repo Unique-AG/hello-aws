@@ -3,6 +3,61 @@ locals {
   # A region absent from the table is refused below rather than silently unpaired.
   recovery_pairs  = yamldecode(file("${path.module}/../../recovery-pairing.yaml")).pairs
   recovery_region = try(local.recovery_pairs[var.aws_region], null)
+  # An interface endpoint allows every principal that can reach it unless given
+  # a policy. This limits each to the organization, or to this account alone.
+  interface_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Sid       = "AllowOwnPrincipalsOnly"
+      Effect    = "Allow"
+      Principal = "*"
+      Action    = "*"
+      Resource  = "*"
+      Condition = {
+        StringEquals = var.vpc_endpoint_policy_org_id != null ? {
+          "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
+          } : {
+          "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+        }
+      }
+    }]
+  })
+
+  # A federated call carries no principal, so the policy above would deny IRSA.
+  # AWS documents this second statement, scoping it by the role it targets.
+  sts_endpoint_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowOwnPrincipalsOnly"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = "*"
+        Resource  = "*"
+        Condition = {
+          StringEquals = var.vpc_endpoint_policy_org_id != null ? {
+            "aws:PrincipalOrgID" = var.vpc_endpoint_policy_org_id
+            } : {
+            "aws:PrincipalAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid       = "AllowFederatedIntoOwnRoles"
+        Effect    = "Allow"
+        Principal = "*"
+        Action    = ["sts:AssumeRoleWithSAML", "sts:AssumeRoleWithWebIdentity"]
+        Resource  = "*"
+        Condition = {
+          StringEquals = var.vpc_endpoint_policy_org_id != null ? {
+            "aws:ResourceOrgID" = var.vpc_endpoint_policy_org_id
+            } : {
+            "aws:ResourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
 
   # Secondary CIDR for EKS pod networking (RFC 6598 range)
   secondary_cidr = "100.64.0.0/20"

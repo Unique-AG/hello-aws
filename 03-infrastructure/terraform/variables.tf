@@ -67,9 +67,15 @@ variable "vpc_cidr" {
 }
 
 variable "enable_nat_gateway" {
-  description = "Enable NAT Gateway for private subnets"
+  description = "Enable NAT Gateway for private subnets. Refused in production by the validation below."
   type        = bool
   default     = true
+  validation {
+    # single_nat_gateway guards one-vs-per-zone; without this, false guards
+    # nothing at all and a production plan passes with zero NAT gateways.
+    condition     = contains(["sbx", "dev"], var.environment) || var.enable_nat_gateway
+    error_message = "A production environment needs a NAT Gateway in each zone: set enable_nat_gateway = true, or name the environment sbx or dev."
+  }
 }
 
 variable "availability_zone_count" {
@@ -229,12 +235,6 @@ variable "enable_management_server" {
   default     = true
 }
 
-variable "management_server_public_access" {
-  description = "Enable public IP for management server (if false, use Session Manager only)"
-  type        = bool
-  default     = false
-}
-
 variable "management_server_instance_type" {
   description = "EC2 instance type for management server"
   type        = string
@@ -304,6 +304,12 @@ variable "alb_ingress_from_cloudfront_service_sg" {
   description = "Admit the VPC-origin ALB only from CloudFront's service security group instead of the managed prefix list. CloudFront creates that group with the VPC origin, so leave this false on a first apply."
   type        = bool
   default     = false
+}
+
+variable "vpc_endpoint_policy_org_id" {
+  description = "AWS Organization id to limit interface endpoint access to. Null limits to this account instead."
+  type        = string
+  default     = null
 }
 
 variable "enable_connectivity_account_role" {
