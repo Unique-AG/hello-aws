@@ -47,14 +47,14 @@ resource "aws_vpc_security_group_egress_rule" "elasticache_to_vpc" {
 resource "aws_elasticache_replication_group" "redis" {
   #checkov:skip=CKV_AWS_31: see docs/security-baseline.md
   replication_group_id = "redis-${module.naming.id}"
-  description          = "Redis cluster for ${var.environment} environment"
-  engine               = "redis"
+  description          = "Valkey cluster for ${var.environment} environment"
+  engine               = "valkey"
   engine_version       = var.elasticache_engine_version
   node_type            = var.elasticache_node_type
   num_cache_clusters   = var.elasticache_num_cache_nodes
   # Port 6380 triggers auto-TLS in Node.js chat service (see pubSub.base.ts:42)
   port                 = 6380
-  parameter_group_name = aws_elasticache_parameter_group.redis.name
+  parameter_group_name = aws_elasticache_parameter_group.valkey.name
 
   subnet_group_name          = aws_elasticache_subnet_group.main.name
   security_group_ids         = [aws_security_group.elasticache.id]
@@ -83,13 +83,19 @@ resource "aws_elasticache_replication_group" "redis" {
 }
 
 # ElastiCache Parameter Group
-resource "aws_elasticache_parameter_group" "redis" {
-  name   = "param-group-${module.naming.id}-redis"
+resource "aws_elasticache_parameter_group" "valkey" {
+  name   = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
   family = var.elasticache_parameter_family
 
+  # The replication group must be pointed at the new group before the old one
+  # can go; without this the destroy can be ordered first and the apply fails.
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
-    Name    = "param-group-${module.naming.id}-redis"
-    Purpose = "redis-parameter-group"
+    Name    = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
+    Purpose = "valkey-parameter-group"
   }
 }
 
