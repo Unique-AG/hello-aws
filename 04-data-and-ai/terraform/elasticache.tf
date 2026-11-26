@@ -87,15 +87,21 @@ resource "aws_elasticache_parameter_group" "valkey" {
   name   = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
   family = var.elasticache_parameter_family
 
-  # The replication group must be pointed at the new group before the old one
-  # can go; without this the destroy can be ordered first and the apply fails.
-  lifecycle {
-    create_before_destroy = true
-  }
-
   tags = {
     Name    = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
     Purpose = "valkey-parameter-group"
+  }
+}
+
+# Kept only until every installation's replication group has moved to the
+# valkey group above; a group still named by a cluster cannot be deleted.
+resource "aws_elasticache_parameter_group" "redis" {
+  name   = "param-group-${module.naming.id}-redis"
+  family = "redis7"
+
+  tags = {
+    Name    = "param-group-${module.naming.id}-redis"
+    Purpose = "redis-parameter-group"
   }
 }
 
