@@ -1,7 +1,5 @@
-# Service quota requests (CA 16.4, AWS-RES-11).
-#
-# The list is quota-list.yaml beside this layer; the recovery Region comes from
-# the pairing table (CA 16.3), so the two never disagree.
+# Requests the quota-list.yaml values in this Region and the recovery Region,
+# which is read from recovery-pairing.yaml so the two cannot disagree.
 
 locals {
   quota_list = yamldecode(file("${path.module}/../quota-list.yaml"))
