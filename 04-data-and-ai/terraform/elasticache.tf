@@ -87,6 +87,12 @@ resource "aws_elasticache_parameter_group" "valkey" {
   name   = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
   family = var.elasticache_parameter_family
 
+  # A family upgrade changes name and family, which the provider replaces on;
+  # without this the destroy is ordered before the cluster moves off the group.
+  lifecycle {
+    create_before_destroy = true
+  }
+
   tags = {
     Name    = "param-group-${module.naming.id}-${var.elasticache_parameter_family}"
     Purpose = "valkey-parameter-group"
