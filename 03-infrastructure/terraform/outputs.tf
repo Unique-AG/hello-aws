@@ -401,8 +401,7 @@ output "recovery_region" {
   value       = local.recovery_region
 
   precondition {
-    # A precondition fails the plan. A check block would only warn, which is
-    # how an unpaired Region would reach production unnoticed.
+    # A precondition fails the plan; a check block would only warn.
     condition     = contains(keys(local.recovery_pairs), var.aws_region)
     error_message = "Region ${var.aws_region} is not in recovery-pairing.yaml: add it with its pair, or null if it is single-Region."
   }
