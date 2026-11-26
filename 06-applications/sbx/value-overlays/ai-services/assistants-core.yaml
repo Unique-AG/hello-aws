@@ -22,7 +22,7 @@ image:
   repository: ai-service-assistants-core
   useDigest: false
 
-replicaCount: 1
+replicaCount: 2
 
 resources:
   limits:

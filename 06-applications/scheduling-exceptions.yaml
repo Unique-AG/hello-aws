@@ -1,0 +1,91 @@
+# The release's exception list for CA 9.4 (AWS-CMP-17). A workload here does
+# not meet one of the control's clauses, and says why.
+#
+# Each entry names the clause it misses, the reason, and what would close it.
+# "chart" means the chart exposes no value for it — a helm-charts change, not
+# a value change here. "design" means the service would behave incorrectly.
+
+replicas:
+  # The control: "a replica in every zone of its cluster's VPC, at least two
+  # ... an autoscaled one meets the replica count through its autoscaler's
+  # lower bound ... and a queue worker whose lower bound is below that count,
+  # zero included, is on that list with its reason".
+
+  - workload: backend-service-event-socket
+    runs: 1
+    kind: design
+    reason: >-
+      Every replica consumes the one shared AMQP queue EVENT_SOCKET, bound '#'
+      to the EVENT_BUS topic exchange, and RabbitMQ hands each message to a
+      single consumer. A client's websocket lives on one pod, so a second
+      replica would receive events for clients it does not hold and ack them.
+    verified_at: next/services/event-socket/src/amqp.setup.ts, monorepo master 2c2de03abf
+    closes_when: >-
+      The service declares a per-instance exclusive queue bound to the same
+      exchange, so every replica receives every event. Monorepo change.
+
+  - workload: backend-service-ingestion-worker
+    runs: 0
+    kind: design
+    reason: >-
+      KEDA holds it at minReplicaCount 0 while its queue is idle. A workload at
+      rest at zero cannot satisfy a replica-per-zone rule; raising the floor
+      would pay for idle capacity to satisfy a count, not availability.
+    closes_when: >-
+      Never, by design. The control admits this case explicitly.
+
+  - workload: backend-service-ingestion-worker-chat
+    runs: 0
+    kind: design
+    reason: As backend-service-ingestion-worker — the same chart at the same floor.
+    closes_when: Never, by design.
+
+priority_class:
+  # The control: "a priority class that ranks platform services above product
+  # services". The class objects exist; these workloads cannot name one.
+
+  - workloads: [web-app-admin, web-app-chat, web-app-knowledge-upload, web-app-theme]
+    kind: chart
+    reason: web-app 5.3.0 renders no priorityClassName on its pod spec.
+    closes_when: The chart takes a priorityClassName value.
+
+  - workloads: [agent-sandbox-controller]
+    kind: chart
+    reason: agent-sandbox-controller 1.0.1 renders no priorityClassName.
+    closes_when: The chart takes a priorityClassName value.
+
+  - workloads: [zitadel]
+    kind: chart
+    reason: >-
+      zitadel 9.34.1 exposes nodeSelector, tolerations and affinity but no
+      priorityClassName. Third-party chart.
+    closes_when: Upstream adds the value, or the release pins a chart that has it.
+
+topology_spread:
+  # The control: "under a topology spread constraint".
+
+  - workloads: [every backend-service, every web-app]
+    kind: chart
+    reason: >-
+      Neither backend-service 10.5.1 nor web-app 5.3.0 renders
+      topologySpreadConstraints. No value reaches the pod spec.
+    closes_when: >-
+      Both charts take topologySpreadConstraints. Raised with helm-charts
+      alongside trafficDistribution (AWS-CST-08, CA 17.3).
+
+readiness_probe:
+  # The control: "a readiness probe".
+
+  - workloads: [backend-service-webhook-scheduler, backend-service-webhook-worker]
+    kind: design
+    reason: >-
+      AMQP consumers with no HTTP route. Readiness governs Service endpoints,
+      and no Service sends them traffic.
+    closes_when: They serve HTTP, or the chart grows an exec probe.
+
+  - workloads: [client-insights-exporter]
+    kind: design
+    reason: >-
+      Calls other services and pushes to an external endpoint; has no route of
+      its own and receives no inbound traffic.
+    closes_when: It serves HTTP.

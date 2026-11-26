@@ -82,3 +82,9 @@ serviceAccount:
 
 keda:
   skipCrdCheck: true
+
+# CA 9.4's floor for a non-production installation. Production uses the
+# defaults' three, one per zone; event-socket is on the exception list.
+replicaCount: 2
+autoscaling:
+  minReplicas: 2
