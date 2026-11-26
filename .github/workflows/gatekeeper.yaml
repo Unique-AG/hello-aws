@@ -1,0 +1,56 @@
+name: '[gate] Gatekeeper'
+
+# One required check that passes only when every other check on the merge
+# result has passed. CA 12.4 (AWS-SRC-10).
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: gatekeeper-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  gatekeeper:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      checks: read
+      statuses: read
+      pull-requests: read
+    steps:
+      # The gate's first poll is immediate and reads an absent check as passing.
+      # These two workflows carry no path filter, so they register on every PR.
+      - name: Wait for the unconditional checks to register
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 180))
+          while :; do
+            present=$(gh api --paginate \
+              "repos/${GITHUB_REPOSITORY}/commits/${SHA}/check-runs?per_page=100" \
+              --jq '.check_runs[].name')
+            missing=""
+            for want in gitleaks shellcheck; do
+              printf '%s\n' "$present" | grep -qxF "$want" || missing="$missing $want"
+            done
+            [ -z "$missing" ] && break
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "::error::checks never registered:$missing"
+              exit 1
+            fi
+            sleep 10
+          done
+      - uses: upsidr/merge-gatekeeper@09af7a82c1666d0e64d2bd8c01797a0bcfd3bb5d # v1.2.1
+        with:
+          self: gatekeeper
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # 20 minutes: the slowest observed check on this repository took 18.
+          # 20 plus the 3-minute wait above fits the job's 25, so the action
+          # reports its own timeout rather than being killed with no verdict.
+          timeout: 1200
