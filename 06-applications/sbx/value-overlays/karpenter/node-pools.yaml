@@ -85,6 +85,59 @@ resources:
   - apiVersion: karpenter.sh/v1
     kind: NodePool
     metadata:
+      name: data
+    spec:
+      # Higher weight than general-arm64 so a pod that tolerates the taint
+      # lands here rather than on a general node.
+      weight: 10
+      template:
+        metadata:
+          labels:
+            scalability: steady
+            lifecycle: persistent
+            workload: data
+        spec:
+          nodeClassRef:
+            group: karpenter.k8s.aws
+            kind: EC2NodeClass
+            name: default
+          # Only the in-cluster stores, so a general workload cannot take
+          # capacity a store will need to come back onto.
+          taints:
+            - key: workload
+              value: data
+              effect: NoSchedule
+          requirements:
+            - key: kubernetes.io/arch
+              operator: In
+              values: ["arm64"]
+            - key: kubernetes.io/os
+              operator: In
+              values: ["linux"]
+            - key: karpenter.sh/capacity-type
+              operator: In
+              values: ["on-demand"]
+            # Memory-leaning: Qdrant, Elasticsearch and RabbitMQ are held back
+            # by memory before CPU.
+            - key: karpenter.k8s.aws/instance-category
+              operator: In
+              values: ["r", "m"]
+            - key: karpenter.k8s.aws/instance-generation
+              operator: Gt
+              values: ["6"]
+          expireAfter: 336h
+      limits:
+        cpu: "48"
+        memory: 384Gi
+      disruption:
+        consolidationPolicy: WhenEmptyOrUnderutilized
+        consolidateAfter: 5m
+        budgets:
+          - nodes: "1"
+
+  - apiVersion: karpenter.sh/v1
+    kind: NodePool
+    metadata:
       name: general-amd64
     spec:
       # Lower weight: the scheduler prefers arm64 when a pod fits either.
@@ -120,7 +173,7 @@ resources:
               values: ["c", "m", "r"]
             - key: karpenter.k8s.aws/instance-generation
               operator: Gt
-              values: ["5"]
+              values: ["6"]
           expireAfter: 336h
       limits:
         cpu: "48"

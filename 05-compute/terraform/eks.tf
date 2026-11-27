@@ -415,6 +415,16 @@ resource "aws_eks_addon" "pod_identity_agent" {
   depends_on                  = [aws_eks_node_group.pool]
 }
 
+# metrics-server. Nothing serves the resource metrics API without it, so every
+# HPA reports <unknown> and never scales (CA 9.2).
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = "metrics-server"
+  addon_version               = var.eks_metrics_server_version
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [aws_eks_node_group.pool]
+}
+
 # EBS CSI Driver Addon - Required for PersistentVolumeClaims with gp3 storage
 # Pod Identity association is managed via standalone aws_eks_pod_identity_association.ebs_csi
 # service_account_role_arn is ignored because cross-account assumed roles cannot

@@ -72,6 +72,12 @@ variable "eks_cluster_version" {
   default     = "1.35"
 }
 
+variable "eks_metrics_server_version" {
+  description = "Version of the metrics-server addon"
+  type        = string
+  default     = null # Uses latest compatible version if null
+}
+
 variable "eks_ebs_csi_driver_version" {
   description = "Version of the EBS CSI driver addon"
   type        = string
