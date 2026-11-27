@@ -75,13 +75,13 @@ variable "eks_cluster_version" {
 variable "eks_metrics_server_version" {
   description = "Version of the metrics-server addon"
   type        = string
-  default     = null # Uses latest compatible version if null
+  default     = null # null: the default version EKS ships for this cluster
 }
 
 variable "eks_ebs_csi_driver_version" {
   description = "Version of the EBS CSI driver addon"
   type        = string
-  default     = null # Uses latest compatible version if null
+  default     = null # null: the default version EKS ships for this cluster
 }
 
 variable "eks_endpoint_public_access" {

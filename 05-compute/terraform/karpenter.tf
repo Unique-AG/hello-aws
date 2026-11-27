@@ -155,7 +155,7 @@ locals {
       source      = "aws.ec2"
       detail_type = "EC2 Instance State-change Notification"
     }
-    capacity_reservation = {
+    cap_reservation = {
       source      = "aws.ec2"
       detail_type = "EC2 Capacity Reservation Instance Interruption Warning"
     }

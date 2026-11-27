@@ -374,6 +374,7 @@ replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
 
 # 3. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
+replace_all "<KMS_KEY_ARN>" "$TO_KMS_KEY_ARN"
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
 
 # 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
@@ -453,14 +454,16 @@ echo "  EKS cluster name ..."
 # saved and desired values already match, replace_all returns before touching
 # them. So the tokens are replaced whether or not the value changed.
 #
-# And the cluster name holds the prefix, so a new prefix containing the old one
-# would be applied twice inside it: uq-x -> new-uq-x would turn eks-new-uq-x
-# into eks-new-new-uq-x. The sentinel keeps the prefix pass away from it.
+# And a new prefix containing the old one would be applied twice to text the
+# previous pass just wrote: uq-x -> new-uq-x turns new-uq-x into new-new-uq-x.
+# A sentinel per value means each is written exactly once, at the end.
 CLUSTER_SENTINEL="__EKS_CLUSTER_NAME_SENTINEL__"
+PREFIX_SENTINEL="__NAMING_PREFIX_SENTINEL__"
 replace_all "<EKS_CLUSTER_NAME>" "$CLUSTER_SENTINEL"
 replace_all "$FROM_EKS_CLUSTER_NAME" "$CLUSTER_SENTINEL"
-replace_all "<NAMING_PREFIX>" "$TO_NAMING_PREFIX"
-replace_all "$FROM_NAMING_PREFIX" "$TO_NAMING_PREFIX"
+replace_all "<NAMING_PREFIX>" "$PREFIX_SENTINEL"
+replace_all "$FROM_NAMING_PREFIX" "$PREFIX_SENTINEL"
+replace_all "$PREFIX_SENTINEL" "$TO_NAMING_PREFIX"
 replace_all "$CLUSTER_SENTINEL" "$TO_EKS_CLUSTER_NAME"
 
 # 9. VPC ID
