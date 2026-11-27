@@ -21,7 +21,9 @@ configs:
     timeout.reconciliation: 30s
   rbac:
     create: true
-    policy.default: role:admin
+    # no-access, as both fleet policies use: with SSO on, a default of
+    # role:admin makes every authenticated tenant user an Argo CD admin.
+    policy.default: role:no-access
     scopes: '[roles]'
     policy.csv: |
         #################################################
@@ -32,7 +34,12 @@ configs:
         #################################################
 
         ################### GROUPS #####################
+        # The fleet registration module's fixed app roles, mapped as
+        # gitops-resources/defaults/global/argocd/policies/permissive does.
         g, maintain, role:admin
+        g, infrastructure_support, role:admin
+        g, system_support, role:admin
+        g, application_support, role:admin
         ################### POLICIES #####################
         # role:sync-only
         p, role:sync-only, applications, get, *, allow
