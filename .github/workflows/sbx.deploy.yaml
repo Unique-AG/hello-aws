@@ -1,6 +1,8 @@
 name: '[tf] [sbx] Deploy'
 on:
   push:
+    # The branch this applies to. A literal 'deploy' matches no branch that
+    # exists, so the deploy branch had to carry a hand-edited copy of this file.
     branches: [deploy/sbx]
     paths: ['0[1-5]-*/**', 'modules/**', 'common.auto.tfvars']
   workflow_dispatch:
