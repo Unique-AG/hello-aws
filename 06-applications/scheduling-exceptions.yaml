@@ -62,8 +62,10 @@ priority_class:
     closes_when: Upstream adds the value, or the release pins a chart that has it.
 
 pod_disruption_budget:
-  # The control: "a PodDisruptionBudget". The backend-service and web-app
-  # charts render one above a single replica; these two charts render none.
+  # The control: "a PodDisruptionBudget". backend-service and web-app gate
+  # theirs on replicaCount and the HPA's lower bound — never on KEDA's — so
+  # a KEDA workload needs replicaCount above 1 to get one. These two charts
+  # render none at any count.
 
   - workloads: [litellm]
     kind: chart
