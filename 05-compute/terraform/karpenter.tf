@@ -211,6 +211,7 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "arn:aws:ec2:${var.aws_region}:*:security-group/*",
       "arn:aws:ec2:${var.aws_region}:*:subnet/*",
       "arn:aws:ec2:${var.aws_region}:*:capacity-reservation/*",
+      "arn:aws:ec2:${var.aws_region}:*:placement-group/*",
     ]
     actions = ["ec2:RunInstances", "ec2:CreateFleet"]
   }
@@ -361,9 +362,11 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "ec2:DescribeCapacityReservations",
       "ec2:DescribeImages",
       "ec2:DescribeInstances",
+      "ec2:DescribeInstanceStatus",
       "ec2:DescribeInstanceTypeOfferings",
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeLaunchTemplates",
+      "ec2:DescribePlacementGroups",
       "ec2:DescribeSecurityGroups",
       "ec2:DescribeSpotPriceHistory",
       "ec2:DescribeSubnets",
@@ -542,6 +545,21 @@ data "aws_iam_policy_document" "karpenter_controller" {
     effect    = "Allow"
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"]
     actions   = ["iam:GetInstanceProfile"]
+  }
+
+  # Karpenter 1.15 reads ARC zonal shift state so it does not launch into a
+  # zone that is shifted away. Conditioned on this cluster.
+  statement {
+    sid       = "AllowZonalShiftStatusReadOnly"
+    effect    = "Allow"
+    resources = ["*"]
+    actions   = ["arc-zonal-shift:GetManagedResource"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "arc-zonal-shift:ResourceIdentifier"
+      values   = [aws_eks_cluster.main.arn]
+    }
   }
 
   statement {
