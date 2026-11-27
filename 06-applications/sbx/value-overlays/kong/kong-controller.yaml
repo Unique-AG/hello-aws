@@ -3,6 +3,15 @@ controller:
   # CA 9.4 names the ingress controller: two replicas and a budget, so a
   # node drain cannot take the whole ingress path with it.
   replicaCount: 2
+  # Two replicas are only zone tolerance if they land in two zones; the
+  # scheduler's default spread allows a skew of 3 and would not separate them.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: kong-controller
   podDisruptionBudget:
     enabled: true
     maxUnavailable: 1
@@ -41,6 +50,15 @@ gateway:
   # CA 9.4 names the ingress controller: two replicas and a budget, so a
   # node drain cannot take the whole ingress path with it.
   replicaCount: 2
+  # Two replicas are only zone tolerance if they land in two zones; the
+  # scheduler's default spread allows a skew of 3 and would not separate them.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: kong-gateway
   podDisruptionBudget:
     enabled: true
     maxUnavailable: 1
