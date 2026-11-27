@@ -14,7 +14,7 @@ probes:
       path: /theme/api/health
       port: http
     initialDelaySeconds: 5
-replicaCount: 2
+replicaCount: 3
 resources:
   limits:
     cpu: 100m

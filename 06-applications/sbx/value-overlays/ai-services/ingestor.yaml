@@ -25,3 +25,10 @@ podAnnotations:
 
 extraEnvSecrets:
   - ingestor-secrets
+
+# CA 9.4's floor for a non-production installation.
+keda:
+  minReplicaCount: 2
+
+# Only to clear the chart's PDB condition; KEDA owns the count.
+replicaCount: 2
