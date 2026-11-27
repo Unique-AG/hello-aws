@@ -135,7 +135,7 @@ resource "aws_sqs_queue_policy" "karpenter_interruption" {
 }
 
 locals {
-  # The four events Karpenter acts on. Spot interruption gives two minutes;
+  # The five events Karpenter acts on. Spot interruption gives two minutes;
   # rebalance arrives earlier and is advisory; the other two cover retirement
   # and a stop or terminate from outside Karpenter.
   karpenter_events = {
@@ -154,6 +154,10 @@ locals {
     state_change = {
       source      = "aws.ec2"
       detail_type = "EC2 Instance State-change Notification"
+    }
+    cap_reservation = {
+      source      = "aws.ec2"
+      detail_type = "EC2 Capacity Reservation Instance Interruption Warning"
     }
   }
 }
@@ -194,7 +198,7 @@ resource "aws_iam_role" "karpenter_controller" {
 }
 
 # Ported from Karpenter's own reference policy (aws/karpenter-provider-aws,
-# cloudformation.yaml at v1.6.0) rather than written here: the tag conditions
+# cloudformation.yaml at v1.15.3) rather than written here: the tag conditions
 # are what separate Karpenter's nodes from everything else in the account.
 data "aws_iam_policy_document" "karpenter_controller" {
   # The network and image a launch may reference. Narrowed to this Region.
@@ -207,6 +211,7 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "arn:aws:ec2:${var.aws_region}:*:security-group/*",
       "arn:aws:ec2:${var.aws_region}:*:subnet/*",
       "arn:aws:ec2:${var.aws_region}:*:capacity-reservation/*",
+      "arn:aws:ec2:${var.aws_region}:*:placement-group/*",
     ]
     actions = ["ec2:RunInstances", "ec2:CreateFleet"]
   }
@@ -357,9 +362,11 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "ec2:DescribeCapacityReservations",
       "ec2:DescribeImages",
       "ec2:DescribeInstances",
+      "ec2:DescribeInstanceStatus",
       "ec2:DescribeInstanceTypeOfferings",
       "ec2:DescribeInstanceTypes",
       "ec2:DescribeLaunchTemplates",
+      "ec2:DescribePlacementGroups",
       "ec2:DescribeSecurityGroups",
       "ec2:DescribeSpotPriceHistory",
       "ec2:DescribeSubnets",
@@ -386,6 +393,35 @@ data "aws_iam_policy_document" "karpenter_controller" {
     effect    = "Allow"
     resources = ["*"]
     actions   = ["pricing:GetProducts"]
+  }
+
+  # The root volumes are encrypted with the general key, and the launching
+  # principal needs the grant — the managed node groups get this through the
+  # Auto Scaling service-linked role, which Karpenter does not use.
+  statement {
+    sid       = "AllowKMSForEncryptedVolumes"
+    effect    = "Allow"
+    actions   = ["kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"]
+    resources = [local.infrastructure.kms_key_arn]
+
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowKMSDescribeAndDataKey"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
   }
 
   statement {
@@ -524,11 +560,35 @@ data "aws_iam_policy_document" "karpenter_controller" {
     }
   }
 
+  # Unscoped because ListInstanceProfiles supports no resource-level
+  # permission; new in Karpenter 1.11.
+  statement {
+    sid       = "AllowUnscopedInstanceProfileListAction"
+    effect    = "Allow"
+    resources = ["*"]
+    actions   = ["iam:ListInstanceProfiles"]
+  }
+
   statement {
     sid       = "AllowInstanceProfileReadActions"
     effect    = "Allow"
     resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:instance-profile/*"]
     actions   = ["iam:GetInstanceProfile"]
+  }
+
+  # Karpenter 1.15 reads ARC zonal shift state so it does not launch into a
+  # zone that is shifted away. Conditioned on this cluster.
+  statement {
+    sid       = "AllowZonalShiftStatusReadOnly"
+    effect    = "Allow"
+    resources = ["*"]
+    actions   = ["arc-zonal-shift:GetManagedResource"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "arc-zonal-shift:ResourceIdentifier"
+      values   = [aws_eks_cluster.main.arn]
+    }
   }
 
   statement {

@@ -123,7 +123,7 @@ All parameters in `<env>/instance-config.yaml`:
 └── sbx/                             # Environment-specific configuration
     ├── instance-config.yaml         # (gitignored) Real values for this env
     ├── apps/
-    │   ├── system/                   # System app specs (22 apps)
+    │   ├── system/                   # System app specs (23 apps)
     │   ├── chat/                     # Chat app specs (21 apps)
     │   └── conduct/                  # Conduct sandbox app specs (6 apps)
     ├── charts/
@@ -205,7 +205,7 @@ A later push to the deploy branch also clears it, since a new revision starts a 
 
 ## Application Categories
 
-### System Applications (22)
+### System Applications (23)
 
 | App | autoSync | Description |
 |-----|----------|-------------|
@@ -219,6 +219,7 @@ A later push to the deploy branch also clears it, since a new revision starts a 
 | external-secrets | false | AWS Secrets Manager integration (ClusterSecretStore + app secrets) |
 | gateway-api-crds | false | Gateway API CRDs (required by Kong) |
 | kata-deploy | false | Kata Containers runtime for peer-pod sandboxes |
+| karpenter | true | Node provisioning for the general pools; the Kata sandbox hosts stay on a managed node group |
 | keda | true | Event-driven autoscaling (ServerSideApply for CRDs) |
 | kong | false | API gateway — controller, gateway, CRDs, plugins, ingress |
 | kube-prometheus-stack | false | Prometheus, Alertmanager and Grafana |
