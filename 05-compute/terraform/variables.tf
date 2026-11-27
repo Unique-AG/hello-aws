@@ -247,3 +247,15 @@ variable "enable_agentcore_gateway" {
   type        = bool
   default     = false
 }
+
+variable "karpenter_namespace" {
+  description = "Namespace the Karpenter controller runs in; the Pod Identity association names it before the controller exists."
+  type        = string
+  default     = "kube-system"
+}
+
+variable "karpenter_service_account" {
+  description = "Service account the Karpenter controller runs as."
+  type        = string
+  default     = "karpenter"
+}
