@@ -1,10 +1,10 @@
 # Karpenter controller. Its AWS identity comes from the Pod Identity
 # association in 05-compute, so no IRSA annotation here.
 settings:
-  clusterName: <EKS_CLUSTER_NAME>
+  clusterName: eks-uq-dogfood-sbx-use1
   # Drains a node on a Spot interruption or scheduled change instead of
   # losing it; the queue and its EventBridge rules are in 05-compute.
-  interruptionQueue: <NAMING_PREFIX>-karpenter-interruption
+  interruptionQueue: uq-dogfood-sbx-use1-karpenter-interruption
 
 serviceAccount:
   create: true
@@ -23,7 +23,7 @@ controller:
   # IMDS hop limit of 1, so the SDK's fallback cannot reach it.
   env:
     - name: AWS_REGION
-      value: <AWS_REGION>
+      value: us-east-1
   resources:
     requests:
       cpu: 1

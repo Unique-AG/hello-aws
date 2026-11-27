@@ -11,7 +11,7 @@ resources:
     spec:
       # Karpenter builds the instance profile from this role; 05-compute owns
       # the role and its EC2_LINUX access entry.
-      role: <NAMING_PREFIX>-karpenter-node
+      role: uq-dogfood-sbx-use1-karpenter-node
       amiSelectorTerms:
         - alias: al2023@latest
       # The tag the subnets already carry. Adding a second one would change
@@ -19,13 +19,13 @@ resources:
       # whenever they do, which deregisters the ingress targets.
       subnetSelectorTerms:
         - tags:
-            kubernetes.io/cluster/<NAMING_PREFIX>: shared
+            kubernetes.io/cluster/uq-dogfood-sbx-use1: shared
             Type: private
       # Two groups: the nodes' own, and the workload identity group that lets a
       # rule in the network or data layer name a node as a client.
       securityGroupSelectorTerms:
         - tags:
-            karpenter.sh/discovery: <NAMING_PREFIX>
+            karpenter.sh/discovery: uq-dogfood-sbx-use1
       metadataOptions:
         # One hop, as the managed node groups use: IMDS stays reachable from
         # the host and not from a pod's network namespace.
@@ -37,7 +37,7 @@ resources:
             volumeSize: 100Gi
             volumeType: gp3
             encrypted: true
-            kmsKeyID: <KMS_KEY_ARN>
+            kmsKeyID: arn:aws:kms:us-east-1:217381566492:key/13428ba6-4203-405a-b69a-edb2124b6c21
             deleteOnTermination: true
 
   - apiVersion: karpenter.sh/v1
