@@ -213,12 +213,24 @@ data "aws_iam_policy_document" "karpenter_controller" {
     resources = ["*"]
   }
 
-  # Pricing and the AMI parameters Karpenter resolves node images from.
+  # pricing:GetProducts supports no resource-level permission.
   statement {
-    sid       = "ReadPricingAndAMIParameters"
+    sid       = "ReadPricing"
     effect    = "Allow"
-    actions   = ["pricing:GetProducts", "ssm:GetParameter"]
+    actions   = ["pricing:GetProducts"]
     resources = ["*"]
+  }
+
+  # Only AWS's own published AMI parameters: on `*` this would also read any
+  # SecureString in the account that the default aws/ssm key decrypts.
+  statement {
+    sid     = "ReadPublishedAMIParameters"
+    effect  = "Allow"
+    actions = ["ssm:GetParameter"]
+    resources = [
+      "arn:aws:ssm:${var.aws_region}::parameter/aws/service/eks/optimized-ami/*",
+      "arn:aws:ssm:${var.aws_region}::parameter/aws/service/bottlerocket/*",
+    ]
   }
 
   statement {
@@ -239,7 +251,14 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "ec2:CreateLaunchTemplate",
       "ec2:RunInstances",
     ]
-    resources = ["*"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:volume/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:network-interface/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:spot-instances-request/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:fleet/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+    ]
 
     condition {
       test     = "StringEquals"
@@ -289,7 +308,10 @@ data "aws_iam_policy_document" "karpenter_controller" {
       "ec2:DeleteLaunchTemplate",
       "ec2:CreateTags",
     ]
-    resources = ["*"]
+    resources = [
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:instance/*",
+      "arn:aws:ec2:${var.aws_region}:${data.aws_caller_identity.current.account_id}:launch-template/*",
+    ]
 
     condition {
       test     = "StringEquals"
