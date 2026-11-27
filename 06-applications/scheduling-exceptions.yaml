@@ -46,8 +46,14 @@ priority_class:
 
   - workloads: [web-app-admin, web-app-chat, web-app-knowledge-upload, web-app-theme]
     kind: chart
-    reason: web-app 5.3.0 renders no priorityClassName on its pod spec.
-    closes_when: The chart takes a priorityClassName value.
+    reason: >-
+      web-app 5.3.0 renders no priorityClassName. That chart is no longer
+      developed — services now build on the monorepo's base library chart,
+      which does render it.
+    closes_when: >-
+      The rendered pod spec names a priority class ranked above product
+      services. The route is this installation moving to the dedicated
+      per-service charts, not a change to web-app.
 
   - workloads: [agent-sandbox-controller]
     kind: chart
@@ -75,8 +81,8 @@ priority_class:
 pod_disruption_budget:
   # The control: "a PodDisruptionBudget". backend-service and web-app gate
   # theirs on replicaCount and the HPA's lower bound — never on KEDA's — so
-  # a KEDA workload needs replicaCount above 1 to get one. These two charts
-  # render none at any count.
+  # a KEDA workload needs replicaCount above 1 to get one. The monorepo's
+  # base chart carries the same guard, so the migration does not fix this.
 
   - workloads: [litellm]
     kind: chart
@@ -114,10 +120,13 @@ topology_spread:
     kind: chart
     reason: >-
       Neither backend-service 10.5.1 nor web-app 5.3.0 renders
-      topologySpreadConstraints. No value reaches the pod spec.
+      topologySpreadConstraints, and neither chart is developed any more.
+      Services now build on the monorepo's base library chart, which exposes
+      affinity, nodeSelector and tolerations but not this field.
     closes_when: >-
-      Both charts take topologySpreadConstraints. Raised with helm-charts
-      alongside trafficDistribution (AWS-CST-08, CA 17.3).
+      The rendered pod spec carries a topologySpreadConstraint on the zone
+      label. Two steps, both needed: the base chart takes the field, and this
+      installation moves to the dedicated per-service charts that consume it.
 
 readiness_probe:
   # The control: "a readiness probe".
