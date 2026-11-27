@@ -306,18 +306,20 @@ data "aws_iam_policy_document" "assistants_core" {
     ]
     resources = ["arn:aws:s3:::*-ai-data/*"]
   }
-
-  statement {
-    effect    = "Allow"
-    actions   = ["secretsmanager:GetSecretValue"]
-    resources = ["arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*"]
-  }
 }
 
 resource "aws_iam_role_policy" "assistants_core" {
-  name   = "bedrock-s3-secrets-access"
+  # Same grant shape as ingestion_worker, which uses this name too;
+  # an inline policy name is scoped to its role.
+  name   = "bedrock-s3-access"
   role   = aws_iam_role.assistants_core.id
   policy = data.aws_iam_policy_document.assistants_core.json
+
+  # The name forces replacement; without this the old policy is deleted
+  # first and the role briefly grants nothing.
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_eks_pod_identity_association" "assistants_core" {
