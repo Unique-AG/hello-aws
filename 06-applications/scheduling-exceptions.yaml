@@ -61,6 +61,20 @@ priority_class:
       priorityClassName. Third-party chart.
     closes_when: Upstream adds the value, or the release pins a chart that has it.
 
+pod_disruption_budget:
+  # The control: "a PodDisruptionBudget". The backend-service and web-app
+  # charts render one above a single replica; these two charts render none.
+
+  - workloads: [litellm]
+    kind: chart
+    reason: litellm 1.72.2 has no pdb value and renders no PodDisruptionBudget.
+    closes_when: The chart renders one.
+
+  - workloads: [agent-sandbox-controller, agent-sandbox-controller-router]
+    kind: chart
+    reason: agent-sandbox-controller 1.0.1 has no pdb value.
+    closes_when: The chart renders one.
+
 topology_spread:
   # The control: "under a topology spread constraint".
 

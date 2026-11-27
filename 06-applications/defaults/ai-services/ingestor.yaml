@@ -36,7 +36,9 @@ probes:
     failureThreshold: 30
     periodSeconds: 10
 
-replicaCount: 1
+# KEDA owns the pod count; this only clears the chart's PDB condition,
+# which reads replicaCount and not keda.minReplicaCount.
+replicaCount: 3
 
 resources:
   requests:
