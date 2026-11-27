@@ -54,6 +54,17 @@ priority_class:
     reason: agent-sandbox-controller 1.0.1 renders no priorityClassName.
     closes_when: The chart takes a priorityClassName value.
 
+  - workloads: [litellm]
+    kind: chart
+    reason: >-
+      litellm 1.72.2 renders no priorityClassName. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      litellm's rendered pod spec names a priority class ranked above product
+      services. A replacement chart or a patch over the rendered manifest can
+      get there; neither closes this on its own.
+
   - workloads: [zitadel]
     kind: chart
     reason: >-
@@ -69,8 +80,14 @@ pod_disruption_budget:
 
   - workloads: [litellm]
     kind: chart
-    reason: litellm 1.72.2 has no pdb value and renders no PodDisruptionBudget.
-    closes_when: The chart renders one.
+    reason: >-
+      litellm 1.72.2 has no pdb value and renders no PodDisruptionBudget. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      A PodDisruptionBudget selects litellm's pods — rendered by a replacement
+      chart, or shipped beside the release as the network policy and db-init
+      already are through the bedag raw chart. Either satisfies the control.
 
   - workloads: [agent-sandbox-controller, agent-sandbox-controller-router]
     kind: chart
@@ -79,6 +96,19 @@ pod_disruption_budget:
 
 topology_spread:
   # The control: "under a topology spread constraint".
+
+  - workloads: [litellm]
+    kind: chart
+    reason: >-
+      litellm 1.72.2 renders no topologySpreadConstraints. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      litellm's rendered pod spec carries a topologySpreadConstraint on the
+      zone label. A replacement chart alone does not close this — its values
+      have to render the constraint. affinity is exposed, so a podAntiAffinity
+      on the zone label spreads the pods in the meantime, but that is a
+      mitigation and does not satisfy the control.
 
   - workloads: [every backend-service, every web-app]
     kind: chart
