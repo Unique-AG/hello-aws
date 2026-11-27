@@ -91,12 +91,12 @@ data "aws_iam_policy_document" "staff_sso_writer_assume" {
 resource "aws_iam_role" "staff_sso_writer" {
   count = local.staff_sso_enabled ? 1 : 0
 
-  name               = "${module.naming.iam_role_prefix}-staff-sso-secret-writer"
+  name               = "${module.naming.iam_role_prefix}-staff-sso-writer"
   description        = "Lets the identity layer write the staff SSO client secret, and nothing else."
   assume_role_policy = data.aws_iam_policy_document.staff_sso_writer_assume[0].json
 
   tags = merge(local.tags, {
-    Name = "${module.naming.iam_role_prefix}-staff-sso-secret-writer"
+    Name = "${module.naming.iam_role_prefix}-staff-sso-writer"
   })
 }
 
