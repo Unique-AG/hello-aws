@@ -220,3 +220,20 @@ output "podvm_import_role_name" {
   description = "Role VM Import/Export assumes to read a staged pod VM image (null unless enable_podvm_image_import)"
   value       = var.enable_podvm_image_import ? aws_iam_role.podvm_import[0].name : null
 }
+
+# Karpenter. The NodePool and EC2NodeClass are Kubernetes objects rendered
+# elsewhere; these are the AWS names they have to reference.
+output "karpenter_node_role_name" {
+  description = "IAM role Karpenter's instances run as; the EC2NodeClass names it in spec.role"
+  value       = aws_iam_role.karpenter_node.name
+}
+
+output "karpenter_interruption_queue_name" {
+  description = "SQS queue the controller reads interruption events from"
+  value       = aws_sqs_queue.karpenter_interruption.name
+}
+
+output "karpenter_controller_role_arn" {
+  description = "Role the controller assumes through its Pod Identity association"
+  value       = aws_iam_role.karpenter_controller.arn
+}
