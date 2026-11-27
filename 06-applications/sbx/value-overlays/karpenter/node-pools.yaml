@@ -44,6 +44,9 @@ resources:
     metadata:
       name: general-arm64
     spec:
+      # Above general-amd64, so a pod that fits either lands on Graviton.
+      # An omitted weight is 0, which would have let amd64's 1 win.
+      weight: 50
       template:
         metadata:
           labels:
@@ -87,9 +90,9 @@ resources:
     metadata:
       name: data
     spec:
-      # Higher weight than general-arm64 so a pod that tolerates the taint
-      # lands here rather than on a general node.
-      weight: 10
+      # Above the general pools, so a store that tolerates the taint lands
+      # here rather than on a general node.
+      weight: 100
       template:
         metadata:
           labels:

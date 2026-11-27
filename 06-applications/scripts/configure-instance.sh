@@ -161,7 +161,7 @@ FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
-FROM_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix' "$FROM")
+FROM_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix // "<NAMING_PREFIX>"' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
 FROM_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$FROM")
 FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$FROM")
@@ -447,9 +447,21 @@ replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 
 # 8. EKS cluster name
 echo "  EKS cluster name ..."
-replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
-# After the cluster name: the prefix is a substring of it.
+# Two hazards here, so neither value is replaced directly.
+#
+# A file added by an upgrade still carries the literal tokens, and when the
+# saved and desired values already match, replace_all returns before touching
+# them. So the tokens are replaced whether or not the value changed.
+#
+# And the cluster name holds the prefix, so a new prefix containing the old one
+# would be applied twice inside it: uq-x -> new-uq-x would turn eks-new-uq-x
+# into eks-new-new-uq-x. The sentinel keeps the prefix pass away from it.
+CLUSTER_SENTINEL="__EKS_CLUSTER_NAME_SENTINEL__"
+replace_all "<EKS_CLUSTER_NAME>" "$CLUSTER_SENTINEL"
+replace_all "$FROM_EKS_CLUSTER_NAME" "$CLUSTER_SENTINEL"
+replace_all "<NAMING_PREFIX>" "$TO_NAMING_PREFIX"
 replace_all "$FROM_NAMING_PREFIX" "$TO_NAMING_PREFIX"
+replace_all "$CLUSTER_SENTINEL" "$TO_EKS_CLUSTER_NAME"
 
 # 9. VPC ID
 echo "  VPC ID ..."

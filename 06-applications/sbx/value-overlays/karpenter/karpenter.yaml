@@ -4,7 +4,7 @@ settings:
   clusterName: <EKS_CLUSTER_NAME>
   # Drains a node on a Spot interruption or scheduled change instead of
   # losing it; the queue and its EventBridge rules are in 05-compute.
-  interruptionQueue: <EKS_CLUSTER_NAME>-karpenter-interruption
+  interruptionQueue: <NAMING_PREFIX>-karpenter-interruption
 
 serviceAccount:
   create: true

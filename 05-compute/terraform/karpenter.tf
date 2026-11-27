@@ -155,6 +155,10 @@ locals {
       source      = "aws.ec2"
       detail_type = "EC2 Instance State-change Notification"
     }
+    capacity_reservation = {
+      source      = "aws.ec2"
+      detail_type = "EC2 Capacity Reservation Instance Interruption Warning"
+    }
   }
 }
 
@@ -522,6 +526,15 @@ data "aws_iam_policy_document" "karpenter_controller" {
       variable = "aws:ResourceTag/karpenter.k8s.aws/ec2nodeclass"
       values   = ["*"]
     }
+  }
+
+  # Unscoped because ListInstanceProfiles supports no resource-level
+  # permission; new in Karpenter 1.11.
+  statement {
+    sid       = "AllowUnscopedInstanceProfileListAction"
+    effect    = "Allow"
+    resources = ["*"]
+    actions   = ["iam:ListInstanceProfiles"]
   }
 
   statement {
