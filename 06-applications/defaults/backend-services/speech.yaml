@@ -1,3 +1,4 @@
+replicaCount: 3
 env:
   LOG_LEVEL: info
 routes:

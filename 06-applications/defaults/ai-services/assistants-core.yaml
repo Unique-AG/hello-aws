@@ -21,7 +21,7 @@ probes:
   startup:
     httpGet:
       path: /bundle
-replicaCount: 2
+replicaCount: 3
 resources:
   limits:
     cpu: 500m

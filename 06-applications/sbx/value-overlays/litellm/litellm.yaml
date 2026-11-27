@@ -2,7 +2,7 @@
 # Uses AWS Bedrock via EKS Pod Identity (no static credentials)
 # Database: Aurora PostgreSQL, Cache: ElastiCache Redis (TLS)
 
-replicaCount: 1
+replicaCount: 2
 
 image:
   repository: ghcr.io/berriai/litellm-database

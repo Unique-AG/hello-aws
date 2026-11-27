@@ -8,7 +8,7 @@ hooks:
     command: |
       cd /home/node/app/services/configuration-backend && pnpm exec prisma migrate deploy --config prisma.config.ts
     enabled: true
-replicaCount: 1
+replicaCount: 3
 resources:
   limits:
     cpu: 100m

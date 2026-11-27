@@ -19,3 +19,6 @@ router:
             app.kubernetes.io/instance: assistants-core
           namespaceSelector:
             kubernetes.io/metadata.name: unique
+
+# Two, with the chart's leaderElect default: one active, one standby (CA 9.4).
+replicaCount: 2
