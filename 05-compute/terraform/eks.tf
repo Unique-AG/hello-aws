@@ -215,7 +215,8 @@ resource "aws_security_group" "eks_nodes" {
   vpc_id      = local.infrastructure.vpc_id
 
   tags = {
-    Name = "${module.naming.id}-eks-nodes-sg"
+    Name                     = "${module.naming.id}-eks-nodes-sg"
+    "karpenter.sh/discovery" = module.naming.id
   }
 }
 
@@ -410,6 +411,16 @@ resource "aws_iam_role_policy" "eks_node_ecr_pull_through_cache" {
 resource "aws_eks_addon" "pod_identity_agent" {
   cluster_name                = aws_eks_cluster.main.name
   addon_name                  = "eks-pod-identity-agent"
+  resolve_conflicts_on_update = "OVERWRITE"
+  depends_on                  = [aws_eks_node_group.pool]
+}
+
+# metrics-server. Nothing serves the resource metrics API without it, so every
+# HPA reports <unknown> and never scales (CA 9.2).
+resource "aws_eks_addon" "metrics_server" {
+  cluster_name                = aws_eks_cluster.main.name
+  addon_name                  = "metrics-server"
+  addon_version               = var.eks_metrics_server_version
   resolve_conflicts_on_update = "OVERWRITE"
   depends_on                  = [aws_eks_node_group.pool]
 }

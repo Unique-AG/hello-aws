@@ -6,7 +6,8 @@ resource "aws_security_group" "workload" {
   vpc_id      = aws_vpc.main.id
 
   tags = {
-    Name = "sg-${module.naming.id}-workload"
+    Name                     = "sg-${module.naming.id}-workload"
+    "karpenter.sh/discovery" = module.naming.id
   }
 }
 
