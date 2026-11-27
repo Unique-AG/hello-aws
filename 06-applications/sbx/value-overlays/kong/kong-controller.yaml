@@ -1,5 +1,11 @@
 # Using public images for sbx - private ECR not accessible
 controller:
+  # CA 9.4 names the ingress controller: two replicas and a budget, so a
+  # node drain cannot take the whole ingress path with it.
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
   image:
     repository: kong/kubernetes-ingress-controller
     tag: 3.4.4
@@ -32,6 +38,12 @@ controller:
       spec:
         controllerName: konghq.com/kic-gateway-controller
 gateway:
+  # CA 9.4 names the ingress controller: two replicas and a budget, so a
+  # node drain cannot take the whole ingress path with it.
+  replicaCount: 2
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
   image:
     repository: kong
     tag: 3.9.0
