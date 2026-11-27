@@ -215,7 +215,8 @@ resource "aws_security_group" "eks_nodes" {
   vpc_id      = local.infrastructure.vpc_id
 
   tags = {
-    Name = "${module.naming.id}-eks-nodes-sg"
+    Name                     = "${module.naming.id}-eks-nodes-sg"
+    "karpenter.sh/discovery" = module.naming.id
   }
 }
 

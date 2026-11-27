@@ -80,6 +80,9 @@ aws:
     keyArn: "<KMS_KEY_ARN>"
   eks:
     clusterName: "<EKS_CLUSTER_NAME>"
+    # Resource-name prefix, which is the cluster name without its eks- prefix.
+    # Karpenter's discovery tags and its node role are named from it.
+    namingPrefix: "<NAMING_PREFIX>"
   vpc:
     id: "<VPC_ID>"
   sandbox:
@@ -158,6 +161,7 @@ FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
+FROM_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
 FROM_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$FROM")
 FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$FROM")
@@ -219,6 +223,7 @@ TO_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$CONFIG")
 TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
 TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
+TO_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
 TO_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$CONFIG")
 TO_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$CONFIG")
@@ -443,6 +448,8 @@ replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 # 8. EKS cluster name
 echo "  EKS cluster name ..."
 replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
+# After the cluster name: the prefix is a substring of it.
+replace_all "$FROM_NAMING_PREFIX" "$TO_NAMING_PREFIX"
 
 # 9. VPC ID
 echo "  VPC ID ..."

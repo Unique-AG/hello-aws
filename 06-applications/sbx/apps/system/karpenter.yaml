@@ -1,0 +1,23 @@
+# Karpenter provisions the general node pools. The Kata sandbox hosts stay on
+# a managed node group (CA 9.3), so this cluster is deliberately mixed.
+spec:
+  name: karpenter
+  autoSync: true
+  syncOptions:
+    - ServerSideApply=true
+  sources:
+    - chart: karpenter
+      repoURL: public.ecr.aws/karpenter
+      targetRevision: 1.6.0
+      helm:
+        releaseName: karpenter
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/karpenter/karpenter.yaml
+    # Separate source so the pools sync after the CRDs the chart installs.
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: karpenter-node-pools
+        valueFiles:
+          - $values/06-applications/sbx/value-overlays/karpenter/node-pools.yaml

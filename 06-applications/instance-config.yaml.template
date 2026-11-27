@@ -24,6 +24,7 @@ aws:
     keyArn: <KMS_KEY_ARN>              # KMS key ARN for EBS encryption
   eks:
     clusterName: <EKS_CLUSTER_NAME>    # terraform output -raw eks_cluster_name (compute layer)
+    namingPrefix: <NAMING_PREFIX>      # the cluster name without its "eks-" prefix, e.g. uq-dogfood-sbx-use1
   vpc:
     id: <VPC_ID>                       # terraform output -raw vpc_id (infrastructure layer)
   sandbox:

@@ -1,0 +1,40 @@
+# Karpenter controller. Its AWS identity comes from the Pod Identity
+# association in 05-compute, so no IRSA annotation here.
+settings:
+  clusterName: <EKS_CLUSTER_NAME>
+  # Drains a node on a Spot interruption or scheduled change instead of
+  # losing it; the queue and its EventBridge rules are in 05-compute.
+  interruptionQueue: <EKS_CLUSTER_NAME>-karpenter-interruption
+
+serviceAccount:
+  create: true
+  name: karpenter
+
+# Karpenter cannot provision the node it runs on, so it stays on the managed
+# node group that exists before it does.
+nodeSelector:
+  scalability: steady
+  lifecycle: persistent
+
+replicas: 2
+
+controller:
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 512Mi
+
+# priorityClassName is deliberately not set: the chart defaults to
+# system-cluster-critical, which outranks unique-platform. Nothing scales if
+# Karpenter cannot schedule.
+
+topologySpreadConstraints:
+  - maxSkew: 1
+    topologyKey: topology.kubernetes.io/zone
+    whenUnsatisfiable: ScheduleAnyway
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/instance: karpenter
+        app.kubernetes.io/name: karpenter
