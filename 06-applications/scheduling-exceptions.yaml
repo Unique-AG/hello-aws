@@ -61,8 +61,9 @@ priority_class:
       helm-charts in December 2025; only the published OCI artifact remains,
       so no chart change is coming.
     closes_when: >-
-      The release pins a maintained chart, or the value is set by a kustomize
-      patch over the rendered manifest.
+      litellm's rendered pod spec names a priority class ranked above product
+      services. A replacement chart or a patch over the rendered manifest can
+      get there; neither closes this on its own.
 
   - workloads: [zitadel]
     kind: chart
@@ -84,8 +85,9 @@ pod_disruption_budget:
       helm-charts in December 2025; only the published OCI artifact remains,
       so no chart change is coming.
     closes_when: >-
-      A raw PodDisruptionBudget ships beside the release, as the network
-      policy and db-init already do through the bedag raw chart.
+      A PodDisruptionBudget selects litellm's pods — rendered by a replacement
+      chart, or shipped beside the release as the network policy and db-init
+      already are through the bedag raw chart. Either satisfies the control.
 
   - workloads: [agent-sandbox-controller, agent-sandbox-controller-router]
     kind: chart
@@ -102,8 +104,11 @@ topology_spread:
       helm-charts in December 2025; only the published OCI artifact remains,
       so no chart change is coming.
     closes_when: >-
-      The release pins a maintained chart. affinity is exposed, so a
-      podAntiAffinity on the zone label is the interim route.
+      litellm's rendered pod spec carries a topologySpreadConstraint on the
+      zone label. A replacement chart alone does not close this — its values
+      have to render the constraint. affinity is exposed, so a podAntiAffinity
+      on the zone label spreads the pods in the meantime, but that is a
+      mitigation and does not satisfy the control.
 
   - workloads: [every backend-service, every web-app]
     kind: chart
