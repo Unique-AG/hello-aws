@@ -3,10 +3,6 @@
 spec:
   name: karpenter
   autoSync: true
-  # The ApplicationSet puts system apps in unique; the Pod Identity
-  # association in 05-compute names kube-system/karpenter.
-  destination:
-    namespace: kube-system
   syncOptions:
     - ServerSideApply=true
   sources:
@@ -18,7 +14,8 @@ spec:
         releaseName: karpenter
         valueFiles:
           - $values/06-applications/sbx/value-overlays/karpenter/karpenter.yaml
-    # Separate source so the pools sync after the CRDs the chart installs.
+    # A second source; Argo CD does not order them, so the first sync may
+    # retry until the chart's CRDs exist.
     - chart: raw
       repoURL: "https://bedag.github.io/helm-charts"
       targetRevision: 2.0.0

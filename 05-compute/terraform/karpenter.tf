@@ -135,7 +135,7 @@ resource "aws_sqs_queue_policy" "karpenter_interruption" {
 }
 
 locals {
-  # The four events Karpenter acts on. Spot interruption gives two minutes;
+  # The five events Karpenter acts on. Spot interruption gives two minutes;
   # rebalance arrives earlier and is advisory; the other two cover retirement
   # and a stop or terminate from outside Karpenter.
   karpenter_events = {
@@ -198,7 +198,7 @@ resource "aws_iam_role" "karpenter_controller" {
 }
 
 # Ported from Karpenter's own reference policy (aws/karpenter-provider-aws,
-# cloudformation.yaml at v1.6.0) rather than written here: the tag conditions
+# cloudformation.yaml at v1.15.3) rather than written here: the tag conditions
 # are what separate Karpenter's nodes from everything else in the account.
 data "aws_iam_policy_document" "karpenter_controller" {
   # The network and image a launch may reference. Narrowed to this Region.
@@ -393,6 +393,35 @@ data "aws_iam_policy_document" "karpenter_controller" {
     effect    = "Allow"
     resources = ["*"]
     actions   = ["pricing:GetProducts"]
+  }
+
+  # The root volumes are encrypted with the general key, and the launching
+  # principal needs the grant — the managed node groups get this through the
+  # Auto Scaling service-linked role, which Karpenter does not use.
+  statement {
+    sid       = "AllowKMSForEncryptedVolumes"
+    effect    = "Allow"
+    actions   = ["kms:CreateGrant", "kms:ListGrants", "kms:RevokeGrant"]
+    resources = [local.infrastructure.kms_key_arn]
+
+    condition {
+      test     = "Bool"
+      variable = "kms:GrantIsForAWSResource"
+      values   = ["true"]
+    }
+  }
+
+  statement {
+    sid    = "AllowKMSDescribeAndDataKey"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKeyWithoutPlaintext",
+      "kms:ReEncryptFrom",
+      "kms:ReEncryptTo",
+    ]
+    resources = [local.infrastructure.kms_key_arn]
   }
 
   statement {

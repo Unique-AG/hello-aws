@@ -37,6 +37,7 @@ resources:
             volumeSize: 100Gi
             volumeType: gp3
             encrypted: true
+            kmsKeyID: <KMS_KEY_ARN>
             deleteOnTermination: true
 
   - apiVersion: karpenter.sh/v1

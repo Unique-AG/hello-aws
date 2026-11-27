@@ -255,9 +255,9 @@ variable "enable_agentcore_gateway" {
 }
 
 variable "karpenter_namespace" {
-  description = "Namespace the Karpenter controller runs in; the Pod Identity association names it before the controller exists."
+  description = "Namespace the Karpenter controller runs in; the Pod Identity association names it before the controller exists. The system ApplicationSet hard-codes unique and ignores a per-app destination."
   type        = string
-  default     = "kube-system"
+  default     = "unique"
 }
 
 variable "karpenter_service_account" {

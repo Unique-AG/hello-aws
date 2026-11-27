@@ -19,12 +19,17 @@ nodeSelector:
 replicas: 2
 
 controller:
+  # Pod Identity injects credentials but no region, and the nodes run an
+  # IMDS hop limit of 1, so the SDK's fallback cannot reach it.
+  env:
+    - name: AWS_REGION
+      value: <AWS_REGION>
   resources:
     requests:
-      cpu: 200m
-      memory: 512Mi
+      cpu: 1
+      memory: 1Gi
     limits:
-      memory: 512Mi
+      memory: 1Gi
 
 # priorityClassName is deliberately not set: the chart defaults to
 # system-cluster-critical, which outranks unique-platform. Nothing scales if
