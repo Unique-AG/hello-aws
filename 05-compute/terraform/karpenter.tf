@@ -469,6 +469,14 @@ data "aws_iam_policy_document" "karpenter_controller" {
       variable = "aws:RequestTag/topology.kubernetes.io/region"
       values   = [var.aws_region]
     }
+    # Upstream checks only the ownership tag here. A profile created by one
+    # cluster may also carry another's ownership tag, so bind to the stored
+    # cluster name too.
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/eks:eks-cluster-name"
+      values   = [aws_eks_cluster.main.name]
+    }
     condition {
       test     = "StringLike"
       variable = "aws:ResourceTag/karpenter.k8s.aws/ec2nodeclass"
@@ -500,6 +508,14 @@ data "aws_iam_policy_document" "karpenter_controller" {
       test     = "StringEquals"
       variable = "aws:ResourceTag/topology.kubernetes.io/region"
       values   = [var.aws_region]
+    }
+    # Upstream checks only the ownership tag here. A profile created by one
+    # cluster may also carry another's ownership tag, so bind to the stored
+    # cluster name too.
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceTag/eks:eks-cluster-name"
+      values   = [aws_eks_cluster.main.name]
     }
     condition {
       test     = "StringLike"
