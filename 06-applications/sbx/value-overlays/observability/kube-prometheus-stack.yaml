@@ -48,7 +48,9 @@ alertmanager:
     image:
       registry: <ECR_REGISTRY_THIRDPARTY_BARE>
       repository: quay.io/prometheus/alertmanager
-    replicas: 1
+    # Alertmanager gossips between replicas and the operator wires the mesh,
+    # so two is real redundancy rather than two copies of one view.
+    replicas: 2
     alertmanagerConfigMatcherStrategy:
       type: None
     storage:
