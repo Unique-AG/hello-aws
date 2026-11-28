@@ -414,17 +414,31 @@ data "aws_iam_policy_document" "karpenter_controller" {
     }
   }
 
+  # DescribeKey is a direct call the controller makes to read the key; the rest
+  # are only ever reached through EBS, so they are conditioned on it.
   statement {
-    sid    = "AllowKMSDescribeAndDataKey"
+    sid       = "AllowKMSDescribe"
+    effect    = "Allow"
+    actions   = ["kms:DescribeKey"]
+    resources = [local.infrastructure.kms_key_arn]
+  }
+
+  statement {
+    sid    = "AllowKMSForEBSVolumesOnly"
     effect = "Allow"
     actions = [
       "kms:Decrypt",
-      "kms:DescribeKey",
       "kms:GenerateDataKeyWithoutPlaintext",
       "kms:ReEncryptFrom",
       "kms:ReEncryptTo",
     ]
     resources = [local.infrastructure.kms_key_arn]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values   = ["ec2.${var.aws_region}.amazonaws.com"]
+    }
   }
 
   statement {
@@ -618,8 +632,10 @@ resource "aws_iam_role_policy" "karpenter_controller" {
 }
 
 resource "aws_eks_pod_identity_association" "karpenter" {
-  cluster_name    = aws_eks_cluster.main.name
-  namespace       = var.karpenter_namespace
-  service_account = var.karpenter_service_account
+  cluster_name = aws_eks_cluster.main.name
+  namespace    = var.karpenter_namespace
+  # Fixed, not a variable: the Helm release names this service account too, and
+  # a Terraform-only override would bind the role to one the controller is not.
+  service_account = "karpenter"
   role_arn        = aws_iam_role.karpenter_controller.arn
 }
