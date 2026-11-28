@@ -205,8 +205,16 @@ done
 info "Writing ${SECRET_ID} in ${AWS_REGION} ..."
 # Merge over what is already stored: every key becomes an environment variable,
 # so extras such as SLACK_WEBHOOK_URL must survive a rotation.
-EXISTING=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" \
-  --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo '{}')
+# Only a missing secret may fall back to {}. Any other read failure — no
+# kms:Decrypt on the key, a throttle — would drop those extras silently.
+if EXISTING_OUT=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" \
+  --region "$AWS_REGION" --query SecretString --output text 2>&1); then
+  EXISTING="$EXISTING_OUT"
+elif printf '%s' "$EXISTING_OUT" | grep -q 'ResourceNotFoundException'; then
+  EXISTING='{}'
+else
+  error "Cannot read ${SECRET_ID}: ${EXISTING_OUT}"
+fi
 echo "$EXISTING" | jq -e 'type == "object"' >/dev/null 2>&1 || EXISTING='{}'
 PAYLOAD=$(jq -n --argjson old "$EXISTING" \
   --arg base "$DOMAIN_BASE" --arg proj "$PROJECT_ID" \
