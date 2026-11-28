@@ -40,6 +40,57 @@ replicas:
     reason: As backend-service-ingestion-worker — the same chart at the same floor.
     closes_when: Never, by design.
 
+  # The platform and data workloads below run one replica each. Each is
+  # single-writer or single-binary, so a second replica is a design change
+  # rather than a value change.
+
+  - workload: grafana
+    kind: design
+    reason: >-
+      Its dashboard volume is ReadWriteOnce, so a second replica cannot attach
+      it. The same file already sets no-surge rollouts for that reason.
+    closes_when: >-
+      Grafana moves to an external database and drops the volume.
+
+  - workload: prometheus
+    kind: design
+    reason: >-
+      A second replica is not a copy but an HA pair: both scrape everything and
+      Managed Prometheus deduplicates at ingestion, which it only does when
+      every sample carries a cluster label and a __replica__ label. The
+      overlay sets cluster and no replica label at all, so a second replica
+      would store duplicate series rather than a deduplicated pair.
+    closes_when: >-
+      Each replica carries a distinct __replica__ label alongside cluster, and
+      Managed Prometheus ingests the pair as one series.
+
+  - workloads: [loki, tempo]
+    kind: design
+    reason: >-
+      Loki runs deploymentMode SingleBinary and Tempo its single-binary form,
+      each on a ReadWriteOnce volume. Replicas arrive with the scalable
+      topology, which needs object storage rather than a larger count.
+    closes_when: >-
+      Both move to their scalable deployment mode on object storage. If only
+      one does, split this entry rather than closing it.
+
+  - workload: qdrant
+    kind: design
+    reason: >-
+      A second pod is not a second copy of the data: without per-collection
+      replication it is an empty peer, so raising the count would report
+      availability the store does not have.
+    closes_when: >-
+      Collections are created with a replication factor above one.
+
+  - workload: rabbitmq cluster
+    kind: design
+    reason: >-
+      Quorum queues need three nodes, not two, and each node needs its own
+      volume. Going from one to three is a storage and migration exercise.
+    closes_when: >-
+      The cluster runs three nodes with quorum queues.
+
 priority_class:
   # The control: "a priority class that ranks platform services above product
   # services". The class objects exist; these workloads cannot name one.
