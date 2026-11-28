@@ -259,9 +259,3 @@ variable "karpenter_namespace" {
   type        = string
   default     = "unique"
 }
-
-variable "karpenter_service_account" {
-  description = "Service account the Karpenter controller runs as."
-  type        = string
-  default     = "karpenter"
-}
