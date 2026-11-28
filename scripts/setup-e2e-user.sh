@@ -50,6 +50,10 @@ INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 DOMAIN_IDENTITY=$(yq -r '.domain.identity // ""' "$INSTANCE_CONFIG")
 DOMAIN_BASE=$(yq -r '.domain.base // ""' "$INSTANCE_CONFIG")
 AWS_REGION=$(yq -r '.aws.region // ""' "$INSTANCE_CONFIG")
+# A secret created without this lands on the AWS-managed key. The alias follows
+# the cluster name, which the naming module builds as eks-<id>.
+EKS_CLUSTER_NAME=$(yq -r '.aws.eks.clusterName // ""' "$INSTANCE_CONFIG")
+SECRETS_KMS_ALIAS="alias/kms-${EKS_CLUSTER_NAME#eks-}-secrets-manager"
 PROJECT_ID=$(yq -r '.zitadel.projectId // ""' "$INSTANCE_CONFIG")
 ORG_ID=$(yq -r '.zitadel.orgId // ""' "$INSTANCE_CONFIG")
 for v in DOMAIN_IDENTITY DOMAIN_BASE AWS_REGION PROJECT_ID ORG_ID; do
@@ -221,6 +225,7 @@ if aws secretsmanager describe-secret --secret-id "$SECRET_ID" --region "$AWS_RE
   log "Rotated ${SECRET_ID}"
 else
   aws secretsmanager create-secret --name "$SECRET_ID" \
+    --kms-key-id "$SECRETS_KMS_ALIAS" \
     --secret-string "$PAYLOAD" --region "$AWS_REGION" >/dev/null
   log "Created ${SECRET_ID}"
 fi
