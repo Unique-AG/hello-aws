@@ -1,6 +1,8 @@
 name: '[tf] [sbx] Deploy'
 on:
   push:
+    # The branch this applies to. A literal 'deploy' matches no branch that
+    # exists, so the deploy branch had to carry a hand-edited copy of this file.
     branches: [deploy/sbx]
     paths: ['0[1-5]-*/**', 'modules/**', 'common.auto.tfvars']
   workflow_dispatch:
@@ -140,6 +142,15 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       - name: Install yq
         run: sudo snap install yq
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.14.0"
+          terraform_wrapper: false
+      # The script reads the data layer's outputs, and this job has its own
+      # checkout, so the workspace the apply initialised is not here.
+      - name: Initialise the data layer's backend
+        working-directory: 04-data-and-ai/terraform
+        run: terraform init -input=false -backend-config=environments/sbx/backend-config.hcl
       - name: Seed every secret that is still empty
         working-directory: 06-applications
         run: ./scripts/seed-secrets.sh sbx

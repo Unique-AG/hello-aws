@@ -1,6 +1,21 @@
 # Mirrored controller, Docker Official gateway. The controller's own image is
 # under ingressController: controller and gateway both alias the kong chart.
 controller:
+  # CA 9.4 names the ingress controller: two replicas and a budget, so a
+  # node drain cannot take the whole ingress path with it.
+  replicaCount: 2
+  # Two replicas are only zone tolerance if they land in two zones; the
+  # scheduler's default spread allows a skew of 3 and would not separate them.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: kong-controller
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
   ingressController:
     image:
       repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/mirror/kong/kubernetes-ingress-controller
@@ -33,6 +48,21 @@ controller:
       spec:
         controllerName: konghq.com/kic-gateway-controller
 gateway:
+  # CA 9.4 names the ingress controller: two replicas and a budget, so a
+  # node drain cannot take the whole ingress path with it.
+  replicaCount: 2
+  # Two replicas are only zone tolerance if they land in two zones; the
+  # scheduler's default spread allows a skew of 3 and would not separate them.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: topology.kubernetes.io/zone
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: kong-gateway
+  podDisruptionBudget:
+    enabled: true
+    maxUnavailable: 1
   image:
     repository: 217381566492.dkr.ecr.us-east-1.amazonaws.com/public.ecr.aws/docker/library/kong
     tag: 3.9.0@sha256:b2980ac91056bcc9cbf593b2b3d6a8c458cc134304b4d83bc4c93a6449f18df7

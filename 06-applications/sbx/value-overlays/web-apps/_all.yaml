@@ -44,3 +44,6 @@ podAnnotations:
   reloader.stakater.com/auto: "true"
 
 nodeSelector: null
+
+# CA 9.4's floor for a non-production installation.
+replicaCount: 2

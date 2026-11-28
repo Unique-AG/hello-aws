@@ -203,6 +203,11 @@ output "kms_key_cloudwatch_logs_id" {
   value       = aws_kms_key.cloudwatch_logs.key_id
 }
 
+output "kms_key_events_arn" {
+  description = "ARN of the EventBridge-to-SQS KMS key (for use by the compute layer)"
+  value       = aws_kms_key.events.arn
+}
+
 output "kms_key_prometheus_arn" {
   description = "ARN of the Managed Prometheus KMS key (for use by data-and-ai layer)"
   value       = var.enable_managed_prometheus ? aws_kms_key.prometheus[0].arn : null

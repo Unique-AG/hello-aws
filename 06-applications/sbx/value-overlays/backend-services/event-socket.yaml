@@ -13,3 +13,7 @@ routes:
       enabled: true
     probe:
       enabled: true
+
+# One shared AMQP queue, so a second replica consumes events meant for a
+# client held by the first. See 06-applications/scheduling-exceptions.yaml.
+replicaCount: 1

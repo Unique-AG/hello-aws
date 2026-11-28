@@ -1,0 +1,33 @@
+# The two classes CA 9.4 asks for: platform above product, so a node under
+# pressure evicts a product pod before an ingress, operator or secrets pod.
+spec:
+  name: priority-classes
+  autoSync: true
+  sources:
+    - chart: raw
+      repoURL: "https://bedag.github.io/helm-charts"
+      targetRevision: 2.0.0
+      helm:
+        releaseName: priority-classes
+        valuesObject:
+          resources:
+            - apiVersion: scheduling.k8s.io/v1
+              kind: PriorityClass
+              metadata:
+                name: unique-platform
+              # Well below the 1000000000 floor Kubernetes reserves for its own
+              # system-cluster-critical and system-node-critical classes.
+              value: 100000
+              globalDefault: false
+              description: >-
+                Cluster services the product cannot run without: ingress,
+                certificates, secrets, autoscaling, storage and observability.
+            - apiVersion: scheduling.k8s.io/v1
+              kind: PriorityClass
+              metadata:
+                name: unique-product
+              value: 10000
+              globalDefault: false
+              description: >-
+                Application workloads. Evicted before platform services so the
+                cluster keeps the machinery that lets them come back.

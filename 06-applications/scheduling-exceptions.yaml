@@ -1,0 +1,197 @@
+# The release's exception list for CA 9.4 (AWS-CMP-17). A workload here does
+# not meet one of the control's clauses, and says why.
+#
+# Each entry names the clause it misses, the reason, and what would close it.
+# "chart" means the chart exposes no value for it — a helm-charts change, not
+# a value change here. "design" means the service would behave incorrectly.
+
+replicas:
+  # The control: "a replica in every zone of its cluster's VPC, at least two
+  # ... an autoscaled one meets the replica count through its autoscaler's
+  # lower bound ... and a queue worker whose lower bound is below that count,
+  # zero included, is on that list with its reason".
+
+  - workload: backend-service-event-socket
+    runs: 1
+    kind: design
+    reason: >-
+      Every replica consumes the one shared AMQP queue EVENT_SOCKET, bound '#'
+      to the EVENT_BUS topic exchange, and RabbitMQ hands each message to a
+      single consumer. A client's websocket lives on one pod, so a second
+      replica would receive events for clients it does not hold and ack them.
+    verified_at: next/services/event-socket/src/amqp.setup.ts, monorepo master 2c2de03abf
+    closes_when: >-
+      The service declares a per-instance exclusive queue bound to the same
+      exchange, so every replica receives every event. Monorepo change.
+
+  - workload: backend-service-ingestion-worker
+    runs: 0
+    kind: design
+    reason: >-
+      KEDA holds it at minReplicaCount 0 while its queue is idle. A workload at
+      rest at zero cannot satisfy a replica-per-zone rule; raising the floor
+      would pay for idle capacity to satisfy a count, not availability.
+    closes_when: >-
+      Never, by design. The control admits this case explicitly.
+
+  - workload: backend-service-ingestion-worker-chat
+    runs: 0
+    kind: design
+    reason: As backend-service-ingestion-worker — the same chart at the same floor.
+    closes_when: Never, by design.
+
+  # The platform and data workloads below run one replica each. Each is
+  # single-writer or single-binary, so a second replica is a design change
+  # rather than a value change.
+
+  - workload: grafana
+    kind: design
+    reason: >-
+      Its dashboard volume is ReadWriteOnce, so a second replica cannot attach
+      it. The same file already sets no-surge rollouts for that reason.
+    closes_when: >-
+      Grafana moves to an external database and drops the volume.
+
+  - workload: prometheus
+    kind: design
+    reason: >-
+      A second replica is not a copy but an HA pair: both scrape everything and
+      Managed Prometheus deduplicates at ingestion, which it only does when
+      every sample carries a cluster label and a __replica__ label. The
+      overlay sets cluster and no replica label at all, so a second replica
+      would store duplicate series rather than a deduplicated pair.
+    closes_when: >-
+      Each replica carries a distinct __replica__ label alongside cluster, and
+      Managed Prometheus ingests the pair as one series.
+
+  - workloads: [loki, tempo]
+    kind: design
+    reason: >-
+      Loki runs deploymentMode SingleBinary and Tempo its single-binary form,
+      each on a ReadWriteOnce volume. Replicas arrive with the scalable
+      topology, which needs object storage rather than a larger count.
+    closes_when: >-
+      Both move to their scalable deployment mode on object storage. If only
+      one does, split this entry rather than closing it.
+
+  - workload: qdrant
+    kind: design
+    reason: >-
+      A second pod is not a second copy of the data: without per-collection
+      replication it is an empty peer, so raising the count would report
+      availability the store does not have.
+    closes_when: >-
+      Collections are created with a replication factor above one.
+
+  - workload: rabbitmq cluster
+    kind: design
+    reason: >-
+      Quorum queues need three nodes, not two, and each node needs its own
+      volume. Going from one to three is a storage and migration exercise.
+    closes_when: >-
+      The cluster runs three nodes with quorum queues.
+
+priority_class:
+  # The control: "a priority class that ranks platform services above product
+  # services". The class objects exist; these workloads cannot name one.
+
+  - workloads: [web-app-admin, web-app-chat, web-app-knowledge-upload, web-app-theme]
+    kind: chart
+    reason: >-
+      web-app 5.3.0 renders no priorityClassName. That chart is no longer
+      developed — services now build on the monorepo's base library chart,
+      which does render it.
+    closes_when: >-
+      The rendered pod spec names a priority class ranked above product
+      services. The route is this installation moving to the dedicated
+      per-service charts, not a change to web-app.
+
+  - workloads: [agent-sandbox-controller]
+    kind: chart
+    reason: agent-sandbox-controller 1.0.1 renders no priorityClassName.
+    closes_when: The chart takes a priorityClassName value.
+
+  - workloads: [litellm]
+    kind: chart
+    reason: >-
+      litellm 1.72.2 renders no priorityClassName. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      litellm's rendered pod spec names a priority class ranked above product
+      services. A replacement chart or a patch over the rendered manifest can
+      get there; neither closes this on its own.
+
+  - workloads: [zitadel]
+    kind: chart
+    reason: >-
+      zitadel 9.34.1 exposes nodeSelector, tolerations and affinity but no
+      priorityClassName. Third-party chart.
+    closes_when: Upstream adds the value, or the release pins a chart that has it.
+
+pod_disruption_budget:
+  # The control: "a PodDisruptionBudget". backend-service and web-app gate
+  # theirs on replicaCount and the HPA's lower bound — never on KEDA's — so
+  # a KEDA workload needs replicaCount above 1 to get one. The monorepo's
+  # base chart carries the same guard, so the migration does not fix this.
+
+  - workloads: [litellm]
+    kind: chart
+    reason: >-
+      litellm 1.72.2 has no pdb value and renders no PodDisruptionBudget. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      A PodDisruptionBudget selects litellm's pods — rendered by a replacement
+      chart, or shipped beside the release as the network policy and db-init
+      already are through the bedag raw chart. Either satisfies the control.
+
+  - workloads: [agent-sandbox-controller, agent-sandbox-controller-router]
+    kind: chart
+    reason: agent-sandbox-controller 1.0.1 has no pdb value.
+    closes_when: The chart renders one.
+
+topology_spread:
+  # The control: "under a topology spread constraint".
+
+  - workloads: [litellm]
+    kind: chart
+    reason: >-
+      litellm 1.72.2 renders no topologySpreadConstraints. The chart was deprecated and deleted from
+      helm-charts in December 2025; only the published OCI artifact remains,
+      so no chart change is coming.
+    closes_when: >-
+      litellm's rendered pod spec carries a topologySpreadConstraint on the
+      zone label. A replacement chart alone does not close this — its values
+      have to render the constraint. affinity is exposed, so a podAntiAffinity
+      on the zone label spreads the pods in the meantime, but that is a
+      mitigation and does not satisfy the control.
+
+  - workloads: [every backend-service, every web-app]
+    kind: chart
+    reason: >-
+      Neither backend-service 10.5.1 nor web-app 5.3.0 renders
+      topologySpreadConstraints, and neither chart is developed any more.
+      Services now build on the monorepo's base library chart, which exposes
+      affinity, nodeSelector and tolerations but not this field.
+    closes_when: >-
+      The rendered pod spec carries a topologySpreadConstraint on the zone
+      label. Two steps, both needed: the base chart takes the field, and this
+      installation moves to the dedicated per-service charts that consume it.
+
+readiness_probe:
+  # The control: "a readiness probe".
+
+  - workloads: [backend-service-webhook-scheduler, backend-service-webhook-worker]
+    kind: design
+    reason: >-
+      AMQP consumers with no HTTP route. Readiness governs Service endpoints,
+      and no Service sends them traffic.
+    closes_when: They serve HTTP, or the chart grows an exec probe.
+
+  - workloads: [client-insights-exporter]
+    kind: design
+    reason: >-
+      Calls other services and pushes to an external endpoint; has no route of
+      its own and receives no inbound traffic.
+    closes_when: It serves HTTP.

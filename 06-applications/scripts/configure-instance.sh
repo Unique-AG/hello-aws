@@ -80,6 +80,9 @@ aws:
     keyArn: "<KMS_KEY_ARN>"
   eks:
     clusterName: "<EKS_CLUSTER_NAME>"
+    # Resource-name prefix, which is the cluster name without its eks- prefix.
+    # Karpenter's discovery tags and its node role are named from it.
+    namingPrefix: "<NAMING_PREFIX>"
   vpc:
     id: "<VPC_ID>"
   sandbox:
@@ -158,6 +161,7 @@ FROM_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$FROM")
 FROM_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$FROM")
 FROM_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$FROM")
 FROM_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$FROM")
+FROM_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix // "<NAMING_PREFIX>"' "$FROM")
 FROM_VPC_ID=$(yq '.aws.vpc.id' "$FROM")
 FROM_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$FROM")
 FROM_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$FROM")
@@ -219,6 +223,7 @@ TO_ECR_THIRDPARTY_ACCOUNT=$(yq '.aws.ecr.thirdParty.accountId' "$CONFIG")
 TO_ECR_THIRDPARTY_PREFIX=$(yq '.aws.ecr.thirdParty.prefix' "$CONFIG")
 TO_KMS_KEY_ARN=$(yq '.aws.kms.keyArn' "$CONFIG")
 TO_EKS_CLUSTER_NAME=$(yq '.aws.eks.clusterName' "$CONFIG")
+TO_NAMING_PREFIX=$(yq '.aws.eks.namingPrefix // "<NAMING_PREFIX>"' "$CONFIG")
 TO_VPC_ID=$(yq '.aws.vpc.id' "$CONFIG")
 TO_SANDBOX_SUBNET_ID=$(yq '.aws.sandbox.subnetId // "<SANDBOX_SUBNET_ID>"' "$CONFIG")
 TO_PEER_PODS_SG_ID=$(yq '.aws.sandbox.securityGroupId // "<PEER_PODS_SECURITY_GROUP_ID>"' "$CONFIG")
@@ -369,6 +374,7 @@ replace_all "$FROM_TG_HTTPS_ARN" "$TO_TG_HTTPS_ARN"
 
 # 3. KMS key ARN (before region, since ARN contains region)
 echo "  KMS key ARN ..."
+replace_all "<KMS_KEY_ARN>" "$TO_KMS_KEY_ARN"
 replace_all "$FROM_KMS_KEY_ARN" "$TO_KMS_KEY_ARN"
 
 # 3b. Bedrock inference profile ID (before account ID and region, since ARN contains both)
@@ -442,7 +448,23 @@ replace_all "$FROM_HOSTED_ZONE_ID" "$TO_HOSTED_ZONE_ID"
 
 # 8. EKS cluster name
 echo "  EKS cluster name ..."
-replace_all "$FROM_EKS_CLUSTER_NAME" "$TO_EKS_CLUSTER_NAME"
+# Two hazards here, so neither value is replaced directly.
+#
+# A file added by an upgrade still carries the literal tokens, and when the
+# saved and desired values already match, replace_all returns before touching
+# them. So the tokens are replaced whether or not the value changed.
+#
+# And a new prefix containing the old one would be applied twice to text the
+# previous pass just wrote: uq-x -> new-uq-x turns new-uq-x into new-new-uq-x.
+# A sentinel per value means each is written exactly once, at the end.
+CLUSTER_SENTINEL="__EKS_CLUSTER_NAME_SENTINEL__"
+PREFIX_SENTINEL="__NAMING_PREFIX_SENTINEL__"
+replace_all "<EKS_CLUSTER_NAME>" "$CLUSTER_SENTINEL"
+replace_all "$FROM_EKS_CLUSTER_NAME" "$CLUSTER_SENTINEL"
+replace_all "<NAMING_PREFIX>" "$PREFIX_SENTINEL"
+replace_all "$FROM_NAMING_PREFIX" "$PREFIX_SENTINEL"
+replace_all "$PREFIX_SENTINEL" "$TO_NAMING_PREFIX"
+replace_all "$CLUSTER_SENTINEL" "$TO_EKS_CLUSTER_NAME"
 
 # 9. VPC ID
 echo "  VPC ID ..."

@@ -18,6 +18,9 @@ aws:
     keyArn: "arn:aws:kms:us-east-1:217381566492:key/13428ba6-4203-405a-b69a-edb2124b6c21"
   eks:
     clusterName: eks-uq-dogfood-sbx-use1
+    # module.naming.id — the prefix Terraform gives Karpenter's role, queue and
+    # discovery tags. Not the cluster name, which carries an eks- prefix.
+    namingPrefix: uq-dogfood-sbx-use1
   vpc:
     id: vpc-07f206251370e1b6f
   route53:

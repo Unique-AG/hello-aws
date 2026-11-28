@@ -50,6 +50,10 @@ INSTANCE_CONFIG="${PROJECT_ROOT}/06-applications/${ENV}/instance-config.yaml"
 DOMAIN_IDENTITY=$(yq -r '.domain.identity // ""' "$INSTANCE_CONFIG")
 DOMAIN_BASE=$(yq -r '.domain.base // ""' "$INSTANCE_CONFIG")
 AWS_REGION=$(yq -r '.aws.region // ""' "$INSTANCE_CONFIG")
+# A secret created without this lands on the AWS-managed key. The alias follows
+# the cluster name, which the naming module builds as eks-<id>.
+EKS_CLUSTER_NAME=$(yq -r '.aws.eks.clusterName // ""' "$INSTANCE_CONFIG")
+SECRETS_KMS_ALIAS="alias/kms-${EKS_CLUSTER_NAME#eks-}-secrets-manager"
 PROJECT_ID=$(yq -r '.zitadel.projectId // ""' "$INSTANCE_CONFIG")
 ORG_ID=$(yq -r '.zitadel.orgId // ""' "$INSTANCE_CONFIG")
 for v in DOMAIN_IDENTITY DOMAIN_BASE AWS_REGION PROJECT_ID ORG_ID; do
@@ -201,8 +205,16 @@ done
 info "Writing ${SECRET_ID} in ${AWS_REGION} ..."
 # Merge over what is already stored: every key becomes an environment variable,
 # so extras such as SLACK_WEBHOOK_URL must survive a rotation.
-EXISTING=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" \
-  --region "$AWS_REGION" --query SecretString --output text 2>/dev/null || echo '{}')
+# Only a missing secret may fall back to {}. Any other read failure — no
+# kms:Decrypt on the key, a throttle — would drop those extras silently.
+if EXISTING_OUT=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ID" \
+  --region "$AWS_REGION" --query SecretString --output text 2>&1); then
+  EXISTING="$EXISTING_OUT"
+elif printf '%s' "$EXISTING_OUT" | grep -q 'ResourceNotFoundException'; then
+  EXISTING='{}'
+else
+  error "Cannot read ${SECRET_ID}: ${EXISTING_OUT}"
+fi
 echo "$EXISTING" | jq -e 'type == "object"' >/dev/null 2>&1 || EXISTING='{}'
 PAYLOAD=$(jq -n --argjson old "$EXISTING" \
   --arg base "$DOMAIN_BASE" --arg proj "$PROJECT_ID" \
@@ -221,6 +233,7 @@ if aws secretsmanager describe-secret --secret-id "$SECRET_ID" --region "$AWS_RE
   log "Rotated ${SECRET_ID}"
 else
   aws secretsmanager create-secret --name "$SECRET_ID" \
+    --kms-key-id "$SECRETS_KMS_ALIAS" \
     --secret-string "$PAYLOAD" --region "$AWS_REGION" >/dev/null
   log "Created ${SECRET_ID}"
 fi
