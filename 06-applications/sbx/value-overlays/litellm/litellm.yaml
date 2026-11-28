@@ -132,10 +132,9 @@ proxy_config:
     max_budget: 10000
     budget_duration: 30d
     json_logs: true
-    cache: true
-    cache_params:
-      type: redis
-      namespace: "litellm.caching.caching"
+    # A cached completion would sit in Redis; prompt caching is a separate,
+    # provider-side setting and is unaffected.
+    cache: false
     redact_messages_in_exceptions: true
     request_timeout: 600
     set_verbose: false
