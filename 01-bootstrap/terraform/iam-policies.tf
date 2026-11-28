@@ -110,7 +110,9 @@ data "aws_iam_policy_document" "github_actions_deploy" {
       "budgets:*", "acm:*", "route53:*", "ram:*",
       # bedrock-agentcore is its own service prefix, not covered by bedrock:*.
       "cloudfront:*", "bedrock:*", "bedrock-agentcore:*", "aps:*", "grafana:*",
-      "codebuild:*", "events:*", "ssm:*",
+      # Karpenter's interruption queue is the blueprint's first SQS resource;
+      # events:* already covers the rules that feed it.
+      "codebuild:*", "events:*", "sqs:*", "ssm:*",
       # ECR enhanced scanning (05-compute) turns Amazon Inspector on and off for ECR.
       "inspector2:Enable", "inspector2:Disable", "inspector2:BatchGetAccountStatus",
       "inspector2:ListAccountPermissions",
