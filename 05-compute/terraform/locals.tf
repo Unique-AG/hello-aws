@@ -23,6 +23,7 @@ locals {
     public_subnet_ids                        = data.terraform_remote_state.infrastructure.outputs.public_subnet_ids
     vpc_endpoints_security_group_id          = data.terraform_remote_state.infrastructure.outputs.vpc_endpoints_security_group_id
     kms_key_arn                              = data.terraform_remote_state.infrastructure.outputs.kms_key_general_arn
+    kms_key_events_arn                       = data.terraform_remote_state.infrastructure.outputs.kms_key_events_arn
     kms_key_cloudwatch_logs_arn              = data.terraform_remote_state.infrastructure.outputs.kms_key_cloudwatch_logs_arn
     kms_key_id                               = data.terraform_remote_state.infrastructure.outputs.kms_key_general_id
     kms_key_secrets_manager_arn              = data.terraform_remote_state.infrastructure.outputs.kms_key_secrets_manager_arn

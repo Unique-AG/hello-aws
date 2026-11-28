@@ -374,6 +374,53 @@ resource "aws_kms_alias" "prometheus" {
   target_key_id = aws_kms_key.prometheus[0].key_id
 }
 
+resource "aws_kms_key" "events" {
+  description = "KMS key for EventBridge deliveries to SQS (Karpenter interruption)"
+  # AWS requires minimum 7 days - enforce when 0 is specified (for fast teardown in dev/sbx)
+  deletion_window_in_days = var.kms_deletion_window == 0 ? 7 : var.kms_deletion_window
+  enable_key_rotation     = var.kms_enable_rotation
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "Enable IAM User Permissions"
+        Effect = "Allow"
+        Principal = {
+          AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+        }
+        Action   = "kms:*"
+        Resource = "*"
+      },
+      {
+        # The three actions EventBridge documents for a customer managed key.
+        # Without them a delivery to an encrypted queue fails silently.
+        Sid    = "Allow EventBridge to use the key"
+        Effect = "Allow"
+        Principal = {
+          Service = "events.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+
+  tags = {
+    Name    = "kms-${module.naming.id}-events"
+    Purpose = "events"
+  }
+}
+
+resource "aws_kms_alias" "events" {
+  name          = "alias/kms-${module.naming.id}-events"
+  target_key_id = aws_kms_key.events.key_id
+}
+
 # EBS Encryption by Default
 # Ensures all new EBS volumes are encrypted automatically
 resource "aws_ebs_encryption_by_default" "main" {
