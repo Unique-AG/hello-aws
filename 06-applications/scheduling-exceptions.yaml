@@ -56,10 +56,13 @@ replicas:
     kind: design
     reason: >-
       A second replica is not a copy but an HA pair: both scrape everything and
-      the reader deduplicates. That changes what is written to Managed
-      Prometheus, so it is a design change, not a count.
+      Managed Prometheus deduplicates at ingestion, which it only does when
+      every sample carries a cluster label and a __replica__ label. The
+      overlay sets cluster and no replica label at all, so a second replica
+      would store duplicate series rather than a deduplicated pair.
     closes_when: >-
-      The remote-write and query path are set up for deduplicated pairs.
+      Each replica carries a distinct __replica__ label alongside cluster, and
+      Managed Prometheus ingests the pair as one series.
 
   - workloads: [loki, tempo]
     kind: design
@@ -68,7 +71,8 @@ replicas:
       each on a ReadWriteOnce volume. Replicas arrive with the scalable
       topology, which needs object storage rather than a larger count.
     closes_when: >-
-      Either moves to its scalable deployment mode on object storage.
+      Both move to their scalable deployment mode on object storage. If only
+      one does, split this entry rather than closing it.
 
   - workload: qdrant
     kind: design
