@@ -38,9 +38,9 @@ artifacts:
 
   # Grafana publishes its images to Docker Hub only, and the observability stack
   # is four charts deep in them. Not on ghcr.io or any registry with a PT rule.
-  - source: grafana/grafana:12.0.0
-    digest: sha256:263cbefd5d9b179893c47c415daab4da5c1f3d6770154741eca4f45c81119884
-    target: mirror/grafana/grafana:12.0.0
+  - source: grafana/grafana:12.1.9
+    digest: sha256:b765f709aa2f9cf6cb9ffc1b7cdbed046cb6b19152239e3d42ae162b925a472c
+    target: mirror/grafana/grafana:12.1.9
 
   - source: grafana/loki:3.4.2
     digest: sha256:58a6c186ce78ba04d58bfe2a927eff296ba733a430df09645d56cdc158f3ba08
