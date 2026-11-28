@@ -99,6 +99,9 @@ APP_NAME="unique-app"
 
 # An explicit export still wins.
 AWS_REGION="${AWS_REGION:-${AWS_DEFAULT_REGION:-$CONFIG_REGION}}"
+# A secret created without this lands on the AWS-managed key. The alias follows
+# the cluster name, which the naming module builds as eks-<id>.
+SECRETS_KMS_ALIAS="alias/kms-$(yq -r '.aws.eks.clusterName // ""' "$INSTANCE_CONFIG" | sed 's/^eks-//')-secrets-manager"
 
 info "Environment: ${ENV}"
 info "Zitadel host: ${ZITADEL_HOST}"
@@ -440,6 +443,7 @@ else
       BG_WRITE=(aws secretsmanager put-secret-value --secret-id "$AWS_SM_BREAKGLASS_ID")
     elif echo "$BG_DESC_ERR" | grep -q 'ResourceNotFoundException'; then
       BG_WRITE=(aws secretsmanager create-secret --name "$AWS_SM_BREAKGLASS_ID"
+        --kms-key-id "$SECRETS_KMS_ALIAS"
         --description "Zitadel break-glass IAM_OWNER PAT")
     else
       warn "Cannot read ${AWS_SM_BREAKGLASS_ID}: ${BG_DESC_ERR}"
