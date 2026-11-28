@@ -85,7 +85,10 @@ resource "aws_eks_access_entry" "karpenter_node" {
 resource "aws_sqs_queue" "karpenter_interruption" {
   name                      = "${module.naming.id}-karpenter-interruption"
   message_retention_seconds = 300
-  sqs_managed_sse_enabled   = true
+  # A customer managed key, not SSE-SQS: the queue carries interruption notices
+  # for this installation and DAT-18 asks for a key this account controls.
+  kms_master_key_id                 = local.infrastructure.kms_key_events_arn
+  kms_data_key_reuse_period_seconds = 300
 
   tags = merge(module.naming.tags, {
     Name = "${module.naming.id}-karpenter-interruption"
@@ -429,6 +432,15 @@ data "aws_iam_policy_document" "karpenter_controller" {
     effect    = "Allow"
     resources = [aws_sqs_queue.karpenter_interruption.arn]
     actions   = ["sqs:DeleteMessage", "sqs:GetQueueUrl", "sqs:ReceiveMessage"]
+  }
+
+  # Receiving from a queue encrypted with a customer managed key needs the key
+  # as well as the queue; without it every receive is denied.
+  statement {
+    sid       = "AllowDecryptingInterruptionMessages"
+    effect    = "Allow"
+    resources = [local.infrastructure.kms_key_events_arn]
+    actions   = ["kms:Decrypt"]
   }
 
   statement {
