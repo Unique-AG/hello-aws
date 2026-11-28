@@ -79,7 +79,7 @@ AURORA_ENDPOINT=$(tf '.aurora_cluster_endpoint.value')
 AURORA_PW_ARN=$(tf '.aurora_master_password_secret_arn.value')
 S3_IAM_USER=$(tf '.s3_access_iam_user_name.value')
 [[ "$AWS_REGION" != "null" ]] || error "Terraform outputs do not look like the data layer's."
-info "Region: ${AWS_REGION}   Env: ${ENV}   Mode: $( $CHECK && echo check || { $FORCE && echo force || echo seed; } )"
+info "Region: ${AWS_REGION}   Env: ${ENV}   Mode: $(if $CHECK; then echo check; elif $FORCE; then echo force; else echo seed; fi)"
 
 #######################################
 # Inventory
@@ -403,7 +403,7 @@ if [[ -n "$LITELLM_CHAT_KEY" && -f "$LITELLM_OVERLAY" ]]; then
     fi
   fi
 else
-  warn "azure-openai-endpoint-definitions: needs the chat virtual key and ${LITELLM_OVERLAY#$PROJECT_ROOT/} — left empty"
+  warn "azure-openai-endpoint-definitions: needs the chat virtual key and ${LITELLM_OVERLAY#"$PROJECT_ROOT"/} — left empty"
   LEFT_EMPTY=$((LEFT_EMPTY+1))
 fi
 fi
